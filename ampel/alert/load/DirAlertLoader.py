@@ -7,7 +7,7 @@
 # Last Modified Date: 30.01.2020
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
-from ampel.logging.AmpelLogger import AmpelLogger
+from ampel.log.AmpelLogger import AmpelLogger
 from io import BytesIO
 
 

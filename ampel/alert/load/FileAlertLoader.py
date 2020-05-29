@@ -4,29 +4,30 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 30.04.2018
-# Last Modified Date: 30.01.2020
+# Last Modified Date: 19.03.2020
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 from io import BytesIO
-from typing import List, Union
-from ampel.logging.AmpelLogger import AmpelLogger
+from typing import List, Union, Optional
+from ampel.log.AmpelLogger import AmpelLogger
 
 
 class FileAlertLoader:
-	""" """
 
-	def __init__(self, files: Union[List[str], str] = None, logger: AmpelLogger = None):
-		""" """
+	def __init__(self,
+		files: Optional[Union[List[str], str]] = None,
+		logger: Optional[AmpelLogger] = None
+	) -> None:
+
 		self.logger = AmpelLogger.get_logger() if logger is None else logger
-		self.iter_files = None
-		self.files = []
+		self.files: List[str] = []
 
 		if files:
 			self.add_files(files)
 
 
 	def add_files(self, arg: Union[List[str], str]) -> None:
-		""" """
+
 		if isinstance(arg, str):
 			arg = [arg]
 
@@ -42,6 +43,5 @@ class FileAlertLoader:
 
 
 	def __next__(self) -> BytesIO:
-		""" """
 		with open(next(self.iter_files), "rb") as alert_file:
 			return BytesIO(alert_file.read())

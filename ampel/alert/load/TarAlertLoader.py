@@ -9,7 +9,7 @@
 
 import tarfile
 from typing import Optional, BinaryIO
-from ampel.logging.AmpelLogger import AmpelLogger
+from ampel.log.AmpelLogger import AmpelLogger
 
 
 class TarAlertLoader:

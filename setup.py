@@ -14,6 +14,10 @@ setup(
 	version='0.7',
 	packages=find_namespace_packages(),
 	package_data = {
-		  'conf': ['*.conf', '**/*.conf', '**/**/*.conf']
+		'conf': [
+			'*.json', '**/*.json', '**/**/*.json',
+			'*.yaml', '**/*.yaml', '**/**/*.yaml',
+			'*.yml', '**/*.yml', '**/**/*.yml'
+		]
 	}
 )

@@ -11,11 +11,11 @@ from extcats import CatalogQuery
 from pymongo import MongoClient
 from numpy import mean
 
-from ampel.abstract.AbsPhotoAlertFilter import AbsPhotoAlertFilter
+from ampel.abstract.AbsAlertFilter import AbsAlertFilter
+from ampel.alert.PhotoAlert import PhotoAlert
 
-class BasicCatalogFilter(AbsPhotoAlertFilter):
 
-	version = 0.1
+class BasicCatalogFilter(AbsAlertFilter[PhotoAlert]):
 
 	resources = ('extcats.reader', )
 

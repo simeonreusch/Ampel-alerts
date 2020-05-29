@@ -8,10 +8,11 @@
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 import operator
-from ampel.abstract.AbsPhotoAlertFilter import AbsPhotoAlertFilter
+from ampel.abstract.AbsAlertFilter import AbsAlertFilter
+from ampel.alert.PhotoAlert import PhotoAlert
 
 
-class BasicFilter(AbsPhotoAlertFilter):
+class BasicFilter(AbsAlertFilter[PhotoAlert]):
 
 	version = 1.0
 

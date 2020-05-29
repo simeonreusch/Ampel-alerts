@@ -1,129 +1,305 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# File              : Ampel-alerts/ampel/alert/APFilter.py
+# File              : Ampel-alerts/ampel/alert/FilterBlock.py
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 03.05.2018
-# Last Modified Date: 30.01.2020
+# Last Modified Date: 27.05.2020
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
-from ampel.db.AmpelDB import AmpelDB
-from ampel.model.APChanModel import APChanModel
-from ampel.core.AmpelUnitLoader import AmpelUnitLoader
+from logging import LogRecord
+from typing import Any, Union, Optional, Tuple, Dict, Callable, cast
+from ampel.type import ChannelId
+from ampel.alert.AmpelAlert import AmpelAlert
+from ampel.alert.IngestionHandler import IngestionHandler
+from ampel.core.AmpelContext import AmpelContext
+from ampel.model.AlertProcessingModel import FilterModel, AliasedFilterModel
+from ampel.log.AmpelLogger import AmpelLogger
+from ampel.log.handlers.EnclosedChanRecordBufHandler import EnclosedChanRecordBufHandler
+from ampel.log.handlers.ChanRecordBufHandler import ChanRecordBufHandler
+from ampel.log.handlers.LoggingHandlerProtocol import LoggingHandlerProtocol
+from ampel.log.LighterLogRecord import LighterLogRecord
+from ampel.log.LogRecordFlag import LogRecordFlag
+from ampel.abstract.AbsAlertFilter import AbsAlertFilter
+from ampel.abstract.AbsAlertRegister import AbsAlertRegister
+from ampel.model.AutoStockMatchModel import AutoStockMatchModel
 
-from ampel.logging.AmpelLogger import AmpelLogger
-from ampel.logging.DBRejectedLogsSaver import DBRejectedLogsSaver
-from ampel.logging.T0RejConsoleFormatter import T0RejConsoleFormatter
-from ampel.logging.RecordsBufferingHandler import RecordsBufferingHandler
+
+def no_filter(alert: Any) -> bool:
+	return True
 
 
-class APFilter:
+class FilterBlock:
 	"""
-	Helper class for the AlertProcessor.
-	It instantiates and references loggers, T0 filter and the list of T2 tickets to be created
-	A better class name is welcome.
-
-	A note regarding logging:
-	AmpelLogger can be setup with a default 'extra' parameter (with a channel for example),
-	which is convenient when passing a logger to a contrib unit whose data originates for known channels.
-	It is used at the T3 level for example.
-
-	At the T0 level however, the majority of alerts do not pass the filters and the produced log entries
-	go into a dedicated db collection named after the channel name.
-	Therefore, a 'channels' property does not need to be added to the log entries.
-
-	We could add the 'channels' property to the logger anyway and remove it later in DBRejectedLogsSaver,
-	but better is not to add it at all.
-
-	So we optimize logging for the most frequent case by doing the following:
-
-	1) For accepted alerts:
-	For the few times where we accept an alert, we add 'channels' to the parameter 'extra' of
-	log entries before passing them to the DBLoggingHandler. That's what the option
-	'channels' in RecordsBufferingHandler.copy() or RecordsBufferingHandler.forward() is for.
-
-	2) For rejected alerts:
-	Nothing should be done except (possibly) when full_console_logging=True in the AlertProcessor
-	(which is not the case in production): no channel info appears in the console logs
-	since channel info is not included by default.
-	To make the console output consistent between rejected and accepted alerts, we can artificially
-	add the channel info to log entries outputed to the console. It is done in T0RejConsoleFormatter
-	(variable 'implicit_channels'). Again, on production, the T0RejConsoleFormatter of each Channel
-	(this class) is not used because full_console_logging is False.
-
-	Second Note: T0 filter units get a dedicated logger associated with a RecordBufferingHandler because
-	we route the produced logs either to the standard logger or to the "rejected logger" depending
-	whether the alert is accepeted or not.
+	Helper class for AlertProcessor.
+	Among other things, it instantiates and references loggers and T0 filters.
+	Note: T0 filter units get a dedicated logger which is associated with a
+	RecordBufferingHandler instance because we route the produced logs either to the standard logger
+	or to the "rejected logger/dumper" depending whether the alert is accepted or not.
 	"""
+
+	__slots__ = '__dict__', 'logger', 'channel', 'context', \
+		'retro_complete', 'chan_str', 'count_matches', 'count_rej', \
+		'min_log_msg', 'filter_func', 'count_ac', 'ac', 'overrule', \
+		'bypass', 'update_rej', 'rej_log_handler', 'rej_log_handle', 'file', \
+		'log', 'ap_log_flag', 'forward', 'buffer', 'buf_hdlr', 'stock_ids'
+
 
 	def __init__(self,
-		ampel_db: AmpelDB, ampel_unit_loader: AmpelUnitLoader, ap_chan_data: APChanModel,
-		parent_logger: AmpelLogger, log_line_nbr: bool = False,
-		embed: bool = False, single_rej_col: bool = False
-	):
-		"""
-		:param bool single_rej_col:
-		- False: rejected logs are saved in channel specific collections
-		 (collection name equals channel name)
-		- True: rejected logs are saved in a single collection called 'logs'
-		"""
+		context: AmpelContext,
+		channel: ChannelId,
+		filter_model: Union[FilterModel, AliasedFilterModel],
+		stock_match: Optional[AutoStockMatchModel],
+		logger: AmpelLogger,
+		run_type: int,
+		embed: bool = False
+	) -> None:
 
-		# Channel name (ex: HU_SN, 1)
-		self.channel = ap_chan_data.name
-		self.chan_str = str(self.channel) if isinstance(self.channel, int) else self.channel
-		self.auto_complete = ap_chan_data.auto_complete
+		self._stock_col = context.db.get_collection('stock')
+		self.filter_model = filter_model
+		self.context = context
+
+		# Channel name (ex: HU_SN or 1)
+		self.channel = channel
+		self.chan_str = str(self.channel)
+
+		# Minimal log entry in case filter does not log anything
+		self.min_log_msg: Optional[Dict[str, ChannelId]] = {'c': self.channel} if embed else None
+		self.ap_log_flag: int = (LogRecordFlag.UNIT | LogRecordFlag.CORE | LogRecordFlag.INFO).__int__()
 
 		# Create channel (buffering) logger
-		self.logger = AmpelLogger("buf_" + self.chan_str)
-		self.rec_buf_hdlr = RecordsBufferingHandler(embed)
-		self.logger.addHandler(self.rec_buf_hdlr)
+		buf_logger = context.get_logger(name="buf_" + self.chan_str, level=LogRecordFlag.UNIT)
+		self.buf_hdlr = EnclosedChanRecordBufHandler(self.channel) if embed else ChanRecordBufHandler(self.channel)
+		buf_logger.addHandler(self.buf_hdlr)
 
-		# Instantiate/get filter class associated with this channel
-		parent_logger.info(
-			f"Loading filter: {ap_chan_data.t0_add.unit.class_name}"
-		)
+		if filter_model:
 
-		unit_class = ampel_unit_loader.get_class(ap_chan_data.t0_add.unit)
+			# Instantiate/get filter class associated with this channel
+			logger.info(f"Loading filter: {filter_model.unit}")
 
-		self.t2_units = {
-			el.class_name for el in ap_chan_data.t0_add.t2_compute
-		}
+			self.unit_instance = context.loader.new_base_unit(
+				model=filter_model, logger=buf_logger, sub_type=AbsAlertFilter
+			)
 
-		init_config = ampel_unit_loader.get_init_config(
-			ap_chan_data.t0_add.unit, unit_class
-		)
+			self.filter_func = self.unit_instance.apply
 
-		init_config.on_match_t2_units = self.t2_units
+			self.overrule = False
+			self.bypass = False
+			self.retro_complete = False
+			self.update_rej = True
 
-		self.filter_func = \
-			unit_class(
-				self.logger, init_config,
-				ampel_unit_loader.get_resources(
-					ap_chan_data.t0_add.unit, unit_class
-				)
-			) \
-			.apply
+			if stock_match:
+				if stock_match.filter == 'overrule':
+					self.overrule = True
+				elif stock_match.filter == 'bypass':
+					self.bypass = True
 
-		parent_logger.info(
-			f"On match t2 units: {self.t2_units}"
-		)
+				self.retro_complete = stock_match.retro_complete
+				self.update_rej = stock_match.update_rej
+
+			self.ac = self.bypass or self.overrule
+		else:
+			self.filter_func = no_filter
 
 		# Clear possibly existing log entries
-		# (logged by FilterClass__init__) to parent_logger
-		self.rec_buf_hdlr.buffer = []
+		# (logged by filter post_init method)
+		self.buf_hdlr.buffer = []
+		self.forward = self.buf_hdlr.forward # type: ignore
+		self.buffer = self.buf_hdlr.buffer
 
-		self.rejected_logger = AmpelLogger.get_logger(
-			name = self.chan_str + "_rej",
-			formatter = T0RejConsoleFormatter(
-				line_number = log_line_nbr,
-				implicit_channels = self.channel
-			)
-		)
+		self.rej_log_handle: Optional[Callable[[Union[LighterLogRecord, LogRecord]], None]] = None
+		self.rej_log_handler: Optional[LoggingHandlerProtocol] = None
+		self.file: Optional[Callable[[AmpelAlert, Optional[int]], None]] = None
+		self.register: Optional[AbsAlertRegister] = None
 
-		self.rejected_log_handler = DBRejectedLogsSaver(
-			ampel_db, self.chan_str, parent_logger, single_rej_col
-		)
 
-		self.rejected_logger.addHandler(
-			self.rejected_log_handler
-		)
+	def filter(self, alert: AmpelAlert) -> Optional[Tuple[ChannelId, Union[int, bool]]]:
+
+		stock_id = alert.stock_id
+
+		if self.bypass and stock_id in self.stock_ids:
+			return self.channel, True
+
+		# Apply filter (returns None/False in case of rejection or True/int in case of match)
+		res = self.filter_func(alert)
+
+		# Filter accepted alert
+		if res:
+
+			self.count_matches += 1
+
+			# Write log entries to main logger
+			# (note: log records already contain chan info)
+			if self.buffer:
+				self.forward(
+					self.logger, stock=stock_id, extra={'alert': alert.id}
+				)
+
+			# Log minimal entry if channel did not log anything
+			else:
+				if self.min_log_msg: # embed is True
+					if isinstance(res, bool):
+						self.log(self.ap_log_flag, self.min_log_msg, stock=stock_id, extra={'a': alert.id})
+					else:
+						self.log(self.ap_log_flag, {'c': self.channel, 'g': res}, stock=stock_id, extra={'a': alert.id})
+				else:
+					self.log(
+						self.ap_log_flag, None, channel=self.channel, stock=stock_id, extra={'a': alert.id}
+					)
+
+			# self.ac contains all "kinds" of auto-complete
+			if self.ac:
+				if alert.is_new(): # Just update stock ids for new alerts
+					self.stock_ids.add(stock_id)
+				elif stock_id not in self.stock_ids:
+					self.stock_ids.add(stock_id)
+					# "accept" ac requires backward/retro processing of
+					# alert content (see further below in the ingestion part)
+					if self.retro_complete:
+						self.ih.retro_complete.append(self.channel)
+
+			return self.channel, res
+
+		# Filter rejected alert
+		else:
+
+			self.count_rej += 1
+
+			# "live" autocomplete requested for this channel
+			if self.overrule and stock_id in self.stock_ids:
+
+				extra_ac = {'a': alert.id, 'ac': True}
+
+				# Main logger feedback
+				self.log(self.ap_log_flag, None, channel=self.channel, stock=stock_id, extra=extra_ac)
+
+				# Update count
+				self.count_ac += 1
+
+				# Rejected alerts notifications can go to rejected log collection
+				# even though it was "auto-completed" because it
+				# was actually rejected by the filter/channel
+				if self.update_rej:
+
+					if self.buffer:
+						if self.rej_log_handle:
+							# Clears the buffer
+							self.forward(self.rej_log_handler, stock=stock_id, extra=extra_ac)
+						else:
+							self.buffer.clear()
+
+					# Log minimal entry if channel did not log anything
+					else:
+						if self.rej_log_handle:
+							lrec = LighterLogRecord(0, 0, None)
+							lrec.stock = stock_id
+							lrec.extra = extra_ac
+							self.rej_log_handle(lrec)
+
+					if self.file:
+						self.file(alert, res)
+
+				# Use default t2 units as filter results
+				return self.channel, True
+
+			else:
+
+				if self.buffer:
+
+					# Save possibly existing error to 'main' logs
+					if self.buf_hdlr.has_error:
+						self.forward(
+							self.logger, stock=stock_id, extra={'alert': alert.id},
+							clear=not self.rej_log_handler
+						)
+
+					if self.rej_log_handler:
+						# Send rejected logs to dedicated separate logger/handler
+						self.forward(self.rej_log_handler, stock=stock_id, extra={'alert': alert.id})
+
+				if self.file:
+					self.file(alert, res)
+
+				return None
+
+
+	def ready(self, logger: AmpelLogger, run_id: int, ingestion_handler: IngestionHandler) -> None:
+		"""
+		Dependending on the channel settings, this method might:
+		- Builds set of transient ids for "auto complete"
+		- open an alert register for rejected alerts.
+		- instantiate a logging handler for rejected logs
+		"""
+
+		self.count_matches = 0
+		self.count_rej = 0
+		self.count_ac = 0
+
+		self.logger = logger
+		self.log = logger.log
+
+		if self.retro_complete:
+			self.ih = ingestion_handler
+
+		#if self.auto_accept or self.retro_complete:
+		if self.ac:
+
+			# Build set of transient ids for this channel
+			self.stock_ids = {
+				el['_id'] for el in self._stock_col.find(
+					{'channel': self.channel},
+					{'_id': 1}
+				)
+			}
+
+		if self.filter_model.reject:
+
+			if 'log' in self.filter_model.reject:
+
+				# DBRejectedLogsHandler for example
+				self.rej_log_handler = cast(
+					LoggingHandlerProtocol,
+					self.context.loader.new_admin_unit(
+						model = self.filter_model.reject['log'],
+						context = self.context,
+						channel = self.channel,
+						logger = logger
+					)
+				)
+
+				if not isinstance(self.rej_log_handler, LoggingHandlerProtocol):
+					raise ValueError(
+						f"Unit must comply with ampel.log.handler.LoggingHandlerProtocol. "
+						f"Offending model:\n {self.filter_model.reject['log']}"
+					)
+
+				self.rej_log_handler.set_run_id(run_id) # type: ignore
+				self.rej_log_handle = self.rej_log_handler.handle
+
+			if 'register' in self.filter_model.reject:
+
+				self.register = self.context.loader.new_admin_unit(
+					model = self.filter_model.reject['register'],
+					context = self.context,
+					sub_type = AbsAlertRegister,
+					logger = logger,
+					channel = self.channel,
+					run_id = run_id
+				)
+
+				self.file = self.register.file
+
+
+	def done(self) -> None:
+
+		self.ih = None # type: ignore[assignment]
+
+		if self.filter_model.reject:
+
+			if self.rej_log_handler:
+				self.rej_log_handler.flush()
+				self.rej_log_handler = None
+
+			if self.register:
+				self.register.close()
+				self.register = None

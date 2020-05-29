@@ -1,0 +1,6 @@
+unit:
+  admin: ["ampel.alert.AlertProcessor"]
+  aux: [
+    "ampel.alert.FilteringAlertSupplier",
+    "ampel.dev.UnitTestAlertSupplier"
+  ]

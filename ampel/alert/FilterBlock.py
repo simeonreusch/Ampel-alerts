@@ -13,7 +13,7 @@ from ampel.type import ChannelId
 from ampel.alert.AmpelAlert import AmpelAlert
 from ampel.alert.IngestionHandler import IngestionHandler
 from ampel.core.AmpelContext import AmpelContext
-from ampel.model.AlertProcessingModel import FilterModel, AliasedFilterModel
+from ampel.model.AlertProcessorDirective import FilterModel, AliasedFilterModel
 from ampel.log.AmpelLogger import AmpelLogger
 from ampel.log.handlers.EnclosedChanRecordBufHandler import EnclosedChanRecordBufHandler
 from ampel.log.handlers.ChanRecordBufHandler import ChanRecordBufHandler
@@ -72,21 +72,22 @@ class FilterBlock:
 		self.buf_hdlr = EnclosedChanRecordBufHandler(self.channel) if embed else ChanRecordBufHandler(self.channel)
 		buf_logger.addHandler(self.buf_hdlr)
 
+		self.overrule = False
+		self.bypass = False
+		self.retro_complete = False
+		self.update_rej = True
+		self.ac = False
+
 		if filter_model:
 
 			# Instantiate/get filter class associated with this channel
 			logger.info(f"Loading filter: {filter_model.unit}")
 
 			self.unit_instance = context.loader.new_base_unit(
-				model=filter_model, logger=buf_logger, sub_type=AbsAlertFilter
+				unit_model=filter_model, logger=buf_logger, sub_type=AbsAlertFilter
 			)
 
 			self.filter_func = self.unit_instance.apply
-
-			self.overrule = False
-			self.bypass = False
-			self.retro_complete = False
-			self.update_rej = True
 
 			if stock_match:
 				if stock_match.filter == 'overrule':
@@ -252,7 +253,7 @@ class FilterBlock:
 				)
 			}
 
-		if self.filter_model.reject:
+		if self.filter_model and self.filter_model.reject:
 
 			if 'log' in self.filter_model.reject:
 
@@ -260,7 +261,7 @@ class FilterBlock:
 				self.rej_log_handler = cast(
 					LoggingHandlerProtocol,
 					self.context.loader.new_admin_unit(
-						model = self.filter_model.reject['log'],
+						unit_model = self.filter_model.reject['log'],
 						context = self.context,
 						channel = self.channel,
 						logger = logger
@@ -279,7 +280,7 @@ class FilterBlock:
 			if 'register' in self.filter_model.reject:
 
 				self.register = self.context.loader.new_admin_unit(
-					model = self.filter_model.reject['register'],
+					unit_model = self.filter_model.reject['register'],
 					context = self.context,
 					sub_type = AbsAlertRegister,
 					logger = logger,
@@ -294,7 +295,7 @@ class FilterBlock:
 
 		self.ih = None # type: ignore[assignment]
 
-		if self.filter_model.reject:
+		if self.filter_model and self.filter_model.reject:
 
 			if self.rej_log_handler:
 				self.rej_log_handler.flush()

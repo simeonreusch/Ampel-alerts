@@ -36,7 +36,7 @@ from ampel.log.handlers.DBLoggingHandler import DBLoggingHandler
 from ampel.log.AmpelLoggingError import AmpelLoggingError
 
 from ampel.model.PlainUnitModel import PlainUnitModel
-from ampel.model.AlertProcessingModel import AlertProcessingModel
+from ampel.model.AlertProcessorDirective import AlertProcessorDirective
 
 CONNECTIVITY = 1
 INTERRUPTED = 2
@@ -56,15 +56,16 @@ class AlertProcessor(Generic[T], AbsRunnable):
 	- mongo: include t0 metrics in the process event document which is written into the DB
 	:param iter_max: main loop (in method run()) will stop processing alerts when this limit is reached
 	:param error_max: main loop (in method run()) will stop processing alerts when this limit is reached
-	:param directives: mandatory alert processor directives (AlertProcessingModel). This parameter will
+	:param directives: mandatory alert processor directives (AlertProcessorDirective). This parameter will
 	determine how the underlying FilterBlocksHandler and IngestionHandler instances are set up.
 	:param db_log_format: see `ampel.alert.FilterBlocksHandler.FilterBlocksHandler` docstring
-	:param log_profile: log profile key as defined in the ampel conf (ex: 'standard', 'quiet', 'silent')
 	:param supplier: alert supplier, no time explain more currently
-	:param run_type: LogRecordFlag.SCHEDULED_RUN or LogRecordFlag.MANUAL_RUN
-	:param db_logging_handler_kwargs: optional kwargs to be passed to the DBLoggingHandler constructor.
-	:param raise_exc: whether the AP should raise Exceptions rather than catching them (default False)
 	:param verbose: 1 -> verbose mode, 2 -> debug mode
+
+	:param logger_profile: See AbsRunnable docstring
+	:param db_logging_handler_kwargs: See AbsRunnable docstring
+	:param log_flag: See AbsRunnable docstring
+	:param raise_exc: See AbsRunnable docstring (default False)
 
 	Potential update: maybe allow an alternative way of initialization for this class
 	through direct input of (possibly customized, that is the point) FilterBlocksHandler and
@@ -74,17 +75,11 @@ class AlertProcessor(Generic[T], AbsRunnable):
 	# General options
 	iter_max: int = 50000
 	error_max: int = 20
-	directives: Sequence[AlertProcessingModel]
+	directives: Sequence[AlertProcessorDirective]
 	publish_stats: Sequence[str] = 'graphite', 'mongo'
-	log_profile: str = "default"
 	db_log_format: str = "standard"
 	single_rej_col: bool = False
 	supplier: Optional[Union[AbsAlertSupplier, PlainUnitModel, str]]
-	db_logging_handler_kwargs: Dict[str, Any] = {}
-
-	# Run time options
-	raise_exc: bool = False
-	run_type: LogRecordFlag = LogRecordFlag.SCHEDULED_RUN
 
 
 	@classmethod
@@ -121,8 +116,8 @@ class AlertProcessor(Generic[T], AbsRunnable):
 		super().__init__(**kwargs)
 
 		self._ampel_db = self.context.get_database()
-		self.log_flag: int = (LogRecordFlag.T0 | LogRecordFlag.CORE | self.run_type).__int__()
-		logger = self.context.get_unique_logger(level = self.log_flag)
+		self.log_flag = LogRecordFlag.T0 | LogRecordFlag.CORE | self.log_flag
+		logger = self.context.get_unique_logger(level=self.log_flag.__int__())
 
 		if self.supplier:
 			if isinstance(self.supplier, AbsAlertSupplier):
@@ -131,7 +126,7 @@ class AlertProcessor(Generic[T], AbsRunnable):
 				if isinstance(self.supplier, str):
 					self.supplier = PlainUnitModel(unit=self.supplier)
 				self.alert_supplier = UnitLoader.new_aux_unit(
-					model = self.supplier, sub_type = AbsAlertSupplier
+					unit_model = self.supplier, sub_type = AbsAlertSupplier
 				)
 		else:
 			self.alert_supplier = None # type: ignore[assignment]
@@ -142,7 +137,7 @@ class AlertProcessor(Generic[T], AbsRunnable):
 		# Load filter blocks
 		self._fbh = FilterBlocksHandler(
 			self.context, logger, self.directives,
-			self.db_log_format, self.run_type
+			self.db_log_format, self.log_flag
 		)
 
 		if self.verbose:
@@ -239,7 +234,10 @@ class AlertProcessor(Generic[T], AbsRunnable):
 		# Save current time to later evaluate processing time
 		run_start = time()
 
-		logger = self.context.get_unique_logger(level=self.log_flag, profile=self.log_profile)
+		logger = self.context.get_unique_logger(
+			level=self.log_flag.__int__(), profile=self.logger_profile
+		)
+
 		if self.verbose:
 			logger.verbose("Pre-run setup")
 

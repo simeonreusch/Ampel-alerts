@@ -27,7 +27,7 @@ from ampel.log.LogsBufferDict import LogsBufferDict
 from ampel.log.LogRecordFlag import LogRecordFlag
 from ampel.log.LogUtils import LogUtils
 from ampel.model.PlainUnitModel import PlainUnitModel
-from ampel.model.AlertProcessingModel import AlertProcessingModel
+from ampel.model.AlertProcessorDirective import AlertProcessorDirective
 
 
 class IngestionHandler:
@@ -49,7 +49,7 @@ class IngestionHandler:
 
 	def __init__(self,
 		context: AmpelContext,
-		directives: Sequence[AlertProcessingModel],
+		directives: Sequence[AlertProcessorDirective],
 		updates_buffer: DBUpdatesBuffer,
 		logger: AmpelLogger,
 		run_id: int,
@@ -87,7 +87,7 @@ class IngestionHandler:
 
 
 	def setup_ingesters(self,
-		context: AmpelContext, directive: AlertProcessingModel,
+		context: AmpelContext, directive: AlertProcessorDirective,
 		logger: AmpelLogger, **kwargs
 	) -> None:
 		"""
@@ -100,7 +100,7 @@ class IngestionHandler:
 		# An AP can for now only have a unique datapoint ingester
 		if not hasattr(self, 'datapoint_ingester'):
 			self.datapoint_ingester = context.loader.new_admin_unit(
-				model = t0_add,
+				unit_model = t0_add,
 				context = context,
 				sub_type = AbsAlertContentIngester,
 				**kwargs
@@ -109,7 +109,7 @@ class IngestionHandler:
 		# An AP can for now only have a unique stock ingester
 		if not hasattr(self, 'stock_ingester'):
 			self.stock_ingester = context.loader.new_admin_unit(
-				model = directive.stock_update,
+				unit_model = directive.stock_update, # type: ignore[arg-type]
 				context = context,
 				sub_type = AbsStockIngester,
 				**kwargs
@@ -185,7 +185,7 @@ class IngestionHandler:
 
 	def _get_ingester(self,
 		context: AmpelContext, model: PlainUnitModel, sub_type: Type[PT],
-		it: Iterable, parent_model: AlertProcessingModel, logger: AmpelLogger, **kwargs
+		it: Iterable, parent_model: AlertProcessorDirective, logger: AmpelLogger, **kwargs
 	) -> PT:
 		"""
 		Method used internally to instantiate ingesters.
@@ -228,7 +228,7 @@ class IngestionHandler:
 
 		# Spawn new instance
 		ingester = context.loader.new_admin_unit(
-			model = model,
+			unit_model = model,
 			context = context,
 			sub_type = sub_type,
 			**kwargs

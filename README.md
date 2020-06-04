@@ -5,7 +5,7 @@
 
 <br><br>
 
-This add-on enables the processing of so-called `alerts` by *AMPEL*.
+This add-on enables the processing of `alerts` by AMPEL.
 The central class of this repository, `ampel.alert.AlertProcessor`,
 is capable of `loading`, `filtering`, `ingesting` these alerts.
 

@@ -39,7 +39,7 @@ class FilteringAlertSupplier(AbsAlertSupplier[T]):
 	def __init__(self, **kwargs) -> None:
 		super().__init__(**kwargs)
 		self.underlying_alert_supplier: AbsAlertSupplier[T] = UnitLoader.new_aux_unit(
-			model = self.supplier, sub_type = AbsAlertSupplier
+			unit_model = self.supplier, sub_type = AbsAlertSupplier
 		)
 
 

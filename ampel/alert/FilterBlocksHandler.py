@@ -13,7 +13,7 @@ from ampel.alert.FilterBlock import FilterBlock
 from ampel.alert.IngestionHandler import IngestionHandler
 from ampel.log.AmpelLogger import AmpelLogger
 from ampel.log.LogRecordFlag import LogRecordFlag
-from ampel.model.AlertProcessingModel import AlertProcessingModel
+from ampel.model.AlertProcessorDirective import AlertProcessorDirective
 
 
 class FilterBlocksHandler:
@@ -71,7 +71,7 @@ class FilterBlocksHandler:
 
 	def __init__(self,
 		context: AmpelContext, logger: AmpelLogger,
-		directives: Sequence[AlertProcessingModel],
+		directives: Sequence[AlertProcessorDirective],
 		db_log_format: str = "standard",
 		run_type: LogRecordFlag = LogRecordFlag.SCHEDULED_RUN
 	) -> None:

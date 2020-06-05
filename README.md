@@ -15,8 +15,8 @@ High-throughput systems, such as ZTF or LSST in astronomy, rely on such filters.
 - The `ingestion` is the step where the content of alerts is saved into the AMPEL database, possibly along with different other documents which can be created according to pre-defined directives.
 
 <p align="center">
+  <img src="https://desycloud.desy.de/index.php/s/fiLRCFZtbTkeCtj/preview" width="40%" />
   <img src="https://desycloud.desy.de/index.php/s/EBacs5bbApzpwDr/preview" width="40%" />  
-  <img src="https://desycloud.desy.de/index.php/s/q6F6gxirsqBecsz/preview" width="40%" />  
 </p>
 
 <p align="center">

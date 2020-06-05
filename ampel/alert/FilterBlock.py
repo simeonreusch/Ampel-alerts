@@ -4,7 +4,7 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 03.05.2018
-# Last Modified Date: 27.05.2020
+# Last Modified Date: 04.06.2020
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 from logging import LogRecord
@@ -48,7 +48,7 @@ class FilterBlock:
 	def __init__(self,
 		context: AmpelContext,
 		channel: ChannelId,
-		filter_model: Union[FilterModel, AliasedFilterModel],
+		filter_model: Optional[Union[FilterModel, AliasedFilterModel]],
 		stock_match: Optional[AutoStockMatchModel],
 		logger: AmpelLogger,
 		run_type: int,

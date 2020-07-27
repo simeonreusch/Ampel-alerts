@@ -19,23 +19,20 @@ from ampel.type import ChannelId
 from ampel.core.AmpelContext import AmpelContext
 from ampel.core.UnitLoader import UnitLoader
 from ampel.util.mappings import merge_dict
-from ampel.util.Freeze import Freeze
+from ampel.util.freeze import recursive_unfreeze
 from ampel.metrics.GraphiteFeeder import GraphiteFeeder
 from ampel.db.DBUpdatesBuffer import DBUpdatesBuffer
 from ampel.alert.FilterBlocksHandler import FilterBlocksHandler
 from ampel.alert.IngestionHandler import IngestionHandler
 
-from ampel.abstract.AbsRunnable import AbsRunnable
+from ampel.abstract.AbsProcessorUnit import AbsProcessorUnit
 from ampel.abstract.AbsAlertSupplier import AbsAlertSupplier, T
 
-from ampel.log.AmpelLogger import AmpelLogger
-from ampel.log.LogRecordFlag import LogRecordFlag
-from ampel.log.LogUtils import LogUtils
-from ampel.log.DBEventDoc import DBEventDoc
-from ampel.log.handlers.DBLoggingHandler import DBLoggingHandler
+from ampel.log import AmpelLogger, LogRecordFlag, DBEventDoc, VERBOSE
+from ampel.log.utils import report_exception
 from ampel.log.AmpelLoggingError import AmpelLoggingError
 
-from ampel.model.PlainUnitModel import PlainUnitModel
+from ampel.model.UnitModel import UnitModel
 from ampel.model.AlertProcessorDirective import AlertProcessorDirective
 
 CONNECTIVITY = 1
@@ -43,7 +40,7 @@ INTERRUPTED = 2
 TOO_MANY_ERRORS = 3
 
 
-class AlertProcessor(Generic[T], AbsRunnable):
+class AlertProcessor(Generic[T], AbsProcessorUnit):
 	"""
 	Class handling the processing of alerts (T0 level).
 	For each alert, following tasks are performed:
@@ -60,12 +57,11 @@ class AlertProcessor(Generic[T], AbsRunnable):
 	determine how the underlying FilterBlocksHandler and IngestionHandler instances are set up.
 	:param db_log_format: see `ampel.alert.FilterBlocksHandler.FilterBlocksHandler` docstring
 	:param supplier: alert supplier, no time explain more currently
-	:param verbose: 1 -> verbose mode, 2 -> debug mode
 
-	:param logger_profile: See AbsRunnable docstring
-	:param db_logging_handler_kwargs: See AbsRunnable docstring
-	:param log_flag: See AbsRunnable docstring
-	:param raise_exc: See AbsRunnable docstring (default False)
+	:param log_profile: See AbsProcessorUnit docstring
+	:param db_handler_kwargs: See AbsProcessorUnit docstring
+	:param base_log_flag: See AbsProcessorUnit docstring
+	:param raise_exc: See AbsProcessorUnit docstring (default False)
 
 	Potential update: maybe allow an alternative way of initialization for this class
 	through direct input of (possibly customized, that is the point) FilterBlocksHandler and
@@ -79,7 +75,8 @@ class AlertProcessor(Generic[T], AbsRunnable):
 	publish_stats: Sequence[str] = 'graphite', 'mongo'
 	db_log_format: str = "standard"
 	single_rej_col: bool = False
-	supplier: Optional[Union[AbsAlertSupplier, PlainUnitModel, str]]
+	supplier: Optional[Union[AbsAlertSupplier, UnitModel, str]]
+	shout: int = LogRecordFlag.SHOUT
 
 
 	@classmethod
@@ -98,7 +95,7 @@ class AlertProcessor(Generic[T], AbsRunnable):
 			raise ValueError(f"process.{process_name}.processor.config is None")
 
 		if override:
-			args = Freeze.recursive_unfreeze(args) # type: ignore
+			args = recursive_unfreeze(args) # type: ignore
 			merge_dict(args, override)
 
 		return cls(context=context, **args)
@@ -116,31 +113,30 @@ class AlertProcessor(Generic[T], AbsRunnable):
 		super().__init__(**kwargs)
 
 		self._ampel_db = self.context.get_database()
-		self.log_flag = LogRecordFlag.T0 | LogRecordFlag.CORE | self.log_flag
-		logger = self.context.get_unique_logger(level=self.log_flag.__int__())
+		logger = AmpelLogger.get_logger()
+		verbose = AmpelLogger.has_verbose_console(self.context, self.log_profile)
 
 		if self.supplier:
 			if isinstance(self.supplier, AbsAlertSupplier):
 				self.alert_supplier: AbsAlertSupplier[T] = self.supplier
 			else:
 				if isinstance(self.supplier, str):
-					self.supplier = PlainUnitModel(unit=self.supplier)
+					self.supplier = UnitModel(unit=self.supplier)
 				self.alert_supplier = UnitLoader.new_aux_unit(
 					unit_model = self.supplier, sub_type = AbsAlertSupplier
 				)
 		else:
 			self.alert_supplier = None # type: ignore[assignment]
 
-		if self.verbose:
-			logger.verbose("AlertProcessor setup")
+		if verbose:
+			logger.log(VERBOSE, "AlertProcessor setup")
 
 		# Load filter blocks
 		self._fbh = FilterBlocksHandler(
-			self.context, logger, self.directives,
-			self.db_log_format, self.log_flag
+			self.context, logger, self.directives, self.db_log_format
 		)
 
-		if self.verbose:
+		if verbose:
 
 			gather_t2_units = lambda node: [el.unit for el in node.t2_compute.units] \
 				if node.t2_compute else []
@@ -164,7 +160,7 @@ class AlertProcessor(Generic[T], AbsRunnable):
 				if model.t2_compute:
 					t2_units += gather_t2_units(model)
 
-				logger.verbose(f"{model.channel} combined on match t2 units: {t2_units}")
+				logger.log(VERBOSE, f"{model.channel} combined on match t2 units: {t2_units}")
 
 		# Graphite
 		if "graphite" in self.publish_stats:
@@ -184,16 +180,22 @@ class AlertProcessor(Generic[T], AbsRunnable):
 		self._cancel_run = INTERRUPTED
 
 
-	def set_supplier(self, alert_supplier: AbsAlertSupplier[T]) -> None:
+	def set_iter_max(self, iter_max: int) -> 'AlertProcessor':
+		self.iter_max = iter_max
+		return self
+
+
+	def set_supplier(self, alert_supplier: AbsAlertSupplier[T]) -> 'AlertProcessor':
 		"""
 		Allows to set a custom alert supplier.
 		AlertSupplier instances provide AmpelAlert instances
 		and need to be sourced by an alert loader instance
 		"""
 		self.alert_supplier = alert_supplier
+		return self
 
 
-	def set_loader(self, alert_loader: Iterable) -> None:
+	def set_loader(self, alert_loader: Iterable) -> 'AlertProcessor':
 		"""
 		Source the current alert suplier with the provided alert loader.
 		AlertLoader instances typically provide file-like objects
@@ -202,6 +204,8 @@ class AlertProcessor(Generic[T], AbsRunnable):
 		if not self.alert_supplier:
 			raise ValueError("Please set alert supplier first")
 		self.alert_supplier.set_alert_source(alert_loader)
+
+		return self
 
 
 	def process_alerts(self, alert_loader: Iterable[IOBase]) -> None:
@@ -233,32 +237,30 @@ class AlertProcessor(Generic[T], AbsRunnable):
 
 		# Save current time to later evaluate processing time
 		run_start = time()
-
-		logger = self.context.get_unique_logger(
-			level=self.log_flag.__int__(), profile=self.logger_profile
-		)
-
-		if self.verbose:
-			logger.verbose("Pre-run setup")
+		run_id = self.new_run_id()
 
 		# Setup logging
 		###############
 
-		# DBLoggingHandler formats, saves and pushes log records into the DB
-		db_logging_handler = DBLoggingHandler(
-			self._ampel_db, auto_flush = False, **self.db_logging_handler_kwargs
+		logger = AmpelLogger.from_profile(
+			self.context, self.log_profile, run_id,
+			base_flag = LogRecordFlag.T0 | LogRecordFlag.CORE | self.base_log_flag
 		)
 
-		run_id = db_logging_handler.get_run_id()
+		if logger.verbose:
+			logger.log(VERBOSE, "Pre-run setup")
 
-		# Add db logging handler to the logger stack of handlers
-		logger.handlers.append(db_logging_handler)
+		# DBLoggingHandler formats, saves and pushes log records into the DB
+		if db_logging_handler := logger.get_db_logging_handler():
+			db_logging_handler.auto_flush = False
 
 		# Add new doc in the 'events' collection
-		event_doc = DBEventDoc(self._ampel_db, event_name="ap", tier=0)
-		event_doc.add_run_id(run_id)
+		event_doc = DBEventDoc(
+			self._ampel_db, process_name=self.process_name,
+			run_id=run_id, tier=0
+		)
 
-		# Collects and executes pymongo.operations
+		# Collects and executes pymongo.operations in collection Ampel_data
 		updates_buffer = DBUpdatesBuffer(
 			self._ampel_db, run_id, logger,
 			error_callback = self.set_cancel_run,
@@ -267,6 +269,9 @@ class AlertProcessor(Generic[T], AbsRunnable):
 
 		# Setup stats
 		#############
+
+		any_ac = any([fb.ac for fb in self._fbh.filter_blocks])
+		any_filter = any([fb.filter_model for fb in self._fbh.filter_blocks])
 
 		# Duration statistics
 		dur_stats: Dict[str, Any] = {
@@ -278,30 +283,39 @@ class AlertProcessor(Generic[T], AbsRunnable):
 			'dbPerOpMeanTimeStock': [],
 			'dbPerOpMeanTimeT0': [],
 			'dbPerOpMeanTimeT1': [],
-			'dbPerOpMeanTimeT2': [],
-			'allFilters': np.empty(self.iter_max),
-			'filters': {}
+			'dbPerOpMeanTimeT2': []
 		}
 
 		# Count statistics (incrementing integer values)
-		count_stats: Dict[str, Any] = {
-			'alerts': 0, 'matches': {'any': 0}, 'auto_complete': {'any': 0}
-		}
+		count_stats: Dict[str, Any] = {'alerts': 0}
 
-		dur_stats['allFilters'].fill(np.nan)
-		for fb in self._fbh.filter_blocks:
-			# dur_stats['filters'][fb.channel] records filter performances
-			# nan will remain only if exception occur for particular alerts
-			dur_stats['filters'][fb.channel] = np.empty(self.iter_max)
-			dur_stats['filters'][fb.channel].fill(np.nan)
-			count_stats['matches'][fb.channel] = 0
-			count_stats['auto_complete'][fb.channel] = 0
+		if any_ac:
+			count_stats['auto_complete'] = {'any': 0}
+
+		if any_filter:
+
+			count_stats['matches'] = {'any': 0}
+			dur_stats['filters'] = {}
+			dur_stats['allFilters'] = np.empty(self.iter_max)
+			dur_stats['allFilters'].fill(np.nan)
+
+			for fb in self._fbh.filter_blocks:
+				# dur_stats['filters'][fb.channel] records filter performances
+				# nan will remain only if exception occur for particular alerts
+				dur_stats['filters'][fb.channel] = np.empty(self.iter_max)
+				dur_stats['filters'][fb.channel].fill(np.nan)
+				count_stats['matches'][fb.channel] = 0
+				if any_ac:
+					count_stats['auto_complete'][fb.channel] = 0
+
+			# Loop variables
+			filter_stats = dur_stats['filters']
+			all_filters_stats = dur_stats['allFilters']
 
 
 		# Setup ingesters
 		ing_hdlr = IngestionHandler(
-			self.context, self.directives, updates_buffer,
-			logger, run_id, verbose = self.verbose
+			self.context, self.directives, updates_buffer, logger, run_id
 		)
 
 		# Loop variables
@@ -312,9 +326,11 @@ class AlertProcessor(Generic[T], AbsRunnable):
 		err = 0
 		reduced_chan_names = self._fbh.chan_names[0] if len(self._fbh.chan_names) == 1 else self._fbh.chan_names
 		fblocks = self._fbh.filter_blocks
-		filter_stats = dur_stats['filters']
-		all_filters_stats = dur_stats['allFilters']
-		filter_results: List[Tuple[ChannelId, Union[bool, int]]] = []
+
+		if any_filter:
+			filter_results: List[Tuple[ChannelId, Union[bool, int]]] = []
+		else:
+			filter_results = [(fb.channel, True) for fb in self._fbh.filter_blocks]
 
 		# Builds set of stock ids for autocomplete, if needed
 		self._fbh.ready(logger, run_id, ing_hdlr)
@@ -327,8 +343,8 @@ class AlertProcessor(Generic[T], AbsRunnable):
 		# Process alerts
 		################
 
-		logger.shout(f"Processing alerts (run: {run_id})")
-		#logger.level -= LogRecordFlag.CORE
+		# The extra is just a feedback for the console stream handler
+		logger.log(self.shout, "Processing alerts", extra={'r': run_id})
 
 		with updates_buffer.run_in_thread():
 
@@ -344,60 +360,61 @@ class AlertProcessor(Generic[T], AbsRunnable):
 					else: # updates_buffer requested to stop processing
 						print("Abording run() procedure")
 
-					# Flush loggers (possible Exceptions handled by method)
-					self._conclude_logging(logger, iter_count, db_logging_handler)
-
+					logger.flush()
+					self._fbh.done()
 					return iter_count
 
 				# Associate upcoming log entries with the current transient id
 				stock_id = alert.stock_id
-
-				# stats
-				all_filters_start = time()
-
 				extra: Dict[str, Any] = {'alert': alert.id}
-				filter_results = []
 
-				# Loop through filter blocks
-				for fblock in fblocks:
+				if any_filter:
 
-					try:
+					# stats
+					all_filters_start = time()
 
-						# stats
-						per_filter_start = time()
+					filter_results = []
 
-						# Apply filter (returns None/False in case of rejection or True/int in case of match)
-						if res := fblock.filter(alert):
-							filter_results.append(res)
+					# Loop through filter blocks
+					for fblock in fblocks:
 
-						# stats
-						filter_stats[fblock.channel][iter_count] = time() - per_filter_start
+						try:
 
-					# Unrecoverable (logging related) errors
-					except (PyMongoError, AmpelLoggingError) as e:
-						print("%s: abording run() procedure" % e.__class__.__name__)
-						self._report_ap_error(e, logger, run_id, extra=extra)
-						raise e
+							# stats
+							per_filter_start = time()
 
-					# Possibly tolerable errors (could be an error from a contributed filter)
-					except Exception as e:
+							# Apply filter (returns None/False in case of rejection or True/int in case of match)
+							if res := fblock.filter(alert):
+								filter_results.append(res)
 
-						fblock.forward(db_logging_handler, stock=stock_id, extra=extra)
-						self._report_ap_error(
-							e, logger, run_id, extra={**extra, 'section': 'filter', 'channel': fblock.channel}
-						)
+							# stats
+							filter_stats[fblock.channel][iter_count] = time() - per_filter_start
 
-						if self.raise_exc:
+						# Unrecoverable (logging related) errors
+						except (PyMongoError, AmpelLoggingError) as e:
+							print("%s: abording run() procedure" % e.__class__.__name__)
+							self._report_ap_error(e, logger, run_id, extra=extra)
 							raise e
-						else:
-							if self.error_max:
-								err += 1
-							if err == self.error_max:
-								logger.error("Max number of error reached, breaking alert processing")
-								self.set_cancel_run(TOO_MANY_ERRORS)
 
-				# time required for all filters
-				all_filters_stats[iter_count] = time() - all_filters_start
+						# Possibly tolerable errors (could be an error from a contributed filter)
+						except Exception as e:
+
+							fblock.forward(db_logging_handler, stock=stock_id, extra=extra)
+							self._report_ap_error(
+								e, logger, run_id, extra={**extra, 'section': 'filter', 'channel': fblock.channel}
+							)
+
+							if self.raise_exc:
+								raise e
+							else:
+								if self.error_max:
+									err += 1
+								if err == self.error_max:
+									logger.error("Max number of error reached, breaking alert processing")
+									self.set_cancel_run(TOO_MANY_ERRORS)
+
+					# time required for all filters
+					all_filters_stats[iter_count] = time() - all_filters_start
 
 				if filter_results:
 
@@ -445,7 +462,8 @@ class AlertProcessor(Generic[T], AbsRunnable):
 						'allout': True,
 						'channel': reduced_chan_names
 					}
-					db_logging_handler.handle(lr)
+					if db_logging_handler:
+						db_logging_handler.handle(lr)
 
 				iter_count += 1
 
@@ -454,7 +472,8 @@ class AlertProcessor(Generic[T], AbsRunnable):
 					break
 
 				updates_buffer.check_push()
-				db_logging_handler.check_flush()
+				if db_logging_handler:
+					db_logging_handler.check_flush()
 
 		# Save post run time
 		post_run = time()
@@ -467,13 +486,15 @@ class AlertProcessor(Generic[T], AbsRunnable):
 
 				# include loop counts
 				count_stats['alerts'] = iter_count
-				count_stats['matches']['any'] = any_match
+
 				if alert_stats := self.alert_supplier.get_stats():
 					count_stats.update(alert_stats)
 				if t0_stats := ing_hdlr.datapoint_ingester.get_stats():
 					count_stats.update(t0_stats)
 				count_stats['dbop'] = updates_buffer.stats
-				count_stats['auto_complete']['any'] = auto_complete
+
+				if any_ac:
+					count_stats['auto_complete']['any'] = auto_complete
 
 				# Compute mean time & std dev in microseconds
 				#############################################
@@ -493,21 +514,26 @@ class AlertProcessor(Generic[T], AbsRunnable):
 								updates_buffer.metrics[key]
 							)
 
-				# per chan filter metrics
-				for key in self._fbh.chan_names:
-					dur_stats['filters'][key] = self._compute_stat(
-						dur_stats['filters'][key], mean=np.nanmean, std=np.nanstd
+				# Alert processing with filter
+				if any_filter:
+
+					count_stats['matches']['any'] = any_match
+
+					# per chan filter metrics
+					for key in self._fbh.chan_names:
+						dur_stats['filters'][key] = self._compute_stat(
+							dur_stats['filters'][key], mean=np.nanmean, std=np.nanstd
+						)
+
+					# all filters metric
+					dur_stats['allFilters'] = self._compute_stat(
+						dur_stats['allFilters'], mean=np.nanmean, std=np.nanstd
 					)
 
-				# all filters metric
-				dur_stats['allFilters'] = self._compute_stat(
-					dur_stats['allFilters'], mean=np.nanmean, std=np.nanstd
-				)
-
 				# Durations in seconds
-				dur_stats['apPreLoop'] = int(pre_run - run_start)
-				dur_stats['apMain'] = int(post_run - pre_run)
-				dur_stats['apPostLoop'] = int(time() - post_run)
+				dur_stats['preLoop'] = round(pre_run - run_start, 3)
+				dur_stats['main'] = round(post_run - pre_run, 3)
+				dur_stats['postLoop'] = round(time() - post_run, 3)
 
 				# Make sure all dict *keys* are str (and not int)
 				# otherwise, graphite/mongod will complain
@@ -528,32 +554,23 @@ class AlertProcessor(Generic[T], AbsRunnable):
 
 				# Publish metrics into document in collection 'events'
 				if "mongo" in self.publish_stats:
-					event_doc.set_event_info(
-						{
-							'metrics': {
-								"count": count_stats,
-								"duration": dur_stats
-							}
-						}
-					)
+					event_doc.add_extra(logger, metrics={"count": count_stats, "duration": dur_stats})
 
-			logger.shout(
-				f"Processing completed (time required: {int(time() - run_start)}s)"
+			logger.log(self.shout,
+				f"Processing completed (time required: {round(time() - run_start, 3)}s)"
 			)
 
 			# Flush loggers
-			self._conclude_logging(logger, iter_count, db_logging_handler)
+			logger.flush()
+			self._fbh.done()
 
-			event_doc.publish()
+			event_doc.update(logger)
 
 		except Exception as e:
 
 			# Try to insert doc into trouble collection (raises no exception)
 			# Possible exception will be logged out to console in any case
-			LogUtils.report_exception(
-				self._ampel_db, logger, tier=0, exc=e,
-				run_id=db_logging_handler.get_run_id()
-			)
+			report_exception(self._ampel_db, logger, exc=e)
 
 		# Return number of processed alerts
 		return iter_count
@@ -564,38 +581,6 @@ class AlertProcessor(Generic[T], AbsRunnable):
 		Cancels current processing of alerts (when DB becomes unresponsive for example).
 		"""
 		self._cancel_run = CONNECTIVITY
-
-
-	def _conclude_logging(self,
-		logger: AmpelLogger, iter_count: int, db_logging_handler: DBLoggingHandler
-	) -> None:
-		""" :raises: None """
-
-		try:
-
-			# Flush loggers
-			if iter_count > 0:
-
-				# Main logs logger. This can raise exceptions
-				db_logging_handler.flush()
-
-			else:
-				db_logging_handler.purge()
-
-			# If needed: close ampel registers, flush rejected logs
-			self._fbh.done()
-
-			# Remove DB logging handler
-			logger.removeHandler(db_logging_handler)
-
-		except Exception as e:
-
-			# Try to insert doc into trouble collection (raises no exception)
-			# Possible exception will be logged out to console in any case
-			LogUtils.report_exception(
-				self._ampel_db, logger, tier=0, exc=e,
-				run_id=db_logging_handler.get_run_id()
-			)
 
 
 	def _report_ap_error(self,
@@ -618,10 +603,7 @@ class AlertProcessor(Generic[T], AbsRunnable):
 
 		# Try to insert doc into trouble collection (raises no exception)
 		# Possible exception will be logged out to console in any case
-		LogUtils.report_exception(
-			self._ampel_db, logger, tier=0,
-			exc=arg_e, run_id=run_id, info=info
-		)
+		report_exception(self._ampel_db, logger, exc=arg_e, info=info)
 
 
 	@staticmethod

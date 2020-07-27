@@ -8,9 +8,9 @@
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 from typing import Literal
-from ampel.model.AmpelStrictModel import AmpelStrictModel
+from ampel.model.StrictModel import StrictModel
 
-class AutoStockMatchModel(AmpelStrictModel):
+class AutoStockMatchModel(StrictModel):
 	filter: Literal['bypass', 'overrule']
 	update_rej: bool = True
 	retro_complete: bool

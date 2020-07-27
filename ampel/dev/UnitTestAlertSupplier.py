@@ -19,7 +19,7 @@ class UnitTestAlertSupplier(AbsAlertSupplier[T]):
 	See AbsAlertSupplier docstring.
 	example:
 	UnitLoader.new_aux_unit(
-		PlainUnitModel(
+		UnitModel(
 			unit="FilteringAlertSupplier",
 			config={
 				"supplier": {"unit": "ZiAlertSupplier"},

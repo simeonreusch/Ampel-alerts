@@ -4,7 +4,7 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 01.05.2020
-# Last Modified Date: 01.05.2020
+# Last Modified Date: 13.06.2020
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 from time import time
@@ -22,11 +22,11 @@ from ampel.abstract.ingest.AbsStateT2Ingester import AbsStateT2Ingester
 from ampel.abstract.ingest.AbsAlertContentIngester import AbsAlertContentIngester
 from ampel.abstract.ingest.AbsPointT2Ingester import AbsPointT2Ingester
 from ampel.abstract.ingest.AbsStockIngester import AbsStockIngester
-from ampel.log.AmpelLogger import AmpelLogger
+from ampel.log import AmpelLogger, VERBOSE
+from ampel.log.utils import log_exception
 from ampel.log.LogsBufferDict import LogsBufferDict
 from ampel.log.LogRecordFlag import LogRecordFlag
-from ampel.log.LogUtils import LogUtils
-from ampel.model.PlainUnitModel import PlainUnitModel
+from ampel.model.UnitModel import UnitModel
 from ampel.model.AlertProcessorDirective import AlertProcessorDirective
 
 
@@ -52,8 +52,7 @@ class IngestionHandler:
 		directives: Sequence[AlertProcessorDirective],
 		updates_buffer: DBUpdatesBuffer,
 		logger: AmpelLogger,
-		run_id: int,
-		verbose: int = 0
+		run_id: int
 	):
 
 		self.updates_buffer = updates_buffer
@@ -73,11 +72,11 @@ class IngestionHandler:
 		for directive in directives:
 			self.setup_ingesters(
 				context, directive, logger, updates_buffer=updates_buffer,
-				logd=self.logd, run_id=run_id, verbose=verbose
+				logd=self.logd, run_id=run_id
 			)
 
-		if verbose:
-			logger.verbose(
+		if logger.verbose:
+			logger.log(VERBOSE,
 				f"Ingesters: datapoint: 1, stock: 1, "
 				f"compound: {len(self.state_t2_ingesters)}, "
 				f"t2_state: {sum(len(v) for v in self.state_t2_ingesters.values())}, "
@@ -184,7 +183,7 @@ class IngestionHandler:
 
 
 	def _get_ingester(self,
-		context: AmpelContext, model: PlainUnitModel, sub_type: Type[PT],
+		context: AmpelContext, model: UnitModel, sub_type: Type[PT],
 		it: Iterable, parent_model: AlertProcessorDirective, logger: AmpelLogger, **kwargs
 	) -> PT:
 		"""
@@ -198,30 +197,28 @@ class IngestionHandler:
 		"""
 
 		# Identifies ingesters using hashed unit id and config
-		md = build_unsafe_dict_id(
-			{"unit": model.unit, "config": model.config}, int
-		)
+		md = build_unsafe_dict_id({"unit": model.unit_name, "config": model.config}, int)
 
 		if ingester := next((el for el in it if el.hash == md), None):
 
-			if kwargs.get('verbose', 0) > 1:
+			if logger.verbose > 1:
 				logger.debug(
 					f"[{parent_model.channel}] Updating ingester with model {model} (hash={md})"
 				)
-			elif kwargs.get('verbose'):
-				logger.verbose(
+			elif logger.verbose:
+				logger.log(VERBOSE,
 					f"[{parent_model.channel}] Updating ingester with id ..{str(md)[-6:]}"
 				)
 
 			return ingester
 
-		if kwargs.get('debug', 0) > 1:
+		if logger.verbose > 1:
 			logger.debug(
 				f"[{parent_model.channel}] Creating new ingester with model {model} (hash={md})"
 			)
-		elif kwargs.get('verbose'):
-			logger.verbose(
-				f"[{parent_model.channel}] Creating new {model.unit} with id ..{str(md)[-6:]}"
+		elif logger.verbose:
+			logger.log(VERBOSE,
+				f"[{parent_model.channel}] Creating new {model.unit_name} with id ..{str(md)[-6:]}"
 			)
 
 		kwargs['hash'] = md
@@ -318,11 +315,11 @@ class IngestionHandler:
 
 						# Update transient journal
 						self.stock_ingester.ingest(
-							stock_id, filter_results, {'ac': True, 'alert': [alert.id, len(prev_det_sequences)]}
+							stock_id, filter_results, {'ac': True, 'alert': [alert.id, len(prev_datapoints)]}
 						)
 
 			except Exception as e:
-				LogUtils.log_exception(self.logger, e)
+				log_exception(self.logger, e)
 
 			finally:
 				self.retro_complete.clear()

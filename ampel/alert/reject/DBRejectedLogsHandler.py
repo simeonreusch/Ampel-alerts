@@ -18,10 +18,10 @@ from ampel.log.AmpelLogger import AmpelLogger
 from ampel.log.LighterLogRecord import LighterLogRecord
 from ampel.log.AmpelLoggingError import AmpelLoggingError
 from ampel.log.LoggingErrorReporter import LoggingErrorReporter
-from ampel.abstract.AbsAdminUnit import AbsAdminUnit
+from ampel.core.AdminUnit import AdminUnit
 
 
-class DBRejectedLogsHandler(AbsAdminUnit):
+class DBRejectedLogsHandler(AdminUnit):
 	"""
 	Saves rejected log events (by T0 filters) into the NoSQL database.
 	This class does not inherit logging.Handler but implements the method handle()

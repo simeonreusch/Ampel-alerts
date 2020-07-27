@@ -9,11 +9,11 @@
 
 from typing import Optional, Union, Generic
 from ampel.type import T
-from ampel.base import abstractmethod
-from ampel.abstract.AbsDataUnit import AbsDataUnit
+from ampel.base import abstractmethod, AmpelABC
+from ampel.base.DataUnit import DataUnit
 
 
-class AbsAlertFilter(Generic[T], AbsDataUnit, abstract=True):
+class AbsAlertFilter(Generic[T], AmpelABC, DataUnit, abstract=True):
 	""" Base class for T0 alert filters """
 
 	@abstractmethod

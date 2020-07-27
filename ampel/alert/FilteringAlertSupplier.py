@@ -11,7 +11,7 @@ from io import IOBase
 from typing import List, TypeVar, Dict, Any, Iterable
 from ampel.alert.AmpelAlert import AmpelAlert
 from ampel.abstract.AbsAlertSupplier import AbsAlertSupplier
-from ampel.model.PlainUnitModel import PlainUnitModel
+from ampel.model.UnitModel import UnitModel
 from ampel.core.UnitLoader import UnitLoader
 
 T = TypeVar("T", bound=AmpelAlert)
@@ -22,7 +22,7 @@ class FilteringAlertSupplier(AbsAlertSupplier[T]):
 	See AbsAlertSupplier docstring.
 	example:
 	UnitLoader.new_aux_unit(
-		PlainUnitModel(
+		UnitModel(
 			unit="FilteringAlertSupplier",
 			config={
 				"supplier": {"unit": "ZiAlertSupplier"},
@@ -32,7 +32,7 @@ class FilteringAlertSupplier(AbsAlertSupplier[T]):
 	)
 	"""
 
-	supplier: PlainUnitModel
+	supplier: UnitModel
 	match_ids: List[int]
 
 

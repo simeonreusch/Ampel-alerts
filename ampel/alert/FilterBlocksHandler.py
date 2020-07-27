@@ -4,7 +4,7 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 29.05.2020
-# Last Modified Date: 29.05.2020
+# Last Modified Date: 12.06.2020
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 from typing import Sequence
@@ -12,7 +12,6 @@ from ampel.core.AmpelContext import AmpelContext
 from ampel.alert.FilterBlock import FilterBlock
 from ampel.alert.IngestionHandler import IngestionHandler
 from ampel.log.AmpelLogger import AmpelLogger
-from ampel.log.LogRecordFlag import LogRecordFlag
 from ampel.model.AlertProcessorDirective import AlertProcessorDirective
 
 
@@ -72,8 +71,7 @@ class FilterBlocksHandler:
 	def __init__(self,
 		context: AmpelContext, logger: AmpelLogger,
 		directives: Sequence[AlertProcessorDirective],
-		db_log_format: str = "standard",
-		run_type: LogRecordFlag = LogRecordFlag.SCHEDULED_RUN
+		db_log_format: str = "standard"
 	) -> None:
 		"""
 		:raises: ValueError if no process can be loaded or if a process is
@@ -90,7 +88,6 @@ class FilterBlocksHandler:
 				filter_model = model.filter,
 				stock_match = model.stock_match,
 				logger = logger,
-				run_type = run_type,
 				embed = embed
 			)
 			for model in directives

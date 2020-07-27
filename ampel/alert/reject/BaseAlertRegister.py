@@ -11,6 +11,7 @@ from typing import BinaryIO, Optional, Literal, Dict, Any, List, Union, Generato
 from ampel.type import ChannelId
 from ampel.abstract.AbsAlertRegister import AbsAlertRegister
 from ampel.util.register import find, reg_iter
+from ampel.log import VERBOSE
 
 
 class BaseAlertRegister(AbsAlertRegister, abstract=True):
@@ -143,7 +144,7 @@ class BaseAlertRegister(AbsAlertRegister, abstract=True):
 			return
 
 		if self.verbose:
-			self.logger.verbose(f"Header updated with run_id {self.run_id}")
+			self.logger.log(VERBOSE, f"Header updated with run_id {self.run_id}")
 
 
 	def close(self, **kwargs) -> None: # type: ignore[override]

@@ -9,12 +9,12 @@
 
 from typing import Optional
 from ampel.base import abstractmethod
-from ampel.abstract.AbsAdminUnit import AbsAdminUnit
+from ampel.core.AdminUnit import AdminUnit
 from ampel.alert.AmpelAlert import AmpelAlert
 from ampel.core.AmpelRegister import AmpelRegister
 
 
-class AbsAlertRegister(AmpelRegister, AbsAdminUnit, abstract=True):
+class AbsAlertRegister(AmpelRegister, AdminUnit, abstract=True):
 	"""
 	Ensemble of classes used mainly for saving information regarding rejected alerts
 	"""

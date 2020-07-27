@@ -13,7 +13,7 @@ from typing import Iterable, Dict, Callable, Any, Literal, Generic, TypeVar, Uni
 from ampel.base import abstractmethod
 from ampel.alert.AmpelAlert import AmpelAlert
 from ampel.base.AmpelABC import AmpelABC
-from ampel.base.AmpelUnit import AmpelUnit
+from ampel.base.AmpelBaseModel import AmpelBaseModel
 
 T = TypeVar("T", bound=AmpelAlert)
 
@@ -25,7 +25,7 @@ def identity(self, arg: Dict) -> Dict:
 	return arg
 
 
-class AbsAlertSupplier(Generic[T], AmpelABC, AmpelUnit, abstract=True):
+class AbsAlertSupplier(Generic[T], AmpelABC, AmpelBaseModel, abstract=True):
 	"""
 	Iterable class that, for each alert payload provided by the underlying alert_loader,
 	returns an AmpelAlert (or sub-class of AmpelAlert such as PhotoAlert) instance.
@@ -42,7 +42,7 @@ class AbsAlertSupplier(Generic[T], AmpelABC, AmpelUnit, abstract=True):
 
 	def __init__(self, **kwargs) -> None:
 
-		AmpelUnit.__init__(self, **kwargs) # type: ignore[call-arg]
+		AmpelBaseModel.__init__(self, **kwargs) # type: ignore[call-arg]
 
 		if self.deserialize is None:
 			self.deserialize = identity # type: ignore[assignment]

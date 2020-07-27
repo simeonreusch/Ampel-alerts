@@ -4,7 +4,7 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 03.05.2018
-# Last Modified Date: 04.06.2020
+# Last Modified Date: 11.06.2020
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 from logging import LogRecord
@@ -13,8 +13,8 @@ from ampel.type import ChannelId
 from ampel.alert.AmpelAlert import AmpelAlert
 from ampel.alert.IngestionHandler import IngestionHandler
 from ampel.core.AmpelContext import AmpelContext
-from ampel.model.AlertProcessorDirective import FilterModel, AliasedFilterModel
-from ampel.log.AmpelLogger import AmpelLogger
+from ampel.model.AlertProcessorDirective import FilterModel
+from ampel.log.AmpelLogger import AmpelLogger, INFO
 from ampel.log.handlers.EnclosedChanRecordBufHandler import EnclosedChanRecordBufHandler
 from ampel.log.handlers.ChanRecordBufHandler import ChanRecordBufHandler
 from ampel.log.handlers.LoggingHandlerProtocol import LoggingHandlerProtocol
@@ -41,17 +41,16 @@ class FilterBlock:
 	__slots__ = '__dict__', 'logger', 'channel', 'context', \
 		'retro_complete', 'chan_str', 'count_matches', 'count_rej', \
 		'min_log_msg', 'filter_func', 'count_ac', 'ac', 'overrule', \
-		'bypass', 'update_rej', 'rej_log_handler', 'rej_log_handle', 'file', \
-		'log', 'ap_log_flag', 'forward', 'buffer', 'buf_hdlr', 'stock_ids'
+		'bypass', 'update_rej', 'rej_log_handler', 'rej_log_handle', \
+		'file', 'log', 'forward', 'buffer', 'buf_hdlr', 'stock_ids'
 
 
 	def __init__(self,
 		context: AmpelContext,
 		channel: ChannelId,
-		filter_model: Optional[Union[FilterModel, AliasedFilterModel]],
+		filter_model: Optional[FilterModel],
 		stock_match: Optional[AutoStockMatchModel],
 		logger: AmpelLogger,
-		run_type: int,
 		embed: bool = False
 	) -> None:
 
@@ -63,29 +62,39 @@ class FilterBlock:
 		self.channel = channel
 		self.chan_str = str(self.channel)
 
-		# Minimal log entry in case filter does not log anything
-		self.min_log_msg: Optional[Dict[str, ChannelId]] = {'c': self.channel} if embed else None
-		self.ap_log_flag: int = (LogRecordFlag.UNIT | LogRecordFlag.CORE | LogRecordFlag.INFO).__int__()
-
-		# Create channel (buffering) logger
-		buf_logger = context.get_logger(name="buf_" + self.chan_str, level=LogRecordFlag.UNIT)
-		self.buf_hdlr = EnclosedChanRecordBufHandler(self.channel) if embed else ChanRecordBufHandler(self.channel)
-		buf_logger.addHandler(self.buf_hdlr)
-
-		self.overrule = False
-		self.bypass = False
-		self.retro_complete = False
-		self.update_rej = True
 		self.ac = False
+		self.retro_complete = False
 
 		if filter_model:
 
+			# Minimal log entry in case filter does not log anything
+			self.min_log_msg: Optional[Dict[str, ChannelId]] = {'c': self.channel} if embed else None
+			self.overrule = False
+			self.bypass = False
+			self.update_rej = True
+
 			# Instantiate/get filter class associated with this channel
-			logger.info(f"Loading filter: {filter_model.unit}")
+			logger.info(f"Loading filter: {filter_model.unit_name}")
+
+			self.buf_hdlr = EnclosedChanRecordBufHandler(logger.level, self.channel) if embed \
+				else ChanRecordBufHandler(logger.level, self.channel)
 
 			self.unit_instance = context.loader.new_base_unit(
-				unit_model=filter_model, logger=buf_logger, sub_type=AbsAlertFilter
+				unit_model = filter_model,
+				sub_type = AbsAlertFilter,
+				logger = AmpelLogger.get_logger(
+					name = "buf_" + self.chan_str,
+					base_flag = (getattr(logger, 'base_flag', 0) & ~LogRecordFlag.CORE) | LogRecordFlag.UNIT,
+					console = False,
+					handlers = [self.buf_hdlr]
+				)
 			)
+
+			# Clear possibly existing log entries
+			# (logged by filter post_init method)
+			self.buf_hdlr.buffer = []
+			self.forward = self.buf_hdlr.forward # type: ignore
+			self.buffer = self.buf_hdlr.buffer
 
 			self.filter_func = self.unit_instance.apply
 
@@ -99,19 +108,15 @@ class FilterBlock:
 				self.update_rej = stock_match.update_rej
 
 			self.ac = self.bypass or self.overrule
+
+			self.rej_log_handle: Optional[Callable[[Union[LighterLogRecord, LogRecord]], None]] = None
+			self.rej_log_handler: Optional[LoggingHandlerProtocol] = None
+			self.file: Optional[Callable[[AmpelAlert, Optional[int]], None]] = None
+			self.register: Optional[AbsAlertRegister] = None
+
 		else:
+
 			self.filter_func = no_filter
-
-		# Clear possibly existing log entries
-		# (logged by filter post_init method)
-		self.buf_hdlr.buffer = []
-		self.forward = self.buf_hdlr.forward # type: ignore
-		self.buffer = self.buf_hdlr.buffer
-
-		self.rej_log_handle: Optional[Callable[[Union[LighterLogRecord, LogRecord]], None]] = None
-		self.rej_log_handler: Optional[LoggingHandlerProtocol] = None
-		self.file: Optional[Callable[[AmpelAlert, Optional[int]], None]] = None
-		self.register: Optional[AbsAlertRegister] = None
 
 
 	def filter(self, alert: AmpelAlert) -> Optional[Tuple[ChannelId, Union[int, bool]]]:
@@ -132,21 +137,17 @@ class FilterBlock:
 			# Write log entries to main logger
 			# (note: log records already contain chan info)
 			if self.buffer:
-				self.forward(
-					self.logger, stock=stock_id, extra={'alert': alert.id}
-				)
+				self.forward(self.logger, stock=stock_id, extra={'alert': alert.id})
 
 			# Log minimal entry if channel did not log anything
 			else:
 				if self.min_log_msg: # embed is True
 					if isinstance(res, bool):
-						self.log(self.ap_log_flag, self.min_log_msg, stock=stock_id, extra={'a': alert.id})
+						self.log(INFO, self.min_log_msg, stock=stock_id, extra={'a': alert.id})
 					else:
-						self.log(self.ap_log_flag, {'c': self.channel, 'g': res}, stock=stock_id, extra={'a': alert.id})
+						self.log(INFO, {'c': self.channel, 'g': res}, stock=stock_id, extra={'a': alert.id})
 				else:
-					self.log(
-						self.ap_log_flag, None, channel=self.channel, stock=stock_id, extra={'a': alert.id}
-					)
+					self.log(INFO, None, channel=self.channel, stock=stock_id, extra={'a': alert.id})
 
 			# self.ac contains all "kinds" of auto-complete
 			if self.ac:
@@ -172,7 +173,7 @@ class FilterBlock:
 				extra_ac = {'a': alert.id, 'ac': True}
 
 				# Main logger feedback
-				self.log(self.ap_log_flag, None, channel=self.channel, stock=stock_id, extra=extra_ac)
+				self.log(INFO, None, channel=self.channel, stock=stock_id, extra=extra_ac)
 
 				# Update count
 				self.count_ac += 1

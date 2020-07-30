@@ -4,3 +4,5 @@ unit:
     "ampel.alert.FilteringAlertSupplier",
     "ampel.dev.UnitTestAlertSupplier"
   ]
+  base:
+   - ampel.alert.filter.BasicMultiFilter

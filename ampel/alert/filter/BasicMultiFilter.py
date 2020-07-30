@@ -4,19 +4,22 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 14.01.2017
-# Last Modified Date: 30.01.2020
-# Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
+# Last Modified Date: 30.07.2020
+# Last Modified By  : Jakob van Santen <jakob.van.santen@desy.de>
 
 import operator
 from ampel.abstract.AbsAlertFilter import AbsAlertFilter
 from ampel.alert.PhotoAlert import PhotoAlert
 
+from ampel.model.StrictModel import StrictModel
+from typing import Literal, Sequence, Union
+from pydantic import Field, validator
 
-class BasicMultiFilter(AbsAlertFilter[PhotoAlert]):
-
-	version = 0.1
-
-	ops = {
+class PhotoAlertQuery(StrictModel):
+	"""
+	A filter condition suitable for use with AmpelAlert.get_values()
+	"""
+	_ops = {
 		'>': operator.gt,
 		'<': operator.lt,
 		'>=': operator.ge,
@@ -26,50 +29,82 @@ class BasicMultiFilter(AbsAlertFilter[PhotoAlert]):
 		'AND': operator.and_,
 		'OR': operator.or_
 	}
+	attribute : str = Field(..., description="Name of a light curve field")
+	operator: str = Field(..., description="Comparison operator")
+	value: float = Field(..., description="Value to compare to")
 
+	@validator('operator')
+	def valid_operator(cls, v):
+		if not v in cls._ops:
+			raise ValueError(f"Unknown operator '{v}'")
+		return v
 
-	def __init__(self, on_match_t2_units, base_config=None, run_config=None, logger=None):
-		""" """
+class BasicFilterCondition(StrictModel):
+	criteria: Union[Sequence[PhotoAlertQuery], PhotoAlertQuery]
+	len: int = Field(..., ge=0)
+	operator: str = None
+	logicalConnection: Literal['AND', 'OR'] = 'AND'
+	
+	@validator('operator', 'logicalConnection')
+	def valid_operator(cls, v):
+		return PhotoAlertQuery._ops[v]
 
-		if run_config is None or not isinstance(run_config, dict):
-			raise ValueError("run_config type must be a dict")
+	@validator('criteria')
+	def to_dicts(cls, v):
+		"Cast back to dict for use with PhotoAlert.get_values()"
+		if isinstance(v, PhotoAlertQuery):
+			v = [v]
+		return [q.dict() for q in v]
 
-		if "logicalConnection" in run_config['filters'][0]:
-			raise ValueError("First filter element cannot contain parameter logicalConnection")
+class BasicMultiFilter(AbsAlertFilter[PhotoAlert]):
 
-		self.on_match_default_t2_units = on_match_t2_units
-		self.filters = []
-		self.logical_ops = [None]
+	version = 1.0
 
-		for param in run_config['filters']:
+	filters: Sequence[BasicFilterCondition]
 
-			self.filters.append(
-				{
-					'operator': BasicMultiFilter.ops[
-						param['operator']
-					],
-					'criteria': param['criteria'],
-					'len': param['len']
-				}
-			)
-
-			if "logicalConnection" in param:
-				self.logical_ops.append(
-					BasicMultiFilter.ops[
-						param["logicalConnection"]
-					]
-				)
-
-		logger.info(f"Following BasicMultiFilter criteria were configured: {self.filters}")
-
-
-	def get_version(self):
-		return BasicMultiFilter.version
-
-
-	def apply(self, alert):
+	def apply(self, alert: PhotoAlert) -> bool:
 		"""
-		Doc will follow
+		Filter alerts via AmpelAlert.get_values(). Criteria in each condition
+		are ANDed together, and conditions can be combined with AND or OR. For
+		example, the following configuration selects alerts with at least 4
+		detections where `rb>0.8 and fid==1 and mag<18` OR at least 4 detections
+		where `magdiff>0.01`::
+		    
+		    "filters": [
+		      {
+		        "criteria": [
+		          {
+		            "attribute": "rb",
+		            "value": 0.8,
+		            "operator": ">"
+		          },
+		          {
+		            "attribute": "fid",
+		            "value": 1,
+		            "operator": "=="
+		          },
+		          {
+		            "attribute": "mag",
+		            "value": 18,
+		            "operator": "<"
+		          }
+		        ],
+		        "len": 4,
+		        "operator": ">="
+		      },
+		      {
+		        "logicalConnection": "OR",
+		        "criteria": [
+		          {
+		            "attribute": "magdiff",
+		            "value": 0.01,
+		            "operator": ">"
+		          }
+		        ],
+		        "len": 4
+		        "operator": ">="
+		      }
+		    ]
 		"""
 
 		filter_res = []
@@ -77,14 +112,14 @@ class BasicMultiFilter(AbsAlertFilter[PhotoAlert]):
 		for param in self.filters:
 
 			filter_res.append(
-				param['operator'](
+				param.operator(
 					len(
 						alert.get_values(
 							'candid',
-							filters = param['criteria']
+							filters = param.criteria
 						)
 					),
-					param['len']
+					param.len
 				)
 			)
 
@@ -95,11 +130,8 @@ class BasicMultiFilter(AbsAlertFilter[PhotoAlert]):
 			if i == 0:
 				current_res = filter_res[i]
 			else:
-				current_res = self.logical_ops[i](
+				current_res = self.filters[i].logicalConnection(
 					current_res, filter_res[i]
 				)
 
-		if current_res:
-			return self.on_match_default_t2_units
-
-		return None
+		return current_res

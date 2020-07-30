@@ -145,13 +145,15 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 
 				t2_units = []
 
-				if model.t0_add.t1_combine:
-					for el in model.t0_add.t1_combine:
-						if el.t2_compute:
-							t2_units += gather_t2_units(el)
+				if model.t0_add:
 
-				if model.t0_add.t2_compute:
-					t2_units += gather_t2_units(model.t0_add)
+					if model.t0_add.t1_combine:
+						for el in model.t0_add.t1_combine:
+							if el.t2_compute:
+								t2_units += gather_t2_units(el)
+
+					if model.t0_add.t2_compute:
+						t2_units += gather_t2_units(model.t0_add)
 
 				if model.t1_combine:
 					for el in model.t1_combine:
@@ -489,7 +491,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 
 				if alert_stats := self.alert_supplier.get_stats():
 					count_stats.update(alert_stats)
-				if t0_stats := ing_hdlr.datapoint_ingester.get_stats():
+				if ing_hdlr.datapoint_ingester and (t0_stats := ing_hdlr.datapoint_ingester.get_stats()):
 					count_stats.update(t0_stats)
 				count_stats['dbop'] = updates_buffer.stats
 

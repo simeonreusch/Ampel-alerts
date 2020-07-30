@@ -8,7 +8,7 @@
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 from time import time
-from typing import Sequence, List, Dict, Union, Iterable, Tuple, Type
+from typing import Sequence, List, Dict, Union, Iterable, Tuple, Type, Optional
 from ampel.type import ChannelId
 from ampel.core.UnitLoader import PT
 from ampel.core.AmpelContext import AmpelContext
@@ -37,7 +37,7 @@ class IngestionHandler:
 		'retro_complete', 'ingest_stats', 'log', 'logd'
 
 	stock_ingester: AbsStockIngester
-	datapoint_ingester: AbsAlertContentIngester[AmpelAlert, DataPoint]
+	datapoint_ingester: Optional[AbsAlertContentIngester[AmpelAlert, DataPoint]]
 	stock_t2_ingesters: List[AbsStockT2Ingester]
 	point_t2_ingesters: List[AbsPointT2Ingester]
 	state_t2_ingesters: Dict[AbsCompoundIngester, List[AbsStateT2Ingester]]
@@ -68,6 +68,7 @@ class IngestionHandler:
 		self.state_t2_ingesters = {}
 		self.point_t2_ingesters = []
 		self.stock_t2_ingesters = []
+		self.datapoint_ingester = None
 
 		for directive in directives:
 			self.setup_ingesters(
@@ -94,17 +95,6 @@ class IngestionHandler:
 		typically, these are: updates_buffer, logd, run_id
 		"""
 
-		t0_add = directive.t0_add
-
-		# An AP can for now only have a unique datapoint ingester
-		if not hasattr(self, 'datapoint_ingester'):
-			self.datapoint_ingester = context.loader.new_admin_unit(
-				unit_model = t0_add,
-				context = context,
-				sub_type = AbsAlertContentIngester,
-				**kwargs
-			)
-
 		# An AP can for now only have a unique stock ingester
 		if not hasattr(self, 'stock_ingester'):
 			self.stock_ingester = context.loader.new_admin_unit(
@@ -114,53 +104,65 @@ class IngestionHandler:
 				**kwargs
 			)
 
-		if t0_add.t1_combine:
+		if t0_add := directive.t0_add:
 
-			for t1_combine in t0_add.t1_combine:
-
-				# Build compound ingester id
-				comp_ingester = self._get_ingester(
-					context, t1_combine, AbsCompoundIngester,
-					self.state_t2_ingesters, directive, logger, **kwargs
+			# An AP can for now only have a unique datapoint ingester
+			if not hasattr(self, 'datapoint_ingester'):
+				self.datapoint_ingester = context.loader.new_admin_unit(
+					unit_model = t0_add,
+					context = context,
+					sub_type = AbsAlertContentIngester,
+					**kwargs
 				)
-				if comp_ingester not in self.state_t2_ingesters:
-					self.state_t2_ingesters[comp_ingester] = []
 
-				# Notify compound ingester that the current channel
-				# requires the creation of states/compounds
-				comp_ingester.add_channel(directive.channel)
+			if t0_add.t1_combine:
 
-				# State T2s (should be defined along with t1 ingesters usually)
-				if state_t2 := t1_combine.t2_compute:
+				for t1_combine in t0_add.t1_combine:
 
-					# Retrieve list of associated t2 ingesters (we allow
-					# the definition of multiple different t2 ingesters)
-					t2_ingesters = self.state_t2_ingesters[comp_ingester] # type: ignore
-
-					t2_ingester = self._get_ingester(
-						context, state_t2, AbsStateT2Ingester,
-						t2_ingesters, directive, logger, **kwargs
+					# Build compound ingester id
+					comp_ingester = self._get_ingester(
+						context, t1_combine, AbsCompoundIngester,
+						self.state_t2_ingesters, directive, logger, **kwargs
 					)
+					if comp_ingester not in self.state_t2_ingesters:
+						self.state_t2_ingesters[comp_ingester] = []
 
-					if t2_ingester not in t2_ingesters:
-						t2_ingesters.append(t2_ingester)
+					# Notify compound ingester that the current channel
+					# requires the creation of states/compounds
+					comp_ingester.add_channel(directive.channel)
 
-					# Update state ingester internal config
-					t2_ingester.add_ingest_models(directive.channel, state_t2.units)
+					# State T2s (should be defined along with t1 ingesters usually)
+					if state_t2 := t1_combine.t2_compute:
 
-		# DataPoint T2s
-		if point_t2 := t0_add.t2_compute:
+						# Retrieve list of associated t2 ingesters (we allow
+						# the definition of multiple different t2 ingesters)
+						t2_ingesters = self.state_t2_ingesters[comp_ingester] # type: ignore
 
-			point_ingester = self._get_ingester(
-				context, point_t2, AbsPointT2Ingester,
-				self.point_t2_ingesters, directive, logger, **kwargs
-			)
+						t2_ingester = self._get_ingester(
+							context, state_t2, AbsStateT2Ingester,
+							t2_ingesters, directive, logger, **kwargs
+						)
 
-			if point_ingester not in self.point_t2_ingesters:
-				self.point_t2_ingesters.append(point_ingester)
+						if t2_ingester not in t2_ingesters:
+							t2_ingesters.append(t2_ingester)
 
-			# Update point ingester internal config
-			point_ingester.add_ingest_models(directive.channel, point_t2.units)
+						# Update state ingester internal config
+						t2_ingester.add_ingest_models(directive.channel, state_t2.units)
+
+			# DataPoint T2s
+			if point_t2 := t0_add.t2_compute:
+
+				point_ingester = self._get_ingester(
+					context, point_t2, AbsPointT2Ingester,
+					self.point_t2_ingesters, directive, logger, **kwargs
+				)
+
+				if point_ingester not in self.point_t2_ingesters:
+					self.point_t2_ingesters.append(point_ingester)
+
+				# Update point ingester internal config
+				point_ingester.add_ingest_models(directive.channel, point_t2.units)
+
 
 		# Standalone T1 processes not supported yet
 		if directive.t1_combine:
@@ -248,7 +250,8 @@ class IngestionHandler:
 		self.logd['extra'] = {'a': alert.id}
 
 		# T0 ingestion
-		datapoints = self.datapoint_ingester.ingest(alert) # type: ignore[union-attr]
+		if self.datapoint_ingester:
+			datapoints = self.datapoint_ingester.ingest(alert) # type: ignore[union-attr]
 
 		# Stock T2 ingestions
 		if self.stock_t2_ingesters:

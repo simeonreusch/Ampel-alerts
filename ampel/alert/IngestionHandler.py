@@ -107,7 +107,7 @@ class IngestionHandler:
 		if t0_add := directive.t0_add:
 
 			# An AP can for now only have a unique datapoint ingester
-			if not hasattr(self, 'datapoint_ingester'):
+			if not self.datapoint_ingester:
 				self.datapoint_ingester = context.loader.new_admin_unit(
 					unit_model = t0_add,
 					context = context,

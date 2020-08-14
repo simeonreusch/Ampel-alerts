@@ -95,8 +95,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 			raise ValueError(f"process.{process_name}.processor.config is None")
 
 		if override:
-			args = recursive_unfreeze(args) # type: ignore
-			merge_dict(args, override)
+			args = merge_dict(recursive_unfreeze(args), override) # type: ignore
 
 		return cls(context=context, **args)
 

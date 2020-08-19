@@ -17,7 +17,7 @@ from ampel.base.AmpelBaseModel import AmpelBaseModel
 
 T = TypeVar("T", bound=AmpelAlert)
 
-def identity(self, arg: Dict) -> Dict:
+def identity(arg: Dict) -> Dict:
 	"""
 	Covers the "no deserialization needed" which might occur
 	if the underlying alert loader directly returns dicts

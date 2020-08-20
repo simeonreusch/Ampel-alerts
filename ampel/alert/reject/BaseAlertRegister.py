@@ -97,7 +97,7 @@ class BaseAlertRegister(AbsAlertRegister, abstract=True):
 		self.header_extra_base['run'] = self.run_id
 
 		if self.file_prefix == "$run_id":
-			self.file_prefix = self.run_id
+			self.file_prefix = str(self.run_id)
 		elif self.file_prefix == "$channel":
 			self.file_prefix = self.channel
 

@@ -78,7 +78,7 @@ class BaseAlertRegister(AbsAlertRegister, abstract=True):
 	# Override
 	file_rotate: Optional[Dict[Literal['runs', 'blocks'], int]] # type: ignore[assignment]
 
-	header_hints: ClassVar[Optional[Sequence[str]]]
+	header_hints: ClassVar[Optional[Sequence[str]]] = None
 
 
 	def __init__(self, **kwargs):

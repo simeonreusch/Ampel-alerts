@@ -12,14 +12,14 @@ from ampel.abstract.AbsAlertFilter import AbsAlertFilter
 from ampel.alert.PhotoAlert import PhotoAlert
 
 from ampel.model.StrictModel import StrictModel
-from typing import Literal, Sequence, Union
+from typing import Literal, Sequence, Union, Callable, Dict, Optional
 from pydantic import Field, validator
 
 class PhotoAlertQuery(StrictModel):
 	"""
 	A filter condition suitable for use with AmpelAlert.get_values()
 	"""
-	_ops = {
+	_ops: Dict[str,Callable] = {
 		'>': operator.gt,
 		'<': operator.lt,
 		'>=': operator.ge,
@@ -42,7 +42,7 @@ class PhotoAlertQuery(StrictModel):
 class BasicFilterCondition(StrictModel):
 	criteria: Union[Sequence[PhotoAlertQuery], PhotoAlertQuery]
 	len: int = Field(..., ge=0)
-	operator: str = None
+	operator: str
 	logicalConnection: Literal['AND', 'OR'] = 'AND'
 	
 	@validator('operator', 'logicalConnection')
@@ -112,11 +112,11 @@ class BasicMultiFilter(AbsAlertFilter[PhotoAlert]):
 		for param in self.filters:
 
 			filter_res.append(
-				param.operator(
+				param.operator( # type: ignore[operator]
 					len(
 						alert.get_values(
 							'candid',
-							filters = param.criteria
+							filters = param.criteria # type: ignore[arg-type]
 						)
 					),
 					param.len
@@ -130,7 +130,7 @@ class BasicMultiFilter(AbsAlertFilter[PhotoAlert]):
 			if i == 0:
 				current_res = filter_res[i]
 			else:
-				current_res = self.filters[i].logicalConnection(
+				current_res = self.filters[i].logicalConnection( # type: ignore[misc]
 					current_res, filter_res[i]
 				)
 

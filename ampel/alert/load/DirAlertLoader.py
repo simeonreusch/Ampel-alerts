@@ -7,6 +7,8 @@
 # Last Modified Date: 30.01.2020
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
+from typing import List, Optional
+
 from ampel.log.AmpelLogger import AmpelLogger
 from io import BytesIO
 
@@ -18,10 +20,10 @@ class DirAlertLoader:
 		""" """
 
 		self.verbose = verbose
-		self.files = []
-		self.min_index = None
-		self.max_index = None
-		self.max_entries = None
+		self.files: List[str] = []
+		self.min_index: Optional[int] = None
+		self.max_index: Optional[int] = None
+		self.max_entries: Optional[int] = None
 		self.folder = "/Users/hu/Documents/ZTF/IPAC-ZTF/ztf/src/pl/avroalerts/testprod"
 		self.extension = "*.avro"
 		self.logger = AmpelLogger.get_logger() if logger is None else logger

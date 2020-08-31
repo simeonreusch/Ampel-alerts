@@ -4,7 +4,7 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 16.05.2020
-# Last Modified Date: 24.05.2020
+# Last Modified Date: 31.08.2020
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 from typing import BinaryIO, Optional, Literal, Dict, Any, List, Union, Generator, Tuple, ClassVar, Sequence
@@ -21,15 +21,18 @@ class BaseAlertRegister(AbsAlertRegister, abstract=True):
 
 	:param path_channel_folder: if true, a folder whose name equals the parameter `channel`
 	will be created under path `path_base`
+
 	:param file_prefix: use $run_id to save file as <run>.bin.gz (whereby <run> equals the constructor parameter run),
 	$channel to save file as <channel>.bin.gz or any string to save file as <string>.bin.gz
-	:param file_rotate: additionaly to the parent's class ability to rotate files based on the number of blocks,
-	this class can also rotate files based on a max number of run_id registers are associated with.
-	Both parameters (runs and blocks) can be used together, the criteria fulfilled will trigger a file rotation.
-	Note1: file rotation occurs during the opening of registers, meaning that once a register is opened,
+
+	:param file_cap: additionaly to the parent's class (AmpelRegister) ability to rename the current register when
+	the number of blocks reaches a given threshold, this class can also rename the current file when
+	the number of registered run ids in the header reaches a limit.
+	Both parameters (runs and blocks) can be used together, the first criteria fulfilled will trigger a file rename.
+	Note1: file rename occurs during the opening of registers, which means that once a register is opened,
 	no check is performed (a register can thus grow beyond the defined limits as long as a process keeps it open).
-	Note2: the current file rotation number is encoded in the header. If the current rotation number is 10 and
-	you move the rotated file to another folder, the next rotation will create ampel_register.bin.gz.11 nonetheless.
+	Note2: the current file suffix number is encoded in the header. If the current suffix number is 10 and
+	you move files to another folder, the next rename will create ampel_register.bin.gz.11 nonetheless.
 
 
 	Possible setups:
@@ -50,15 +53,14 @@ class BaseAlertRegister(AbsAlertRegister, abstract=True):
 	- Avoids any potential concurency issue (this setup should be used for re-runs)
 	- Fast query
 	Cons:
-	- Can generate numerous files (whichs should not be a pblm for any modern file system)
+	- Can generate numerous files (which should not be a pblm for any modern file system)
 
 	2) register file are named after channel id:
 	<path>/AMPEL_CHANNEL1.register.gz
 	<path>/AMPEL_CHANNEL2.register.gz
 	...
 
-	Log rotate can be performed based on file size (file_rotate='blocks')
-	or number of run_ids (file_rotate='runs').
+	Register could be capped based on file size (file_cap='blocks') or number of run_ids (file_cap='runs').
 
 	Pro:
 	- Less files
@@ -76,9 +78,9 @@ class BaseAlertRegister(AbsAlertRegister, abstract=True):
 	file_prefix: Union[str, Literal['$run_id', '$channel']] = '$channel' # save file as <run_id|channel|string>.bin.gz
 
 	# Override
-	file_rotate: Optional[Dict[Literal['runs', 'blocks'], int]] # type: ignore[assignment]
+	file_cap: Optional[Dict[Literal['runs', 'blocks'], int]] # type: ignore[assignment]
 
-	header_hints: ClassVar[Optional[Sequence[str]]] = None
+	header_bounds: ClassVar[Optional[Sequence[str]]] = None
 
 
 	def __init__(self, **kwargs):
@@ -110,24 +112,24 @@ class BaseAlertRegister(AbsAlertRegister, abstract=True):
 		self.load()
 		self._write = self._inner_fh.write
 
-		if self.header_hints:
+		if self.header_bounds:
 			hdr = self.header['payload']
-			for el in self.header_hints:
+			for el in self.header_bounds:
 				for m in ('min', 'max'):
 					if el in hdr and m in hdr[el]:
 						object.__setattr__(self, f'{el}_{m}', hdr[el][m])
 
 
-	def check_rotate(self, header: Dict[str, Any]) -> bool:
+	def check_rename(self, header: Dict[str, Any]) -> bool:
 
-		if not self.file_rotate:
+		if not self.file_cap:
 			return False
 
-		if 'runs' in self.file_rotate: # type: ignore[operator]
-			if isinstance(header['run'], list) and len(header['run']) > self.file_rotate['runs']:
+		if 'runs' in self.file_cap: # type: ignore[operator]
+			if isinstance(header['run'], list) and len(header['run']) > self.file_cap['runs']:
 				return True
 
-		return super().check_rotate(header)
+		return super().check_rename(header)
 
 
 	def onload_update_header(self) -> None:
@@ -149,12 +151,12 @@ class BaseAlertRegister(AbsAlertRegister, abstract=True):
 
 	def close(self, **kwargs) -> None: # type: ignore[override]
 		"""
-		Automatically adds aggregated "header hints" into the header before called super close()
+		Automatically adds aggregated "header bounds" into the header before super close() call
 		"""
 
-		if self.header_hints:
+		if self.header_bounds and hasattr(self, 'header'):
 			hdr = self.header['payload']
-			for el in self.header_hints:
+			for el in self.header_bounds:
 				if getattr(self, el + '_max') == 0:
 					continue
 				if el not in self.header['payload']:

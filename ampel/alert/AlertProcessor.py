@@ -20,7 +20,6 @@ from ampel.core.AmpelContext import AmpelContext
 from ampel.core.UnitLoader import UnitLoader
 from ampel.util.mappings import merge_dict
 from ampel.util.freeze import recursive_unfreeze
-from ampel.metrics.GraphiteFeeder import GraphiteFeeder
 from ampel.db.DBUpdatesBuffer import DBUpdatesBuffer
 from ampel.alert.FilterBlocksHandler import FilterBlocksHandler
 from ampel.alert.IngestionHandler import IngestionHandler
@@ -165,6 +164,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 
 		# Graphite
 		if "graphite" in self.publish_stats:
+			from ampel.metrics.GraphiteFeeder import GraphiteFeeder
 			self._gfeeder = GraphiteFeeder(
 				self.context.get_config().get('resource.graphite.default'), # type: ignore
 				autoreconnect = True

@@ -84,7 +84,7 @@ class BasicMultiFilter(AbsAlertFilter[PhotoAlert]):
 		            "operator": "=="
 		          },
 		          {
-		            "attribute": "mag",
+		            "attribute": "magpsf",
 		            "value": 18,
 		            "operator": "<"
 		          }

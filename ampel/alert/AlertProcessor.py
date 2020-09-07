@@ -111,7 +111,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 		super().__init__(**kwargs)
 
 		self._ampel_db = self.context.get_database()
-		logger = AmpelLogger.from_profile(self.log_profile)
+		logger = AmpelLogger.from_profile(self.context, self.log_profile)
 		verbose = AmpelLogger.has_verbose_console(self.context, self.log_profile)
 
 		if self.supplier:

@@ -11,7 +11,6 @@ import json, signal
 import numpy as np
 from time import time
 from io import IOBase
-from logging import LogRecord, INFO
 from pymongo.errors import PyMongoError
 from typing import Sequence, List, Dict, Union, Any, Iterable, Tuple, Callable, Optional, Generic
 
@@ -30,6 +29,7 @@ from ampel.abstract.AbsAlertSupplier import AbsAlertSupplier, T
 from ampel.log import AmpelLogger, LogRecordFlag, DBEventDoc, VERBOSE
 from ampel.log.utils import report_exception
 from ampel.log.AmpelLoggingError import AmpelLoggingError
+from ampel.log.LighterLogRecord import LighterLogRecord
 
 from ampel.model.UnitModel import UnitModel
 from ampel.model.AlertProcessorDirective import AlertProcessorDirective
@@ -327,7 +327,8 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 		any_match = 0
 		auto_complete = 0
 		err = 0
-		reduced_chan_names = self._fbh.chan_names[0] if len(self._fbh.chan_names) == 1 else self._fbh.chan_names
+		assert self._fbh.chan_names is not None
+		reduced_chan_names: Union[str,List[str]] = self._fbh.chan_names[0] if len(self._fbh.chan_names) == 1 else self._fbh.chan_names
 		fblocks = self._fbh.filter_blocks
 
 		if any_filter:
@@ -458,12 +459,15 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 					# by the StreamHandler in channel specific RecordBufferingHandler instances.
 					# So we address directly db_logging_handler, and for that, we create
 					# a LogRecord manually.
-					lr = LogRecord(None, INFO, None, None, None, None, None) # type: ignore
-					lr.extra = { # type: ignore
-						'stock': stock_id,
+					lr = LighterLogRecord(
+						logger.name,
+						LogRecordFlag.INFO | logger.base_flag
+					)
+					lr.stock = stock_id
+					lr.channel = reduced_chan_names # type: ignore[assignment]
+					lr.extra = {
 						'alert': alert.id,
 						'allout': True,
-						'channel': reduced_chan_names
 					}
 					if db_logging_handler:
 						db_logging_handler.handle(lr)

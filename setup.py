@@ -19,5 +19,10 @@ setup(
 			'*.yaml', '**/*.yaml', '**/**/*.yaml',
 			'*.yml', '**/*.yml', '**/**/*.yml'
 		]
-	}
+	},
+	install_requires = [
+		"pymongo",
+		"pydantic==1.4",
+		"fastavro",
+	]
 )

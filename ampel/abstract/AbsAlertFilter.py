@@ -20,9 +20,10 @@ class AbsAlertFilter(Generic[T], AmpelABC, DataUnit, abstract=True):
 	def apply(self, alert: T) -> Optional[Union[bool, int]]:
 		"""
 		Filters an alert.
-		:returns:
-		- None or False: reject the alert
-		- True: accept the alert and create all defined t2 documents
-		- positive integer: accept the alert and create t2 documents associated with this group id
-		- negative integer: filter rejection code (must not exceed 255)
+		
+		:return:
+			- None or False: reject the alert
+			- True: accept the alert and create all defined t2 documents
+			- positive integer: accept the alert and create t2 documents associated with this group id
+			- negative integer: filter rejection code (must not exceed 255)
 		"""

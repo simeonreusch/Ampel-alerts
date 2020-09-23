@@ -43,17 +43,21 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 	"""
 	Class handling the processing of alerts (T0 level).
 	For each alert, following tasks are performed:
+	
 	* Load the alert
 	* Filter alert based on the configured T0 filter
 	* Ingest alert based on the configured ingester
 
-	:param publish_stats: publish performance metrics:
-	- graphite: send t0 metrics to graphite (graphite server must be defined in ampel_config)
-	- mongo: include t0 metrics in the process event document which is written into the DB
+	:param publish_stats:
+		publish performance metrics:
+		
+		- graphite: send t0 metrics to graphite (graphite server must be defined in ampel_config)
+		- mongo: include t0 metrics in the process event document which is written into the DB
 	:param iter_max: main loop (in method run()) will stop processing alerts when this limit is reached
 	:param error_max: main loop (in method run()) will stop processing alerts when this limit is reached
-	:param directives: mandatory alert processor directives (AlertProcessorDirective). This parameter will
-	determine how the underlying FilterBlocksHandler and IngestionHandler instances are set up.
+	:param directives:
+		mandatory alert processor directives (AlertProcessorDirective). This parameter will
+		determine how the underlying FilterBlocksHandler and IngestionHandler instances are set up.
 	:param db_log_format: see `ampel.alert.FilterBlocksHandler.FilterBlocksHandler` docstring
 	:param supplier: alert supplier, no time explain more currently
 
@@ -81,10 +85,12 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 	@classmethod
 	def from_process(cls, context: AmpelContext, process_name: str, override: Optional[Dict] = None):
 		"""
-		Convenience method instantiating an AP using the config entry from a given T0 process
-		example: AlertProcessor.from_process(
-			context, process_name="VAL_TEST2/T0/ztf_uw_public", override={'publish_stats': []}
-		)
+		Convenience method instantiating an AP using the config entry from a given T0 process.
+		Example::
+			
+			AlertProcessor.from_process(
+				context, process_name="VAL_TEST2/T0/ztf_uw_public", override={'publish_stats': []}
+			)
 		"""
 		args = context.get_config().get( # type: ignore
 			f"process.{process_name}.processor.config", dict
@@ -101,8 +107,9 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 
 	def __init__(self, **kwargs) -> None:
 		"""
-		:raises: ValueError if no process can be loaded or if a process is
-		associated with an unknown channel
+		:raises:
+			ValueError if no process can be loaded or if a process is
+			associated with an unknown channel
 		"""
 
 		if isinstance(kwargs['directives'], dict):
@@ -202,6 +209,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 		"""
 		Source the current alert suplier with the provided alert loader.
 		AlertLoader instances typically provide file-like objects
+		
 		:raises ValueError: if self.alert_supplier is None
 		"""
 		if not self.alert_supplier:
@@ -214,6 +222,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 	def process_alerts(self, alert_loader: Iterable[IOBase]) -> None:
 		"""
 		shortcut method to process all alerts from a given loader until its dries out
+		
 		:param alert_loader: iterable returning alert payloads
 		:raises ValueError: if self.alert_supplier is None
 		"""
@@ -230,6 +239,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 	def run(self) -> int:
 		"""
 		Run alert processing using the internal alert_loader/alert_supplier
+		
 		:raises: LogFlushingError, PyMongoError
 		"""
 

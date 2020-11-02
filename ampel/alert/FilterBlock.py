@@ -130,7 +130,7 @@ class FilterBlock:
 		res = self.filter_func(alert)
 
 		# Filter accepted alert
-		if res:
+		if res is not None and res > 0:
 
 			self.count_matches += 1
 

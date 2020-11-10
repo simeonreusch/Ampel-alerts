@@ -55,8 +55,11 @@ class TarAlertLoader:
 		Out[]: True
 		"""
 		# Free memory
-		# Note that TarFile returns its members as a mutable list
-		self.tar_file.getmembers().clear()
+		# NB: .members is not in the typeshed stub because it's not part of the
+		# public interface. Beware the temptation to call getmembers() instead;
+		# while this does return .members, it also reads the entire archive as
+		# a side-effect.
+		self.tar_file.members.clear() #  type: ignore
 
 		if self.chained_tal is not None:
 			file_obj = self.get_chained_next()

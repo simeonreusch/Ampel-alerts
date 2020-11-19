@@ -17,6 +17,7 @@ from ampel.alert.AmpelAlert import AmpelAlert
 from ampel.alert.IngestionHandler import IngestionHandler
 from ampel.content.Compound import Compound
 from ampel.content.DataPoint import DataPoint
+from ampel.content.StockRecord import StockRecord
 from ampel.db.DBUpdatesBuffer import DBUpdatesBuffer
 from ampel.dev.DevAmpelContext import DevAmpelContext
 from ampel.ingest.CompoundBluePrint import CompoundBluePrint
@@ -27,7 +28,10 @@ from ampel.log.LogsBufferDict import LogsBufferDict
 from ampel.model.AlertProcessorDirective import AlertProcessorDirective
 from ampel.t2.T2RunState import T2RunState
 from ampel.type import ChannelId, StockId, T2UnitResult
-
+from ampel.ingest.PointT2Ingester import PointT2Ingester
+from ampel.ingest.StockT2Ingester import StockT2Ingester
+from ampel.demo.unit.base.DemoPointT2Unit import DemoPointT2Unit
+from ampel.abstract.AbsStockT2Unit import AbsStockT2Unit
 
 class DummyAlertContentIngester(AbsAlertContentIngester[AmpelAlert, DataPoint]):
     alert_history_length = 1
@@ -180,6 +184,9 @@ class DummyStateT2Unit(AbsStateT2Unit):
     def run(self, compound: Compound, datapoints: Iterable[DataPoint]) -> T2UnitResult:
         return {"size": len(compound["body"])}
 
+class DummyStockT2Unit(AbsStockT2Unit):
+    def run(self, stock_record: StockRecord) -> T2UnitResult:
+        return {"name": stock_record["name"]}
 
 @pytest.fixture
 def patch_mongo(monkeypatch):
@@ -241,7 +248,15 @@ def test_legacy_directive(dev_context):
                     },
                 }
             ],
+            "t2_compute": {
+                "ingester": PointT2Ingester,
+                "units": [{"unit": DemoPointT2Unit}]
+            }
         },
+        "t2_compute": {
+            "ingester": StockT2Ingester,
+            "units": [{"unit": DummyStockT2Unit}]
+        }
     }
     handler = get_handler(dev_context, [AlertProcessorDirective(**directive)])
     assert isinstance(handler.stock_ingester, StockIngester)
@@ -262,10 +277,17 @@ def test_legacy_directive(dev_context):
     assert t1.count_documents({"channel": "TEST_CHANNEL"}) == 1
 
     t2 = dev_context.db.get_collection("t2")
-    assert len(docs := list(t2.find({}))) == 1
+    assert len(docs := list(t2.find({}))) == 3
+    print(docs)
     assert docs[0]["stock"] == "stockystock"
-    assert docs[0]["unit"] == "DummyStateT2Unit"
-    assert len(docs[0]["link"]) == 1
+    assert docs[0]["unit"] == "DummyStockT2Unit"
+    assert "link" not in docs[0]
+    assert docs[1]["stock"] == "stockystock"
+    assert docs[1]["unit"] == "DemoPointT2Unit"
+    assert isinstance(docs[1]["link"], int)
+    assert docs[2]["stock"] == "stockystock"
+    assert docs[2]["unit"] == "DummyStateT2Unit"
+    assert len(docs[2]["link"]) == 1
 
 
 def test_standalone_t1_directive(dev_context):

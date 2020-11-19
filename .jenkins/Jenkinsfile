@@ -42,19 +42,15 @@ pipeline {
         COVERALLS_REPO_TOKEN = credentials('coveralls-repo-token')
       }
       steps {
-        dir(path: '/build') {
-          sh 'rm pytest.xml || true'
-          sh 'rm .coverage || true'
-          sh 'python setup.py egg_info'
-          sh 'pytest $(find ampel -name test -prune -o -type f -name \'*.py\' | xargs -L1 dirname | sort -u | xargs -I_ echo -n "--cov=_ ") --junitxml=pytest.xml'
-        }
+        sh 'rm /build/pytest.xml || true'
+        sh 'rm /build/coverage || true'
+        sh 'cd /build && python setup.py egg_info'
+        sh 'cd /build &&pytest $(find ampel -name test -prune -o -type f -name \'*.py\' | xargs -L1 dirname | sort -u | xargs -I_ echo -n "--cov=_ ") --junitxml=pytest.xml'
       }
       post {
         always {
-          dir(path: '/build') {
-            junit 'pytest.xml'
-            sh 'coveralls'
-          }
+          junit '/build/pytest.xml'
+          sh 'cd /build && coveralls'
         }
       }
     }

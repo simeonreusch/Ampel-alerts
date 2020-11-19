@@ -29,6 +29,7 @@ setup(
 	extras_require = {
 		"testing": [
 			"pytest",
+			"pytest-cov",
 			"mongomock",
 			"coveralls",
 		]

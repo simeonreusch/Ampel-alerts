@@ -70,6 +70,8 @@ class IngestionHandler:
 		self.stock_t2_ingesters = []
 		self.datapoint_ingester = None
 
+		if not directives:
+			raise ValueError("Need at least 1 directive")
 		for directive in directives:
 			self.setup_ingesters(
 				context, directive, logger, updates_buffer=updates_buffer,

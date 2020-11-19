@@ -247,6 +247,7 @@ def test_legacy_directive(dev_context):
     assert isinstance(handler.stock_ingester, StockIngester)
     assert isinstance(handler.datapoint_ingester, DummyAlertContentIngester)
 
+    handler.retro_complete = ["TEST_CHANNEL"]
     handler.ingest(
         AmpelAlert(id="alert", stock_id="stockystock", dps=[{}]),
         [("TEST_CHANNEL", True)],

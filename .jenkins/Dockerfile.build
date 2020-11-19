@@ -12,8 +12,11 @@ RUN cd /build && pip install \
     .jenkins/Ampel-core \
     .jenkins/Ampel-photometry
 
-# install dependencies, but not the project itself
+# install dependencies, and install link to project
+# (will be mounted at runtime)
 ADD setup.py /build/setup.py
 RUN cd /build && \
     python setup.py egg_info && \
-    pip install `grep -v '^\[' *.egg-info/requires.txt`
+    pip install `grep -v '^\[' *.egg-info/requires.txt` && \
+    echo "/build\n." > $(python -c 'import site; print(site.getsitepackages()[0])')/ampel-alerts.egg-link
+

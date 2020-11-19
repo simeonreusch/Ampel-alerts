@@ -35,21 +35,26 @@ pipeline {
       agent {
         dockerfile {
           filename '.jenkins/Dockerfile.build'
+          args '-v $WORKSPACE:/build'
         }
       }
       environment {
         COVERALLS_REPO_TOKEN = credentials('coveralls-repo-token')
       }
       steps {
-        sh 'rm pytest.xml || true'
-        sh 'rm .coverage || true'
-        sh 'pip install -e .'
-        sh 'pytest $(find ampel -name test -prune -o -type f -name \'*.py\' | xargs -L1 dirname | sort -u | xargs -I_ echo -n "--cov=_ ") --junitxml=pytest.xml'
+        dir(path: '/build') {
+          sh 'rm pytest.xml || true'
+          sh 'rm .coverage || true'
+          sh 'python setup.py egg_info'
+          sh 'pytest $(find ampel -name test -prune -o -type f -name \'*.py\' | xargs -L1 dirname | sort -u | xargs -I_ echo -n "--cov=_ ") --junitxml=pytest.xml'
+        }
       }
       post {
         always {
-          junit 'pytest.xml'
-          sh 'coveralls'
+          dir(path: '/build') {
+            junit 'pytest.xml'
+            sh 'coveralls'
+          }
         }
       }
     }

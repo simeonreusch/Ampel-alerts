@@ -35,7 +35,7 @@ pipeline {
       agent {
         dockerfile {
           filename '.jenkins/Dockerfile.build'
-          args '-v $WORKSPACE:/build'
+          args "-v ${env.WORKSPACE}:/build"
         }
       }
       environment {

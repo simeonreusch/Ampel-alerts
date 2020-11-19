@@ -35,22 +35,22 @@ pipeline {
       agent {
         dockerfile {
           filename '.jenkins/Dockerfile.build'
-          args "-v /var/lib/jenkins-ztf/workspace/Ampel-alerts_master:/build"
         }
       }
       environment {
         COVERALLS_REPO_TOKEN = credentials('coveralls-repo-token')
+        PYTHONPATH = '.'
       }
       steps {
-        sh 'rm /build/pytest.xml || true'
-        sh 'rm /build/coverage || true'
-        sh 'cd /build && python setup.py egg_info'
-        sh 'cd /build &&pytest $(find ampel -name test -prune -o -type f -name \'*.py\' | xargs -L1 dirname | sort -u | xargs -I_ echo -n "--cov=_ ") --junitxml=pytest.xml'
+        sh 'rm pytest.xml || true'
+        sh 'rm coverage || true'
+        sh 'python setup.py egg_info'
+        sh 'pytest $(find ampel -name test -prune -o -type f -name \'*.py\' | xargs -L1 dirname | sort -u | xargs -I_ echo -n "--cov=_ ") --junitxml=pytest.xml'
       }
       post {
         always {
-          junit '/build/pytest.xml'
-          sh 'cd /build && coveralls'
+          junit 'pytest.xml'
+          sh 'coveralls'
         }
       }
     }

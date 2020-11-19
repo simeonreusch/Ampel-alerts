@@ -35,7 +35,7 @@ pipeline {
       agent {
         dockerfile {
           filename '.jenkins/Dockerfile.build'
-          args "-v ${pwd()}:/build"
+          args "-v /var/lib/jenkins-ztf/workspace/Ampel-alerts_master:/build"
         }
       }
       environment {

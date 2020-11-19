@@ -8,6 +8,7 @@ import pytest
 from pymongo import InsertOne, UpdateOne
 
 from ampel.abstract.AbsStateT2Unit import AbsStateT2Unit
+from ampel.abstract.AbsStockT2Unit import AbsStockT2Unit
 from ampel.abstract.ingest.AbsAlertContentIngester import AbsAlertContentIngester
 from ampel.abstract.ingest.AbsCompoundIngester import AbsCompoundIngester
 from ampel.abstract.ingest.AbsStateT2Compiler import AbsStateT2Compiler
@@ -19,19 +20,19 @@ from ampel.content.Compound import Compound
 from ampel.content.DataPoint import DataPoint
 from ampel.content.StockRecord import StockRecord
 from ampel.db.DBUpdatesBuffer import DBUpdatesBuffer
+from ampel.demo.unit.base.DemoPointT2Unit import DemoPointT2Unit
 from ampel.dev.DevAmpelContext import DevAmpelContext
 from ampel.ingest.CompoundBluePrint import CompoundBluePrint
+from ampel.ingest.PointT2Ingester import PointT2Ingester
 from ampel.ingest.StockIngester import StockIngester
+from ampel.ingest.StockT2Ingester import StockT2Ingester
 from ampel.ingest.T1DefaultCombiner import T1DefaultCombiner
 from ampel.log.AmpelLogger import AmpelLogger, DEBUG
 from ampel.log.LogsBufferDict import LogsBufferDict
 from ampel.model.AlertProcessorDirective import AlertProcessorDirective
 from ampel.t2.T2RunState import T2RunState
 from ampel.type import ChannelId, StockId, T2UnitResult
-from ampel.ingest.PointT2Ingester import PointT2Ingester
-from ampel.ingest.StockT2Ingester import StockT2Ingester
-from ampel.demo.unit.base.DemoPointT2Unit import DemoPointT2Unit
-from ampel.abstract.AbsStockT2Unit import AbsStockT2Unit
+
 
 class DummyAlertContentIngester(AbsAlertContentIngester[AmpelAlert, DataPoint]):
     alert_history_length = 1
@@ -184,9 +185,11 @@ class DummyStateT2Unit(AbsStateT2Unit):
     def run(self, compound: Compound, datapoints: Iterable[DataPoint]) -> T2UnitResult:
         return {"size": len(compound["body"])}
 
+
 class DummyStockT2Unit(AbsStockT2Unit):
     def run(self, stock_record: StockRecord) -> T2UnitResult:
         return {"name": stock_record["name"]}
+
 
 @pytest.fixture
 def patch_mongo(monkeypatch):
@@ -202,7 +205,7 @@ def get_handler(context, directives):
     run_id = 0
     logger = AmpelLogger.get_logger(console={"level": DEBUG})
     updates_buffer = DBUpdatesBuffer(context.db, run_id=run_id, logger=logger)
-    logd = LogsBufferDict({"logs": [], "extra": {}, "err": False,})
+    logd = LogsBufferDict({"logs": [], "extra": {}})
     return IngestionHandler(
         context=context,
         logger=logger,
@@ -224,6 +227,12 @@ def test_minimal_directive(dev_context):
     }
     handler = get_handler(dev_context, [AlertProcessorDirective(**directive)])
     assert isinstance(handler.stock_ingester, StockIngester)
+    handler.logd["logs"].append(f"doing a good thing")
+    handler.ingest(
+        AmpelAlert(id="alert", stock_id="stockystock", dps=[]), [("TEST_CHANNEL", True)]
+    )
+    handler.logd["logs"].append(f"doing a bad thing")
+    handler.logd["err"] = True
     handler.ingest(
         AmpelAlert(id="alert", stock_id="stockystock", dps=[]), [("TEST_CHANNEL", True)]
     )
@@ -250,13 +259,13 @@ def test_legacy_directive(dev_context):
             ],
             "t2_compute": {
                 "ingester": PointT2Ingester,
-                "units": [{"unit": DemoPointT2Unit}]
-            }
+                "units": [{"unit": DemoPointT2Unit}],
+            },
         },
         "t2_compute": {
             "ingester": StockT2Ingester,
-            "units": [{"unit": DummyStockT2Unit}]
-        }
+            "units": [{"unit": DummyStockT2Unit}],
+        },
     }
     handler = get_handler(dev_context, [AlertProcessorDirective(**directive)])
     assert isinstance(handler.stock_ingester, StockIngester)
@@ -276,16 +285,16 @@ def test_legacy_directive(dev_context):
     assert t1.count_documents({}) == 2
 
     t2 = dev_context.db.get_collection("t2")
-    assert len(docs := list(t2.find({}))) == 2+3
+    assert len(docs := list(t2.find({}))) == 2 + 3
     print(docs)
     assert docs[0]["stock"] == "stockystock"
     assert docs[0]["unit"] == "DummyStockT2Unit"
     assert "link" not in docs[0]
-    for i in range(1,3):
+    for i in range(1, 3):
         assert docs[i]["stock"] == "stockystock"
         assert docs[i]["unit"] == "DemoPointT2Unit"
         assert isinstance(docs[i]["link"], int)
-    for i in range(3,5):
+    for i in range(3, 5):
         assert docs[i]["stock"] == "stockystock"
         assert docs[i]["unit"] == "DummyStateT2Unit"
         assert len(docs[i]["link"]) == 1

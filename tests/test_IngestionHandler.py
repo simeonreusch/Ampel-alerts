@@ -264,30 +264,31 @@ def test_legacy_directive(dev_context):
 
     handler.retro_complete = ["TEST_CHANNEL"]
     handler.ingest(
-        AmpelAlert(id="alert", stock_id="stockystock", dps=[{}]),
+        AmpelAlert(id="alert", stock_id="stockystock", dps=[{}, {}]),
         [("TEST_CHANNEL", True)],
     )
     handler.updates_buffer.push_updates()
     t0 = dev_context.db.get_collection("t0")
-    assert t0.count_documents({}) == 1
+    assert t0.count_documents({}) == 2
     assert t0.count_documents({"_id": 0}) == 1
 
     t1 = dev_context.db.get_collection("t1")
-    assert t1.count_documents({}) == 1
-    assert t1.count_documents({"channel": "TEST_CHANNEL"}) == 1
+    assert t1.count_documents({}) == 2
 
     t2 = dev_context.db.get_collection("t2")
-    assert len(docs := list(t2.find({}))) == 3
+    assert len(docs := list(t2.find({}))) == 2+3
     print(docs)
     assert docs[0]["stock"] == "stockystock"
     assert docs[0]["unit"] == "DummyStockT2Unit"
     assert "link" not in docs[0]
-    assert docs[1]["stock"] == "stockystock"
-    assert docs[1]["unit"] == "DemoPointT2Unit"
-    assert isinstance(docs[1]["link"], int)
-    assert docs[2]["stock"] == "stockystock"
-    assert docs[2]["unit"] == "DummyStateT2Unit"
-    assert len(docs[2]["link"]) == 1
+    for i in range(1,3):
+        assert docs[i]["stock"] == "stockystock"
+        assert docs[i]["unit"] == "DemoPointT2Unit"
+        assert isinstance(docs[i]["link"], int)
+    for i in range(3,5):
+        assert docs[i]["stock"] == "stockystock"
+        assert docs[i]["unit"] == "DummyStateT2Unit"
+        assert len(docs[i]["link"]) == 1
 
 
 def test_standalone_t1_directive(dev_context):

@@ -43,6 +43,7 @@ pipeline {
       steps {
         sh 'rm pytest.xml || true'
         sh 'rm .coverage || true'
+        sh 'pip install -e .'
         sh 'pytest $(find ampel -name test -prune -o -type f -name \'*.py\' | xargs -L1 dirname | sort -u | xargs -I_ echo -n "--cov=_ ") --junitxml=pytest.xml'
       }
       post {

@@ -24,5 +24,11 @@ setup(
 		"pymongo",
 		"pydantic==1.4",
 		"fastavro",
-	]
+	],
+	extras_require = {
+		"testing": [
+			"pytest",
+			"mongomock",
+		]
+	},
 )

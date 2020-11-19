@@ -41,6 +41,8 @@ pipeline {
         COVERALLS_REPO_TOKEN = credentials('coveralls-repo-token')
       }
       steps {
+        sh 'rm pytest.xml || true'
+        sh 'rm .coverage || true'
         sh 'pytest $(find ampel -name test -prune -o -type f -name \'*.py\' | xargs -L1 dirname | sort -u | xargs -I_ echo -n "--cov=_ ") --junitxml=pytest.xml'
       }
       post {

@@ -41,7 +41,7 @@ pipeline {
         COVERALLS_REPO_TOKEN = credentials('coveralls-repo-token')
       }
       steps {
-        sh 'pytest $(find ampel -name test -prune -o -type f -name '*.py' | xargs -L1 dirname | sort -u | xargs -I_ echo -n "--cov=_ ") --junitxml=pytest.xml'
+        sh 'pytest $(find ampel -name test -prune -o -type f -name \'*.py\' | xargs -L1 dirname | sort -u | xargs -I_ echo -n "--cov=_ ") --junitxml=pytest.xml'
       }
       post {
         always {

@@ -37,12 +37,16 @@ pipeline {
           filename '.jenkins/Dockerfile.build'
         }
       }
+      environment {
+        COVERALLS_REPO_TOKEN = credentials('coveralls-repo-token')
+      }
       steps {
-        sh 'pytest --junitxml=pytest.xml'
+        sh 'coverage run --source=ampel -m pytest --junitxml=pytest.xml'
       }
       post {
         always {
           junit 'pytest.xml'
+          sh 'coveralls'
         }
       }
     }

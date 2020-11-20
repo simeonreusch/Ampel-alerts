@@ -26,7 +26,10 @@ class DummyAlertContentIngester(AbsAlertContentIngester[AmpelAlert, DataPoint]):
     alert_history_length = 1
 
     def ingest(self, alert: AmpelAlert) -> List[DataPoint]:
-        dps = [{"_id": i, "body": dp} for i, dp in enumerate(alert.dps)]
+        dps = [
+            {"_id": i, "body": dp, "stock_id": alert.stock_id}
+            for i, dp in enumerate(alert.dps)
+        ]
         for dp in dps:
             self.updates_buffer.add_t0_update(InsertOne(dp))
         return dps
@@ -48,7 +51,7 @@ class DummyCompoundIngester(AbsCompoundIngester):
         stock_id: StockId,
         datapoints: Sequence[DataPoint],
         chan_selection: List[Tuple[ChannelId, Union[bool, int]]],
-    ) -> CompoundBluePrint:
+    ) -> Optional[CompoundBluePrint]:
         chans = [k for k, v in chan_selection if k in self.channels]
 
         blue_print = self.engine.combine(stock_id, datapoints, chans)
@@ -88,6 +91,48 @@ class DummyCompoundIngester(AbsCompoundIngester):
             )
 
         return blue_print
+
+
+class DummyExtendedCompoundIngester(AbsCompoundIngester):
+    """
+    Extended compound ingester creates compounds for datapoints that were not
+    in the triggering alert.
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.channels: Set[ChannelId] = set()
+        self.engine = DummyCompoundIngester(
+            context=self.context,
+            updates_buffer=self.updates_buffer,
+            logd=self.logd,
+            run_id=self.run_id,
+        )
+
+    def add_channel(self, channel: ChannelId) -> None:
+        self.channels.add(channel)
+        self.engine.add_channel(channel)
+
+    def ingest(
+        self,
+        stock_id: StockId,
+        datapoints: Sequence[DataPoint],
+        chan_selection: List[Tuple[ChannelId, Union[bool, int]]],
+    ) -> Optional[CompoundBluePrint]:
+        if not (chans := [(k, v) for k, v in chan_selection if k in self.channels]):
+            return None
+
+        # Find some new datapoints lying around, and insert them
+        dps = [
+            {"_id": -(dp["_id"] + 1), "body": {}, "stock_id": stock_id}
+            for i, dp in enumerate(datapoints)
+        ]
+        for dp in dps:
+            self.updates_buffer.add_t0_update(InsertOne(dp))
+
+        extended_datapoints = sorted(dps + datapoints, key=lambda dp: dp["_id"])
+
+        return self.engine.ingest(stock_id, extended_datapoints, chans)
 
 
 class DummyStateT2Compiler(AbsStateT2Compiler):

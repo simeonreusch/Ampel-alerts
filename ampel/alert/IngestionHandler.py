@@ -35,13 +35,14 @@ class IngestionHandler:
 
 	__slots__ = '__dict__', 'updates_buffer', 'stock_ingester', 'datapoint_ingester', \
 		'stock_t2_ingesters', 'point_t2_ingesters', 'state_t2_ingesters', \
-		'retro_complete', 'ingest_stats', 'log', 'logd'
+		't1_ingesters', 'retro_complete', 'ingest_stats', 'log', 'logd'
 
 	stock_ingester: AbsStockIngester
 	datapoint_ingester: Optional[AbsAlertContentIngester[AmpelAlert, DataPoint]]
 	stock_t2_ingesters: List[AbsStockT2Ingester]
 	point_t2_ingesters: List[AbsPointT2Ingester]
 	state_t2_ingesters: Dict[AbsCompoundIngester, List[AbsStateT2Ingester]]
+	t1_ingesters: Dict[AbsCompoundIngester, List[AbsStateT2Ingester]]
 	updates_buffer: DBUpdatesBuffer
 	logd: LogsBufferDict
 	retro_complete: List[ChannelId]
@@ -67,6 +68,7 @@ class IngestionHandler:
 		self.ingest_stats = []
 		self.retro_complete = []
 		self.state_t2_ingesters = {}
+		self.t1_ingesters = {}
 		self.point_t2_ingesters = []
 		self.stock_t2_ingesters = []
 		self.datapoint_ingester = None
@@ -143,10 +145,16 @@ class IngestionHandler:
 				# Update point ingester internal config
 				point_ingester.add_ingest_models(directive.channel, point_t2.units)
 
-
-		# Standalone T1 processes not supported yet
-		if directive.t1_combine:
-			raise NotImplementedError()
+		# Standalone T1 processes
+		for t1_combine in directive.t1_combine or []:
+			self._setup_t1_combine(
+				context,
+				t1_combine,
+				directive.channel,
+				self.t1_ingesters,
+				logger,
+				**kwargs
+			)
 
 		# Stock T2s
 		if directive.t2_compute:
@@ -287,8 +295,15 @@ class IngestionHandler:
 			for point_ingester in self.point_t2_ingesters:
 				point_ingester.ingest(stock_id, datapoints, filter_results)
 
-		# T1 and associated T2 ingestions
+		# Alert T1 and associated T2 ingestions
 		for comp_ingester, t2_ingesters in self.state_t2_ingesters.items():
+			comp_blueprint = comp_ingester.ingest(stock_id, datapoints, filter_results)
+			if comp_blueprint:
+				for state_ingester in t2_ingesters:
+					state_ingester.ingest(stock_id, comp_blueprint, filter_results)
+
+		# Standalone T1 and associated T2 ingestions
+		for comp_ingester, t2_ingesters in self.t1_ingesters.items():
 			comp_blueprint = comp_ingester.ingest(stock_id, datapoints, filter_results)
 			if comp_blueprint:
 				for state_ingester in t2_ingesters:

@@ -14,6 +14,7 @@ from ampel.model.AlertProcessorDirective import AlertProcessorDirective
 from .dummy_units import (
     DummyAlertContentIngester,
     DummyCompoundIngester,
+    DummyExtendedCompoundIngester,
     DummyStateT2Ingester,
     DummyStateT2Unit,
     DummyStockT2Unit,
@@ -90,6 +91,7 @@ def test_legacy_directive(dev_context):
     assert isinstance(handler.stock_ingester, StockIngester)
     assert isinstance(handler.datapoint_ingester, DummyAlertContentIngester)
 
+    # enable retro-complete, for more compounds
     handler.retro_complete = ["TEST_CHANNEL"]
     handler.ingest(
         AmpelAlert(id="alert", stock_id="stockystock", dps=[{}, {}]),
@@ -98,6 +100,7 @@ def test_legacy_directive(dev_context):
     handler.updates_buffer.push_updates()
     t0 = dev_context.db.get_collection("t0")
     assert t0.count_documents({}) == 2
+    assert t0.count_documents({"stock_id": "stockystock"}) == 2
     assert t0.count_documents({"_id": 0}) == 1
 
     t1 = dev_context.db.get_collection("t1")
@@ -119,8 +122,9 @@ def test_legacy_directive(dev_context):
         assert len(docs[i]["link"]) == 1
 
 
-def test_standalone_t1_directive(dev_context):
-    directive = {
+@pytest.fixture
+def standalone_t1_directive():
+    return {
         "channel": "TEST_CHANNEL",
         "stock_update": {"unit": StockIngester},
         "t0_add": {
@@ -137,7 +141,7 @@ def test_standalone_t1_directive(dev_context):
         },
         "t1_combine": [
             {
-                "ingester": DummyCompoundIngester,
+                "ingester": DummyExtendedCompoundIngester,
                 "t2_compute": {
                     "ingester": DummyStateT2Ingester,
                     "units": [{"unit": DummyStateT2Unit}],
@@ -145,5 +149,102 @@ def test_standalone_t1_directive(dev_context):
             }
         ],
     }
-    with pytest.raises(NotImplementedError):
-        handler = get_handler(dev_context, [AlertProcessorDirective(**directive)])
+
+
+def test_standalone_t1_directive(dev_context, standalone_t1_directive):
+    """
+    Extended history is created if a channel requests it
+    """
+    directive = standalone_t1_directive
+    handler = get_handler(dev_context, [AlertProcessorDirective(**directive)])
+
+    handler.ingest(
+        AmpelAlert(id="alert", stock_id="stockystock", dps=[{}]),
+        [("TEST_CHANNEL", True)],
+    )
+
+    handler.updates_buffer.push_updates()
+    t0 = dev_context.db.get_collection("t0")
+    assert t0.count_documents({}) == 2
+    assert t0.count_documents({"stock_id": "stockystock"}) == 2
+    assert t0.count_documents({"_id": 0}) == 1
+    assert t0.count_documents({"_id": -1}) == 1
+
+    t1 = dev_context.db.get_collection("t1")
+    assert (
+        t1.count_documents({}) == 2
+    ), "two compounds created (for one inserted dp, one from archive)"
+
+    t2 = dev_context.db.get_collection("t2")
+    assert (
+        t2.count_documents({}) == 2
+    ), "two t2 docs created (for one inserted dp, one from archive)"
+
+
+def test_standalone_t1_channel_dispatch(dev_context, standalone_t1_directive):
+    """
+    Extended history compounds are created only for channels that request it
+    """
+    long_channel = {**standalone_t1_directive, **{"channel": "LONG_CHANNEL"}}
+    short_channel = {**standalone_t1_directive, **{"channel": "SHORT_CHANNEL"}}
+    del short_channel["t1_combine"]
+
+    handler = get_handler(
+        dev_context,
+        [
+            AlertProcessorDirective(**directive)
+            for directive in (long_channel, short_channel)
+        ],
+    )
+
+    handler.ingest(
+        AmpelAlert(id="alert", stock_id=1, dps=[{}]),
+        [("LONG_CHANNEL", True), ("SHORT_CHANNEL", True)],
+    )
+
+    handler.updates_buffer.push_updates()
+    t0 = dev_context.db.get_collection("t0")
+    assert t0.count_documents({}) == 2
+    assert t0.count_documents({"stock_id": 1}) == 2
+    assert t0.count_documents({"_id": 0}) == 1
+
+    t1 = dev_context.db.get_collection("t1")
+    assert t1.count_documents({}) == 2
+    assert t1.count_documents({"channel": "SHORT_CHANNEL"}) == 1
+
+    t2 = dev_context.db.get_collection("t2")
+    assert t2.count_documents({}) == 2
+    assert t2.count_documents({"channel": "SHORT_CHANNEL"}) == 1
+
+
+def test_standalone_t1_elision(dev_context, standalone_t1_directive):
+    """
+    Extended history points are skipped when only short channels pass
+    """
+    long_channel = {**standalone_t1_directive, **{"channel": "LONG_CHANNEL"}}
+    short_channel = {**standalone_t1_directive, **{"channel": "SHORT_CHANNEL"}}
+    del short_channel["t1_combine"]
+
+    handler = get_handler(
+        dev_context,
+        [
+            AlertProcessorDirective(**directive)
+            for directive in (long_channel, short_channel)
+        ],
+    )
+
+    handler.ingest(
+        AmpelAlert(id="alert", stock_id=1, dps=[{}]), [("SHORT_CHANNEL", True)],
+    )
+
+    handler.updates_buffer.push_updates()
+    t0 = dev_context.db.get_collection("t0")
+    assert t0.count_documents({}) == 1
+    assert t0.count_documents({"stock_id": 1}) == 1
+    assert t0.count_documents({"_id": 0}) == 1
+
+    t1 = dev_context.db.get_collection("t1")
+    assert t1.count_documents({}) == 1
+
+    t2 = dev_context.db.get_collection("t2")
+    assert t2.count_documents({}) == 1

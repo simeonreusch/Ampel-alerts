@@ -4,8 +4,8 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 01.05.2020
-# Last Modified Date: 13.06.2020
-# Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
+# Last Modified Date: 20.11.2020
+# Last Modified By  : Jakob van Santen <jakob.van.santen@desy.de>
 
 from time import time
 from typing import Sequence, List, Dict, Union, Iterable, Tuple, Type, Optional
@@ -27,6 +27,7 @@ from ampel.log.utils import log_exception
 from ampel.log.LogsBufferDict import LogsBufferDict
 from ampel.log.LogRecordFlag import LogRecordFlag
 from ampel.model.UnitModel import UnitModel
+from ampel.model.ingest.T1CombineModel import T1CombineModel
 from ampel.model.AlertProcessorDirective import AlertProcessorDirective
 
 
@@ -117,46 +118,23 @@ class IngestionHandler:
 					**kwargs
 				)
 
-			if t0_add.t1_combine:
-
-				for t1_combine in t0_add.t1_combine:
-
-					# Build compound ingester id
-					comp_ingester = self._get_ingester(
-						context, t1_combine, AbsCompoundIngester,
-						self.state_t2_ingesters, directive, logger, **kwargs
-					)
-					if comp_ingester not in self.state_t2_ingesters:
-						self.state_t2_ingesters[comp_ingester] = []
-
-					# Notify compound ingester that the current channel
-					# requires the creation of states/compounds
-					comp_ingester.add_channel(directive.channel)
-
-					# State T2s (should be defined along with t1 ingesters usually)
-					if state_t2 := t1_combine.t2_compute:
-
-						# Retrieve list of associated t2 ingesters (we allow
-						# the definition of multiple different t2 ingesters)
-						t2_ingesters = self.state_t2_ingesters[comp_ingester] # type: ignore
-
-						t2_ingester = self._get_ingester(
-							context, state_t2, AbsStateT2Ingester,
-							t2_ingesters, directive, logger, **kwargs
-						)
-
-						if t2_ingester not in t2_ingesters:
-							t2_ingesters.append(t2_ingester)
-
-						# Update state ingester internal config
-						t2_ingester.add_ingest_models(directive.channel, state_t2.units)
+			# States, and T2s based thereon
+			for t1_combine in t0_add.t1_combine or []:
+				self._setup_t1_combine(
+					context,
+					t1_combine,
+					directive.channel,
+					self.state_t2_ingesters,
+					logger,
+					**kwargs
+				)
 
 			# DataPoint T2s
 			if point_t2 := t0_add.t2_compute:
 
 				point_ingester = self._get_ingester(
 					context, point_t2, AbsPointT2Ingester,
-					self.point_t2_ingesters, directive, logger, **kwargs
+					self.point_t2_ingesters, directive.channel, logger, **kwargs
 				)
 
 				if point_ingester not in self.point_t2_ingesters:
@@ -175,7 +153,7 @@ class IngestionHandler:
 
 			stock_t2_ingester = self._get_ingester(
 				context, directive.t2_compute, AbsStockT2Ingester,
-				self.stock_t2_ingesters, directive, logger, **kwargs
+				self.stock_t2_ingesters, directive.channel, logger, **kwargs
 			)
 
 			if stock_t2_ingester not in self.stock_t2_ingesters:
@@ -186,9 +164,53 @@ class IngestionHandler:
 			)
 
 
+	def _setup_t1_combine(self,
+		context: AmpelContext, t1_combine: T1CombineModel, channel: ChannelId,
+		store: Dict[AbsCompoundIngester, List[AbsStateT2Ingester]],
+		logger: AmpelLogger, **kwargs
+	) -> None:
+		"""
+		Add the ingesters specified in ``t1_combine`` to ``store``, reusing
+		existing instances if possible.
+		
+		:param t1_combine: subclause of ingestion directive
+		:param channel: channel of parent directive
+		:param store: cache of existing ingesters
+		"""
+		# Build compound ingester id
+		comp_ingester = self._get_ingester(
+			context, t1_combine, AbsCompoundIngester,
+			store, channel, logger, **kwargs
+		)
+		if comp_ingester not in store:
+			store[comp_ingester] = []
+
+		# Notify compound ingester that the current channel
+		# requires the creation of states/compounds
+		comp_ingester.add_channel(channel)
+
+		# State T2s (should be defined along with t1 ingesters usually)
+		if state_t2 := t1_combine.t2_compute:
+
+			# Retrieve list of associated t2 ingesters (we allow
+			# the definition of multiple different t2 ingesters)
+			t2_ingesters = store[comp_ingester] # type: ignore
+
+			t2_ingester = self._get_ingester(
+				context, state_t2, AbsStateT2Ingester,
+				t2_ingesters, channel, logger, **kwargs
+			)
+
+			if t2_ingester not in t2_ingesters:
+				t2_ingesters.append(t2_ingester)
+
+			# Update state ingester internal config
+			t2_ingester.add_ingest_models(channel, state_t2.units)
+
+
 	def _get_ingester(self,
 		context: AmpelContext, model: UnitModel, sub_type: Type[PT],
-		it: Iterable, parent_model: AlertProcessorDirective, logger: AmpelLogger, **kwargs
+		it: Iterable, channel: ChannelId, logger: AmpelLogger, **kwargs
 	) -> PT:
 		"""
 		Method used internally to instantiate ingesters.
@@ -207,22 +229,22 @@ class IngestionHandler:
 
 			if logger.verbose > 1:
 				logger.debug(
-					f"[{parent_model.channel}] Updating ingester with model {model} (hash={md})"
+					f"[{channel}] Updating ingester with model {model} (hash={md})"
 				)
 			elif logger.verbose:
 				logger.log(VERBOSE,
-					f"[{parent_model.channel}] Updating ingester with id ..{str(md)[-6:]}"
+					f"[{channel}] Updating ingester with id ..{str(md)[-6:]}"
 				)
 
 			return ingester
 
 		if logger.verbose > 1:
 			logger.debug(
-				f"[{parent_model.channel}] Creating new ingester with model {model} (hash={md})"
+				f"[{channel}] Creating new ingester with model {model} (hash={md})"
 			)
 		elif logger.verbose:
 			logger.log(VERBOSE,
-				f"[{parent_model.channel}] Creating new {model.unit_name} with id ..{str(md)[-6:]}"
+				f"[{channel}] Creating new {model.unit_name} with id ..{str(md)[-6:]}"
 			)
 
 		kwargs['hash'] = md

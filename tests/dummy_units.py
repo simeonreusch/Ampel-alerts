@@ -54,7 +54,8 @@ class DummyCompoundIngester(AbsCompoundIngester):
     ) -> Optional[CompoundBluePrint]:
         chans = [k for k, v in chan_selection if k in self.channels]
 
-        blue_print = self.engine.combine(stock_id, datapoints, chans)
+        if not (blue_print := self.engine.combine(stock_id, datapoints, chans)):
+            return None
 
         for eff_comp_id in blue_print.get_effids_for_chans(chans):
 

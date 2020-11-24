@@ -56,7 +56,49 @@ db:
   prefix: AmpelTest
   mongo_options:
     serverSelectionTimeoutMS: 1
-channel: {}
+logging:
+  default:
+    console:
+      std_stream: stdout
+      datefmt: '%Y-%m-%d %H:%M:%S'
+      level: 1024
+      aggregate_interval: 1
+      density: default
+      terminator: '
+
+        '
+      log_sep: '
+
+        '
+      prefix: null
+      provenance: true
+    db:
+      level: 1024
+channel:
+  TEST_CHANNEL:
+    channel: TEST_CHANNEL
+    # purge:
+    #   content:
+    #     delay: 100
+    #     format: json
+    #     unify: true
+    #     compress: true
+    #   logs:
+    #     delay: 50
+    #     format: csv
+    #     compress: true
+    #     header: false
+    # active: true
+    # hash: 31333123851709749
+    # distrib: ampel-contrib-ztfbh
+    # source: conf/ampel-contrib-ztfbh/channel/TDE_RANKING.yaml
+    # contact: sjoert@nyu.edu
+    # access:
+    # - ZTF
+    # - ZTF_PUB
+    # - ZTF_COLLAB
+    # policy: []
+    # template: ztf_uw_private
 unit:
   controller: {}
   admin: {}

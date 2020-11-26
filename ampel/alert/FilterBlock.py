@@ -23,7 +23,7 @@ from ampel.log.LogRecordFlag import LogRecordFlag
 from ampel.abstract.AbsAlertFilter import AbsAlertFilter
 from ampel.abstract.AbsAlertRegister import AbsAlertRegister
 from ampel.model.AutoStockMatchModel import AutoStockMatchModel
-
+from ampel.alert.AlertProcessorMetrics import stat_accepted, stat_autocomplete, stat_time
 
 def no_filter(alert: Any) -> bool:
 	return True
@@ -39,8 +39,8 @@ class FilterBlock:
 	"""
 
 	__slots__ = '__dict__', 'logger', 'channel', 'context', \
-		'retro_complete', 'chan_str', 'count_matches', 'count_rej', \
-		'min_log_msg', 'filter_func', 'count_ac', 'ac', 'overrule', \
+		'retro_complete', 'chan_str', \
+		'min_log_msg', 'filter_func', 'ac', 'overrule', \
 		'bypass', 'update_rej', 'rej_log_handler', 'rej_log_handle', \
 		'file', 'log', 'forward', 'buffer', 'buf_hdlr', 'stock_ids'
 
@@ -50,6 +50,7 @@ class FilterBlock:
 		channel: ChannelId,
 		filter_model: Optional[FilterModel],
 		stock_match: Optional[AutoStockMatchModel],
+		process_name: str,
 		logger: AmpelLogger,
 		embed: bool = False
 	) -> None:
@@ -61,6 +62,11 @@ class FilterBlock:
 		# Channel name (ex: HU_SN or 1)
 		self.channel = channel
 		self.chan_str = str(self.channel)
+
+		# stats
+		self._stat_accepted = stat_accepted.labels(self.chan_str)
+		self._stat_autocomplete = stat_autocomplete.labels(self.chan_str)
+		self._stat_time = stat_time.labels(f"filter.{self.chan_str}")
 
 		self.ac = False
 		self.retro_complete = False
@@ -120,6 +126,11 @@ class FilterBlock:
 
 
 	def filter(self, alert: AmpelAlert) -> Optional[Tuple[ChannelId, Union[int, bool]]]:
+		with self._stat_time.time():
+			return self._filter(alert)
+
+
+	def _filter(self, alert: AmpelAlert) -> Optional[Tuple[ChannelId, Union[int, bool]]]:
 
 		stock_id = alert.stock_id
 
@@ -132,7 +143,7 @@ class FilterBlock:
 		# Filter accepted alert
 		if res is not None and res > 0:
 
-			self.count_matches += 1
+			self._stat_accepted.inc()
 
 			# Write log entries to main logger
 			# (note: log records already contain chan info)
@@ -176,7 +187,7 @@ class FilterBlock:
 				self.log(INFO, None, channel=self.channel, stock=stock_id, extra=extra_ac)
 
 				# Update count
-				self.count_ac += 1
+				self._stat_autocomplete.inc()
 
 				# Rejected alerts notifications can go to rejected log collection
 				# even though it was "auto-completed" because it
@@ -232,10 +243,6 @@ class FilterBlock:
 		- open an alert register for rejected alerts.
 		- instantiate a logging handler for rejected logs
 		"""
-
-		self.count_matches = 0
-		self.count_rej = 0
-		self.count_ac = 0
 
 		self.logger = logger
 		self.log = logger.log

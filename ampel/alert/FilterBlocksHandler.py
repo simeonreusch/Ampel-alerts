@@ -71,6 +71,7 @@ class FilterBlocksHandler:
 	def __init__(self,
 		context: AmpelContext, logger: AmpelLogger,
 		directives: Sequence[AlertProcessorDirective],
+		process_name: str,
 		db_log_format: str = "standard"
 	) -> None:
 		"""
@@ -87,6 +88,7 @@ class FilterBlocksHandler:
 				channel = model.channel,
 				filter_model = model.filter,
 				stock_match = model.stock_match,
+				process_name = process_name,
 				logger = logger,
 				embed = embed
 			)

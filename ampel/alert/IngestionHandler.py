@@ -29,6 +29,7 @@ from ampel.log.LogRecordFlag import LogRecordFlag
 from ampel.model.UnitModel import UnitModel
 from ampel.model.ingest.T1CombineModel import T1CombineModel
 from ampel.model.AlertProcessorDirective import AlertProcessorDirective
+from ampel.alert.AlertProcessorMetrics import stat_time
 
 
 class IngestionHandler:
@@ -270,7 +271,9 @@ class IngestionHandler:
 
 		return ingester
 
-
+	# prettier in Python 3.9
+	stat_time = stat_time.labels("ingest").time()
+	@stat_time
 	def ingest(self,
 		alert: AmpelAlert,
 		filter_results: List[Tuple[ChannelId, Union[bool, int]]]

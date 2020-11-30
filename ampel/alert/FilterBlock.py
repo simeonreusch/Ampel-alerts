@@ -23,7 +23,12 @@ from ampel.log.LogRecordFlag import LogRecordFlag
 from ampel.abstract.AbsAlertFilter import AbsAlertFilter
 from ampel.abstract.AbsAlertRegister import AbsAlertRegister
 from ampel.model.AutoStockMatchModel import AutoStockMatchModel
-from ampel.alert.AlertProcessorMetrics import stat_accepted, stat_autocomplete, stat_time
+from ampel.alert.AlertProcessorMetrics import (
+	stat_accepted,
+	stat_rejected,
+	stat_autocomplete,
+	stat_time,
+)
 
 def no_filter(alert: Any) -> bool:
 	return True
@@ -65,6 +70,7 @@ class FilterBlock:
 
 		# stats
 		self._stat_accepted = stat_accepted.labels(self.chan_str)
+		self._stat_rejected = stat_rejected.labels(self.chan_str)
 		self._stat_autocomplete = stat_autocomplete.labels(self.chan_str)
 		self._stat_time = stat_time.labels(f"filter.{self.chan_str}")
 
@@ -176,7 +182,7 @@ class FilterBlock:
 		# Filter rejected alert
 		else:
 
-			self.count_rej += 1
+			self._stat_rejected.inc()
 
 			# "live" autocomplete requested for this channel
 			if self.overrule and stock_id in self.stock_ids:

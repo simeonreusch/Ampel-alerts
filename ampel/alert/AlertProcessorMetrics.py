@@ -15,6 +15,12 @@ stat_accepted = AmpelMetricsRegistry.counter(
     subsystem="alertprocessor",
     labelnames=("channel",),
 )
+stat_rejected = AmpelMetricsRegistry.counter(
+    "alerts_rejected",
+    "Number of rejected alerts",
+    subsystem="alertprocessor",
+    labelnames=("channel",),
+)
 stat_autocomplete = AmpelMetricsRegistry.counter(
     "alerts_autocompleted",
     "Number of alerts accepted due to auto-complete",

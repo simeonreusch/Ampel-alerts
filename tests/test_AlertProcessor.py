@@ -50,7 +50,7 @@ def test_no_filter(dev_context, legacy_directive):
         ]
         == 1
     )
-    assert stats[("ampel_alertprocessor_time_seconds_sum", (("section", "main"),),)] > 0
+    assert stats[("ampel_alertprocessor_time_seconds_sum", (("section", "ingest"),),)] > 0
     assert (
         stats[
             (
@@ -100,7 +100,7 @@ def test_with_filter(dev_context, legacy_directive):
         ]
         == 1
     )
-    assert stats[("ampel_alertprocessor_time_seconds_sum", (("section", "main"),),)] > 0
+    assert stats[("ampel_alertprocessor_time_seconds_sum", (("section", "ingest"),),)] > 0
     assert (
         stats[
             (

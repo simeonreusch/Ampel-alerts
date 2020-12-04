@@ -77,7 +77,8 @@ def test_legacy_directive(dev_context, legacy_directive):
     print(docs)
     assert docs[0]["stock"] == "stockystock"
     assert docs[0]["unit"] == "DummyStockT2Unit"
-    assert "link" not in docs[0]
+    assert docs[0]["link"] == "stockystock"
+    assert docs[0]["col"] == "stock"
     for i in range(1, 3):
         assert docs[i]["stock"] == "stockystock"
         assert docs[i]["unit"] == "DemoPointT2Unit"

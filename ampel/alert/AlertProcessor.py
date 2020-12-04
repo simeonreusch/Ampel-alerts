@@ -233,166 +233,127 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 		stats = {
 			"alerts": stat_alerts,
 			"accepted": stat_accepted.labels("any"),
-			"time": {
-				section: stat_time.labels(section)
-				for section in ["pre_loop", "post_loop", "main"]
-			}
 		}
 
-		with stats["time"]["pre_loop"].time():
-			# An AlertSupplier deserializes file-like objects provided by the AlertLoader
-			# and returns an AmpelAlert/PhotoAlert
-			if not self.alert_supplier or not self.alert_supplier.ready():
-				raise ValueError("Alert supplier not set or not sourced")
+		# An AlertSupplier deserializes file-like objects provided by the AlertLoader
+		# and returns an AmpelAlert/PhotoAlert
+		if not self.alert_supplier or not self.alert_supplier.ready():
+			raise ValueError("Alert supplier not set or not sourced")
 
-			run_id = self.new_run_id()
+		run_id = self.new_run_id()
 
-			# Setup logging
-			###############
+		# Setup logging
+		###############
 
-			logger = AmpelLogger.from_profile(
-				self.context, self.log_profile, run_id,
-				base_flag = LogRecordFlag.T0 | LogRecordFlag.CORE | self.base_log_flag
-			)
+		logger = AmpelLogger.from_profile(
+			self.context, self.log_profile, run_id,
+			base_flag = LogRecordFlag.T0 | LogRecordFlag.CORE | self.base_log_flag
+		)
 
-			if logger.verbose:
-				logger.log(VERBOSE, "Pre-run setup")
+		if logger.verbose:
+			logger.log(VERBOSE, "Pre-run setup")
 
-			# DBLoggingHandler formats, saves and pushes log records into the DB
-			if db_logging_handler := logger.get_db_logging_handler():
-				db_logging_handler.auto_flush = False
+		# DBLoggingHandler formats, saves and pushes log records into the DB
+		if db_logging_handler := logger.get_db_logging_handler():
+			db_logging_handler.auto_flush = False
 
-			# Add new doc in the 'events' collection
-			event_doc = DBEventDoc(
-				self._ampel_db, process_name=self.process_name,
-				run_id=run_id, tier=0
-			)
+		# Add new doc in the 'events' collection
+		event_doc = DBEventDoc(
+			self._ampel_db, process_name=self.process_name,
+			run_id=run_id, tier=0
+		)
 
-			# Collects and executes pymongo.operations in collection Ampel_data
-			updates_buffer = DBUpdatesBuffer(
-				self._ampel_db, run_id, logger,
-				error_callback = self.set_cancel_run,
-				catch_signals = False # we do it ourself
-			)
+		# Collects and executes pymongo.operations in collection Ampel_data
+		updates_buffer = DBUpdatesBuffer(
+			self._ampel_db, run_id, logger,
+			error_callback = self.set_cancel_run,
+			catch_signals = False # we do it ourself
+		)
 
-			any_filter = any([fb.filter_model for fb in self._fbh.filter_blocks])
-			# if bypassing filters, track passing rates at top level
-			if not any_filter:
-				stats["filter_accepted"] = [
-					stat_accepted.labels(channel)
-					for channel in self._fbh.chan_names
-			]
+		any_filter = any([fb.filter_model for fb in self._fbh.filter_blocks])
+		# if bypassing filters, track passing rates at top level
+		if not any_filter:
+			stats["filter_accepted"] = [
+				stat_accepted.labels(channel)
+				for channel in self._fbh.chan_names
+		]
 
-			# Setup ingesters
-			ing_hdlr = IngestionHandler(
-				self.context, self.directives, updates_buffer, logger, run_id
-			)
+		# Setup ingesters
+		ing_hdlr = IngestionHandler(
+			self.context, self.directives, updates_buffer, logger, run_id
+		)
 
-			# Loop variables
-			iter_max = self.iter_max
-			iter_count = 0
-			any_match = 0
-			auto_complete = 0
-			err = 0
-			assert self._fbh.chan_names is not None
-			reduced_chan_names: Union[str,List[str]] = self._fbh.chan_names[0] if len(self._fbh.chan_names) == 1 else self._fbh.chan_names
-			fblocks = self._fbh.filter_blocks
+		# Loop variables
+		iter_max = self.iter_max
+		iter_count = 0
+		any_match = 0
+		auto_complete = 0
+		err = 0
+		assert self._fbh.chan_names is not None
+		reduced_chan_names: Union[str,List[str]] = self._fbh.chan_names[0] if len(self._fbh.chan_names) == 1 else self._fbh.chan_names
+		fblocks = self._fbh.filter_blocks
 
-			if any_filter:
-				filter_results: List[Tuple[ChannelId, Union[bool, int]]] = []
-			else:
-				filter_results = [(fb.channel, True) for fb in self._fbh.filter_blocks]
+		if any_filter:
+			filter_results: List[Tuple[ChannelId, Union[bool, int]]] = []
+		else:
+			filter_results = [(fb.channel, True) for fb in self._fbh.filter_blocks]
 
-			# Builds set of stock ids for autocomplete, if needed
-			self._fbh.ready(logger, run_id, ing_hdlr)
+		# Builds set of stock ids for autocomplete, if needed
+		self._fbh.ready(logger, run_id, ing_hdlr)
 
-			self._cancel_run = 0
+		self._cancel_run = 0
 
-		with stats["time"]["main"].time():
+		# Process alerts
+		################
 
-			# Process alerts
-			################
+		# The extra is just a feedback for the console stream handler
+		logger.log(self.shout, "Processing alerts", extra={'r': run_id})
 
-			# The extra is just a feedback for the console stream handler
-			logger.log(self.shout, "Processing alerts", extra={'r': run_id})
+		with updates_buffer.run_in_thread():
 
-			with updates_buffer.run_in_thread():
+			# Iterate over alerts
+			for alert in self.alert_supplier:
 
-				# Iterate over alerts
-				for alert in self.alert_supplier:
+				if self._cancel_run:
 
-					if self._cancel_run:
+					print("")
+					if self._cancel_run == INTERRUPTED:
+						logger.info("Interrupting run() procedure")
+						print("Interrupting run() procedure")
+					else: # updates_buffer requested to stop processing
+						print("Abording run() procedure")
 
-						print("")
-						if self._cancel_run == INTERRUPTED:
-							logger.info("Interrupting run() procedure")
-							print("Interrupting run() procedure")
-						else: # updates_buffer requested to stop processing
-							print("Abording run() procedure")
+					logger.flush()
+					self._fbh.done()
+					return iter_count
 
-						logger.flush()
-						self._fbh.done()
-						return iter_count
+				# Associate upcoming log entries with the current transient id
+				stock_id = alert.stock_id
+				extra: Dict[str, Any] = {'alert': alert.id}
 
-					# Associate upcoming log entries with the current transient id
-					stock_id = alert.stock_id
-					extra: Dict[str, Any] = {'alert': alert.id}
+				if any_filter:
 
-					if any_filter:
+					filter_results = []
 
-						filter_results = []
-
-						# Loop through filter blocks
-						for fblock in fblocks:
-							try:
-								# Apply filter (returns None/False in case of rejection or True/int in case of match)
-								if res := fblock.filter(alert):
-									filter_results.append(res)
-
-							# Unrecoverable (logging related) errors
-							except (PyMongoError, AmpelLoggingError) as e:
-								print("%s: abording run() procedure" % e.__class__.__name__)
-								self._report_ap_error(e, logger, run_id, extra=extra)
-								raise e
-
-							# Possibly tolerable errors (could be an error from a contributed filter)
-							except Exception as e:
-
-								fblock.forward(db_logging_handler, stock=stock_id, extra=extra)
-								self._report_ap_error(
-									e, logger, run_id, extra={**extra, 'section': 'filter', 'channel': fblock.channel}
-								)
-
-								if self.raise_exc:
-									raise e
-								else:
-									if self.error_max:
-										err += 1
-									if err == self.error_max:
-										logger.error("Max number of error reached, breaking alert processing")
-										self.set_cancel_run(TOO_MANY_ERRORS)
-					else:
-						# if bypassing filters, track passing rates at top level
-						for counter in stats["filter_accepted"]:
-							counter.inc()
-
-					if filter_results:
-
-						stats["accepted"].inc()
-
+					# Loop through filter blocks
+					for fblock in fblocks:
 						try:
-							ing_hdlr.ingest(alert, filter_results)
-						except (PyMongoError, AmpelLoggingError) as e:
+							# Apply filter (returns None/False in case of rejection or True/int in case of match)
+							if res := fblock.filter(alert):
+								filter_results.append(res)
 
+						# Unrecoverable (logging related) errors
+						except (PyMongoError, AmpelLoggingError) as e:
 							print("%s: abording run() procedure" % e.__class__.__name__)
 							self._report_ap_error(e, logger, run_id, extra=extra)
 							raise e
 
+						# Possibly tolerable errors (could be an error from a contributed filter)
 						except Exception as e:
 
+							fblock.forward(db_logging_handler, stock=stock_id, extra=extra)
 							self._report_ap_error(
-								e, logger, run_id, filter_results,
-								extra={**extra, 'section': 'ingest', 'alert': alert.dict()}
+								e, logger, run_id, extra={**extra, 'section': 'filter', 'channel': fblock.channel}
 							)
 
 							if self.raise_exc:
@@ -403,59 +364,89 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 								if err == self.error_max:
 									logger.error("Max number of error reached, breaking alert processing")
 									self.set_cancel_run(TOO_MANY_ERRORS)
+				else:
+					# if bypassing filters, track passing rates at top level
+					for counter in stats["filter_accepted"]:
+						counter.inc()
 
-					else:
+				if filter_results:
 
-						# All channels reject this alert
-						# no log entries goes into the main logs collection sinces those are redirected to Ampel_rej.
+					stats["accepted"].inc()
 
-						# So we add a notification manually. For that, we don't use logger
-						# cause rejection messages were alreary logged into the console
-						# by the StreamHandler in channel specific RecordBufferingHandler instances.
-						# So we address directly db_logging_handler, and for that, we create
-						# a LogRecord manually.
-						lr = LighterLogRecord(
-							logger.name,
-							LogRecordFlag.INFO | logger.base_flag
+					try:
+						ing_hdlr.ingest(alert, filter_results)
+					except (PyMongoError, AmpelLoggingError) as e:
+
+						print("%s: abording run() procedure" % e.__class__.__name__)
+						self._report_ap_error(e, logger, run_id, extra=extra)
+						raise e
+
+					except Exception as e:
+
+						self._report_ap_error(
+							e, logger, run_id, filter_results,
+							extra={**extra, 'section': 'ingest', 'alert': alert.dict()}
 						)
-						lr.stock = stock_id
-						lr.channel = reduced_chan_names # type: ignore[assignment]
-						lr.extra = {
-							'alert': alert.id,
-							'allout': True,
-						}
-						if db_logging_handler:
-							db_logging_handler.handle(lr)
 
-					iter_count += 1
-					stats["alerts"].inc()
+						if self.raise_exc:
+							raise e
+						else:
+							if self.error_max:
+								err += 1
+							if err == self.error_max:
+								logger.error("Max number of error reached, breaking alert processing")
+								self.set_cancel_run(TOO_MANY_ERRORS)
 
-					if iter_count == iter_max:
-						logger.info("Reached max number of iterations")
-						break
+				else:
 
-					updates_buffer.check_push()
+					# All channels reject this alert
+					# no log entries goes into the main logs collection sinces those are redirected to Ampel_rej.
+
+					# So we add a notification manually. For that, we don't use logger
+					# cause rejection messages were alreary logged into the console
+					# by the StreamHandler in channel specific RecordBufferingHandler instances.
+					# So we address directly db_logging_handler, and for that, we create
+					# a LogRecord manually.
+					lr = LighterLogRecord(
+						logger.name,
+						LogRecordFlag.INFO | logger.base_flag
+					)
+					lr.stock = stock_id
+					lr.channel = reduced_chan_names # type: ignore[assignment]
+					lr.extra = {
+						'alert': alert.id,
+						'allout': True,
+					}
 					if db_logging_handler:
-						db_logging_handler.check_flush()
+						db_logging_handler.handle(lr)
 
-		with stats["time"]["post_loop"].time():
+				iter_count += 1
+				stats["alerts"].inc()
 
-			try:
-				logger.log(self.shout,
-					f"Processing completed"
-				)
+				if iter_count == iter_max:
+					logger.info("Reached max number of iterations")
+					break
 
-				# Flush loggers
-				logger.flush()
-				self._fbh.done()
+				updates_buffer.check_push()
+				if db_logging_handler:
+					db_logging_handler.check_flush()
 
-				event_doc.update(logger)
+		try:
+			logger.log(self.shout,
+				f"Processing completed"
+			)
 
-			except Exception as e:
+			# Flush loggers
+			logger.flush()
+			self._fbh.done()
 
-				# Try to insert doc into trouble collection (raises no exception)
-				# Possible exception will be logged out to console in any case
-				report_exception(self._ampel_db, logger, exc=e)
+			event_doc.update(logger)
+
+		except Exception as e:
+
+			# Try to insert doc into trouble collection (raises no exception)
+			# Possible exception will be logged out to console in any case
+			report_exception(self._ampel_db, logger, exc=e)
 
 		# Return number of processed alerts
 		return iter_count

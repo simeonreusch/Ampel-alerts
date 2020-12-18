@@ -382,13 +382,25 @@ class IngestionHandler:
 				flag = LogRecordFlag.INFO
 
 			log = self.log
-			extra = logd.get('extra')
+			extra = {
+				"channel": chans,
+				"stock": stock_id,
+				**(logd.get("extra") or {})
+			}
 			for l in logd['logs']:
-				log(flag, l, channel=chans, stock=stock_id, extra=extra)
+				log(flag, l, extra=extra)
 
 			logd['logs'] = []
 		else:
-			self.log(LogRecordFlag.INFO, None, channel=chans, stock=stock_id, extra=logd['extra'])
+			self.log(
+				LogRecordFlag.INFO,
+				None,
+				extra={
+					"channel": chans,
+					"stock": stock_id,
+					**(logd.get("extra") or {})
+				}
+			)
 
 		self.ingest_stats.append(time() - ingester_start)
 		self.updates_buffer._block_autopush = False

@@ -160,11 +160,27 @@ class FilterBlock:
 			else:
 				if self.min_log_msg: # embed is True
 					if isinstance(res, bool):
-						self.log(INFO, self.min_log_msg, stock=stock_id, extra={'a': alert.id})
+						self.log(
+							INFO,
+							self.min_log_msg,
+							extra={'a': alert.id, 'stock': stock_id}
+						)
 					else:
-						self.log(INFO, {'c': self.channel, 'g': res}, stock=stock_id, extra={'a': alert.id})
+						self.log(
+							INFO,
+							{'c': self.channel, 'g': res},
+							extra={'a': alert.id, 'stock': stock_id}
+						)
 				else:
-					self.log(INFO, None, channel=self.channel, stock=stock_id, extra={'a': alert.id})
+					self.log(
+						INFO,
+						None,
+						extra={
+							'a': alert.id,
+							'stock': stock_id,
+							'channel': self.channel
+						}
+					)
 
 			# self.ac contains all "kinds" of auto-complete
 			if self.ac:
@@ -187,10 +203,10 @@ class FilterBlock:
 			# "live" autocomplete requested for this channel
 			if self.overrule and stock_id in self.stock_ids:
 
-				extra_ac = {'a': alert.id, 'ac': True}
+				extra_ac = {'a': alert.id, 'ac': True, 'stock': stock_id, 'channel': self.channel}
 
 				# Main logger feedback
-				self.log(INFO, None, channel=self.channel, stock=stock_id, extra=extra_ac)
+				self.log(INFO, None, extra=extra_ac)
 
 				# Update count
 				self._stat_autocomplete.inc()

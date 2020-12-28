@@ -17,9 +17,9 @@ from ampel.model.AlertProcessorDirective import FilterModel
 from ampel.log.AmpelLogger import AmpelLogger, INFO
 from ampel.log.handlers.EnclosedChanRecordBufHandler import EnclosedChanRecordBufHandler
 from ampel.log.handlers.ChanRecordBufHandler import ChanRecordBufHandler
-from ampel.log.handlers.LoggingHandlerProtocol import LoggingHandlerProtocol
 from ampel.log.LighterLogRecord import LighterLogRecord
 from ampel.log.LogRecordFlag import LogRecordFlag
+from ampel.protocol.LoggingHandlerProtocol import LoggingHandlerProtocol
 from ampel.abstract.AbsAlertFilter import AbsAlertFilter
 from ampel.abstract.AbsAlertRegister import AbsAlertRegister
 from ampel.model.AutoStockMatchModel import AutoStockMatchModel

@@ -4,13 +4,13 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 10.10.2017
-# Last Modified Date: 29.05.2020
+# Last Modified Date: 31.01.2021
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
-import json, signal
+import signal
 from io import IOBase
 from pymongo.errors import PyMongoError
-from typing import Sequence, List, Dict, Union, Any, Iterable, Tuple, Callable, Optional, Generic
+from typing import Sequence, List, Dict, Union, Any, Iterable, Tuple, Optional, Generic
 
 from ampel.type import ChannelId
 from ampel.core.AmpelContext import AmpelContext
@@ -31,7 +31,7 @@ from ampel.log.LighterLogRecord import LighterLogRecord
 
 from ampel.model.UnitModel import UnitModel
 from ampel.model.AlertProcessorDirective import AlertProcessorDirective
-from ampel.alert.AlertProcessorMetrics import stat_alerts, stat_accepted, stat_time
+from ampel.alert.AlertProcessorMetrics import stat_alerts, stat_accepted
 
 CONNECTIVITY = 1
 INTERRUPTED = 2
@@ -41,7 +41,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 	"""
 	Class handling the processing of alerts (T0 level).
 	For each alert, following tasks are performed:
-	
+
 	* Load the alert
 	* Filter alert based on the configured T0 filter
 	* Ingest alert based on the configured ingester
@@ -79,7 +79,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 		"""
 		Convenience method instantiating an AP using the config entry from a given T0 process.
 		Example::
-			
+
 			AlertProcessor.from_process(
 				context, process_name="VAL_TEST2/T0/ztf_uw_public", override={'publish_stats': []}
 			)
@@ -193,7 +193,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 		"""
 		Source the current alert suplier with the provided alert loader.
 		AlertLoader instances typically provide file-like objects
-		
+
 		:raises ValueError: if self.alert_supplier is None
 		"""
 		if not self.alert_supplier:
@@ -206,7 +206,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 	def process_alerts(self, alert_loader: Iterable[IOBase]) -> None:
 		"""
 		shortcut method to process all alerts from a given loader until its dries out
-		
+
 		:param alert_loader: iterable returning alert payloads
 		:raises ValueError: if self.alert_supplier is None
 		"""
@@ -223,7 +223,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 	def run(self) -> int:
 		"""
 		Run alert processing using the internal alert_loader/alert_supplier
-		
+
 		:raises: LogFlushingError, PyMongoError
 		"""
 
@@ -276,7 +276,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 			stats["filter_accepted"] = [
 				stat_accepted.labels(channel)
 				for channel in self._fbh.chan_names
-		]
+			]
 
 		# Setup ingesters
 		ing_hdlr = IngestionHandler(
@@ -286,11 +286,11 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 		# Loop variables
 		iter_max = self.iter_max
 		iter_count = 0
-		any_match = 0
-		auto_complete = 0
 		err = 0
+
 		assert self._fbh.chan_names is not None
-		reduced_chan_names: Union[str,List[str]] = self._fbh.chan_names[0] if len(self._fbh.chan_names) == 1 else self._fbh.chan_names
+		reduced_chan_names: Union[str, List[str]] = self._fbh.chan_names[0] \
+			if len(self._fbh.chan_names) == 1 else self._fbh.chan_names
 		fblocks = self._fbh.filter_blocks
 
 		if any_filter:
@@ -432,9 +432,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 					db_logging_handler.check_flush()
 
 		try:
-			logger.log(self.shout,
-				f"Processing completed"
-			)
+			logger.log(self.shout, "Processing completed")
 
 			# Flush loggers
 			logger.flush()

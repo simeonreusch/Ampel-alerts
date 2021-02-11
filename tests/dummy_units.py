@@ -1,6 +1,6 @@
 import time
 from collections import defaultdict
-from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple, Union, Any
 
 from pymongo import InsertOne, UpdateOne
 
@@ -15,6 +15,7 @@ from ampel.alert.AmpelAlert import AmpelAlert
 from ampel.content.Compound import Compound
 from ampel.content.DataPoint import DataPoint
 from ampel.content.StockRecord import StockRecord
+from ampel.content.T2Document import T2Document
 from ampel.ingest.CompoundBluePrint import CompoundBluePrint
 from ampel.ingest.T1DefaultCombiner import T1DefaultCombiner
 from ampel.log.AmpelLogger import AmpelLogger
@@ -186,13 +187,15 @@ class DummyStateT2Ingester(AbsStateT2Ingester):
             }
 
             # Attributes set if no previous doc exists
-            set_on_insert: T2Record = {
+            set_on_insert: T2Document = {
                 "stock": stock_id,
-                "tag": self.tags,
                 "unit": t2_id,
                 "config": run_config,
                 "status": T2RunState.TO_RUN.value,
             }
+
+            if self.tags:
+                set_on_insert['tag'] = self.tags
 
             jchan, chan_add_to_set = AbsT2Ingester.build_query_parts(chans)
             add_to_set: Dict[str, Any] = {"channel": chan_add_to_set}

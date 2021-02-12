@@ -191,7 +191,7 @@ class DummyStateT2Ingester(AbsStateT2Ingester):
                 "stock": stock_id,
                 "unit": t2_id,
                 "config": run_config,
-                "status": T2RunState.TO_RUN.value,
+                "status": T2RunState.NEW.value,
             }
 
             if self.tags:

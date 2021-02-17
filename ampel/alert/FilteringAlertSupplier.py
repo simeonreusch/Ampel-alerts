@@ -12,7 +12,7 @@ from typing import List, TypeVar, Dict, Any, Iterable
 from ampel.alert.AmpelAlert import AmpelAlert
 from ampel.abstract.AbsAlertSupplier import AbsAlertSupplier
 from ampel.model.UnitModel import UnitModel
-from ampel.core.UnitLoader import UnitLoader
+from ampel.base.AuxUnitRegister import AuxUnitRegister
 
 T = TypeVar("T", bound=AmpelAlert)
 
@@ -38,7 +38,7 @@ class FilteringAlertSupplier(AbsAlertSupplier[T]):
 
 	def __init__(self, **kwargs) -> None:
 		super().__init__(**kwargs)
-		self.underlying_alert_supplier: AbsAlertSupplier[T] = UnitLoader.new_aux_unit(
+		self.underlying_alert_supplier: AbsAlertSupplier[T] = AuxUnitRegister.new_unit(
 			unit_model = self.supplier, sub_type = AbsAlertSupplier
 		)
 

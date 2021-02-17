@@ -14,7 +14,7 @@ from typing import Sequence, List, Dict, Union, Any, Iterable, Tuple, Optional, 
 
 from ampel.type import ChannelId
 from ampel.core.AmpelContext import AmpelContext
-from ampel.core.UnitLoader import UnitLoader
+from ampel.base.AuxUnitRegister import AuxUnitRegister
 from ampel.util.mappings import merge_dict
 from ampel.util.freeze import recursive_unfreeze
 from ampel.db.DBUpdatesBuffer import DBUpdatesBuffer
@@ -121,7 +121,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 			else:
 				if isinstance(self.supplier, str):
 					self.supplier = UnitModel(unit=self.supplier)
-				self.alert_supplier = UnitLoader.new_aux_unit(
+				self.alert_supplier = AuxUnitRegister.new_unit(
 					unit_model = self.supplier, sub_type = AbsAlertSupplier
 				)
 		else:

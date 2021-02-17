@@ -1,6 +1,6 @@
 import time
 from collections import defaultdict
-from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple, Union, Any
+from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple, Union, Any, TYPE_CHECKING
 
 from pymongo import InsertOne, UpdateOne
 
@@ -22,13 +22,15 @@ from ampel.log.AmpelLogger import AmpelLogger
 from ampel.enum.T2SysRunState import T2SysRunState
 from ampel.type import ChannelId, StockId, T2UnitResult
 
+if TYPE_CHECKING:
+    from ampel.content.PhotoCompound import PhotoCompound
 
 class DummyAlertContentIngester(AbsAlertContentIngester[AmpelAlert, DataPoint]):
     alert_history_length = 1
 
     def ingest(self, alert: AmpelAlert) -> List[DataPoint]:
         dps = [
-            {"_id": i, "body": dp, "stock_id": alert.stock_id}
+            DataPoint({"_id": i, "body": dp, "stock": alert.stock_id})
             for i, dp in enumerate(alert.dps)
         ]
         for dp in dps:
@@ -126,13 +128,13 @@ class DummyExtendedCompoundIngester(AbsCompoundIngester):
 
         # Find some new datapoints lying around, and insert them
         dps = [
-            {"_id": -(dp["_id"] + 1), "body": {}, "stock_id": stock_id}
+            DataPoint({"_id": -(dp["_id"] + 1), "body": {}, "stock": stock_id})
             for i, dp in enumerate(datapoints)
         ]
         for dp in dps:
             self.updates_buffer.add_t0_update(InsertOne(dp))
 
-        extended_datapoints = sorted(dps + datapoints, key=lambda dp: dp["_id"])
+        extended_datapoints = sorted(dps + list(datapoints), key=lambda dp: dp["_id"])
 
         return self.engine.ingest(stock_id, extended_datapoints, chans)
 
@@ -149,11 +151,13 @@ class DummyStateT2Compiler(AbsStateT2Compiler):
         for chan, ingest_model in self.get_ingest_models(chan_selection):
             t2s_for_channels[(ingest_model.unit_id, ingest_model.config)].add(chan)
 
-        optimized_t2s = {}
+        optimized_t2s: Dict[
+            Tuple[str, Optional[int], Union[bytes, Tuple[bytes, ...]]], Set[ChannelId]
+        ] = {}
         for k, v in t2s_for_channels.items():
             comp_ids = tuple(compound_blueprint.get_effids_for_chans(v))
             if len(comp_ids) == 1:
-                optimized_t2s[k + comp_ids] = v
+                optimized_t2s[k + (comp_ids[0],)] = v
             else:
                 optimized_t2s[k + (comp_ids,)] = v
         return optimized_t2s

@@ -19,7 +19,7 @@ from ampel.content.T2Document import T2Document
 from ampel.ingest.CompoundBluePrint import CompoundBluePrint
 from ampel.ingest.T1DefaultCombiner import T1DefaultCombiner
 from ampel.log.AmpelLogger import AmpelLogger
-from ampel.t2.T2RunState import T2RunState
+from ampel.enum.T2SysRunState import T2SysRunState
 from ampel.type import ChannelId, StockId, T2UnitResult
 
 
@@ -191,7 +191,7 @@ class DummyStateT2Ingester(AbsStateT2Ingester):
                 "stock": stock_id,
                 "unit": t2_id,
                 "config": run_config,
-                "status": T2RunState.NEW.value,
+                "status": T2SysRunState.NEW.value,
             }
 
             if self.tags:

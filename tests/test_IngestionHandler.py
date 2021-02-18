@@ -66,7 +66,7 @@ def test_legacy_directive(dev_context, legacy_directive):
     handler.updates_buffer.push_updates()
     t0 = dev_context.db.get_collection("t0")
     assert t0.count_documents({}) == 2
-    assert t0.count_documents({"stock_id": "stockystock"}) == 2
+    assert t0.count_documents({"stock": "stockystock"}) == 2
     assert t0.count_documents({"_id": 0}) == 1
 
     t1 = dev_context.db.get_collection("t1")
@@ -103,7 +103,7 @@ def test_standalone_t1_directive(dev_context, standalone_t1_directive):
     handler.updates_buffer.push_updates()
     t0 = dev_context.db.get_collection("t0")
     assert t0.count_documents({}) == 2
-    assert t0.count_documents({"stock_id": "stockystock"}) == 2
+    assert t0.count_documents({"stock": "stockystock"}) == 2
     assert t0.count_documents({"_id": 0}) == 1
     assert t0.count_documents({"_id": -1}) == 1
 
@@ -142,7 +142,7 @@ def test_standalone_t1_channel_dispatch(dev_context, standalone_t1_directive):
     handler.updates_buffer.push_updates()
     t0 = dev_context.db.get_collection("t0")
     assert t0.count_documents({}) == 2
-    assert t0.count_documents({"stock_id": 1}) == 2
+    assert t0.count_documents({"stock": 1}) == 2
     assert t0.count_documents({"_id": 0}) == 1
 
     t1 = dev_context.db.get_collection("t1")
@@ -177,7 +177,7 @@ def test_standalone_t1_elision(dev_context, standalone_t1_directive):
     handler.updates_buffer.push_updates()
     t0 = dev_context.db.get_collection("t0")
     assert t0.count_documents({}) == 1
-    assert t0.count_documents({"stock_id": 1}) == 1
+    assert t0.count_documents({"stock": 1}) == 1
     assert t0.count_documents({"_id": 0}) == 1
 
     t1 = dev_context.db.get_collection("t1")

@@ -7,7 +7,7 @@
 # Last Modified Date: 11.06.2020
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
-from logging import LogRecord
+from logging import LogDocument
 from typing import Any, Union, Optional, Tuple, Dict, Callable, cast
 from ampel.type import ChannelId
 from ampel.alert.AmpelAlert import AmpelAlert
@@ -121,7 +121,7 @@ class FilterBlock:
 
 			self.ac = self.bypass or self.overrule
 
-			self.rej_log_handle: Optional[Callable[[Union[LighterLogRecord, LogRecord]], None]] = None
+			self.rej_log_handle: Optional[Callable[[Union[LighterLogRecord, LogDocument]], None]] = None
 			self.rej_log_handler: Optional[LoggingHandlerProtocol] = None
 			self.file: Optional[Callable[[AmpelAlert, Optional[int]], None]] = None
 			self.register: Optional[AbsAlertRegister] = None

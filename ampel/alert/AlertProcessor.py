@@ -406,7 +406,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 					# cause rejection messages were alreary logged into the console
 					# by the StreamHandler in channel specific RecordBufferingHandler instances.
 					# So we address directly db_logging_handler, and for that, we create
-					# a LogRecord manually.
+					# a LogDocument manually.
 					lr = LighterLogRecord(
 						logger.name,
 						LogFlag.INFO | logger.base_flag

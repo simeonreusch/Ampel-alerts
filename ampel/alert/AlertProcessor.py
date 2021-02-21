@@ -27,7 +27,7 @@ from ampel.abstract.AbsAlertSupplier import AbsAlertSupplier, T
 from ampel.log import AmpelLogger, LogFlag, DBEventDoc, VERBOSE
 from ampel.log.utils import report_exception
 from ampel.log.AmpelLoggingError import AmpelLoggingError
-from ampel.log.LighterLogRecord import LighterLogRecord
+from ampel.log.LightLogRecord import LightLogRecord
 
 from ampel.model.UnitModel import UnitModel
 from ampel.model.AlertProcessorDirective import AlertProcessorDirective
@@ -407,7 +407,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 					# by the StreamHandler in channel specific RecordBufferingHandler instances.
 					# So we address directly db_logging_handler, and for that, we create
 					# a LogDocument manually.
-					lr = LighterLogRecord(
+					lr = LightLogRecord(
 						logger.name,
 						LogFlag.INFO | logger.base_flag
 					)

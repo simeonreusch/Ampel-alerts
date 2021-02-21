@@ -14,7 +14,7 @@ from ampel.abstract.ingest.AbsT2Ingester import AbsT2Ingester
 from ampel.alert.AmpelAlert import AmpelAlert
 from ampel.content.Compound import Compound
 from ampel.content.DataPoint import DataPoint
-from ampel.content.StockRecord import StockRecord
+from ampel.content.StockDocument import StockDocument
 from ampel.content.T2Document import T2Document
 from ampel.ingest.CompoundBluePrint import CompoundBluePrint
 from ampel.ingest.T1DefaultCombiner import T1DefaultCombiner
@@ -228,5 +228,5 @@ class DummyStateT2Unit(AbsStateT2Unit):
 
 
 class DummyStockT2Unit(AbsStockT2Unit):
-    def run(self, stock_record: StockRecord) -> T2UnitResult:
-        return {"name": stock_record["name"]}
+    def run(self, stock_doc: StockDocument) -> T2UnitResult:
+        return {"name": stock_doc["name"]}

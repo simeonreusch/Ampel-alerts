@@ -24,10 +24,10 @@ from ampel.alert.IngestionHandler import IngestionHandler
 from ampel.abstract.AbsProcessorUnit import AbsProcessorUnit
 from ampel.abstract.AbsAlertSupplier import AbsAlertSupplier, T
 
-from ampel.log import AmpelLogger, LogRecordFlag, DBEventDoc, VERBOSE
+from ampel.log import AmpelLogger, LogFlag, DBEventDoc, VERBOSE
 from ampel.log.utils import report_exception
 from ampel.log.AmpelLoggingError import AmpelLoggingError
-from ampel.log.LighterLogRecord import LighterLogRecord
+from ampel.log.LightLogRecord import LightLogRecord
 
 from ampel.model.UnitModel import UnitModel
 from ampel.model.AlertProcessorDirective import AlertProcessorDirective
@@ -71,7 +71,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 	db_log_format: str = "standard"
 	single_rej_col: bool = False
 	supplier: Optional[Union[AbsAlertSupplier, UnitModel, str]]
-	shout: int = LogRecordFlag.SHOUT
+	shout: int = LogFlag.SHOUT
 
 
 	@classmethod
@@ -247,7 +247,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 
 		logger = AmpelLogger.from_profile(
 			self.context, self.log_profile, run_id,
-			base_flag = LogRecordFlag.T0 | LogRecordFlag.CORE | self.base_log_flag
+			base_flag = LogFlag.T0 | LogFlag.CORE | self.base_log_flag
 		)
 
 		if logger.verbose:
@@ -406,10 +406,10 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 					# cause rejection messages were alreary logged into the console
 					# by the StreamHandler in channel specific RecordBufferingHandler instances.
 					# So we address directly db_logging_handler, and for that, we create
-					# a LogRecord manually.
-					lr = LighterLogRecord(
+					# a LogDocument manually.
+					lr = LightLogRecord(
 						logger.name,
-						LogRecordFlag.INFO | logger.base_flag
+						LogFlag.INFO | logger.base_flag
 					)
 					lr.stock = stock_id
 					lr.channel = reduced_chan_names # type: ignore[assignment]

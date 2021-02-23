@@ -65,7 +65,7 @@ class FilterBlocksHandler:
 	}
 	```
 
-	:param run_type: LogRecordFlag.SCHEDULED_RUN or LogRecordFlag.MANUAL_RUN
+	:param run_type: LogFlag.SCHEDULED_RUN or LogFlag.MANUAL_RUN
 	"""
 
 	def __init__(self,

@@ -25,7 +25,7 @@ from ampel.abstract.ingest.AbsStockIngester import AbsStockIngester
 from ampel.log import AmpelLogger, VERBOSE
 from ampel.log.utils import log_exception
 from ampel.log.LogsBufferDict import LogsBufferDict
-from ampel.log.LogRecordFlag import LogRecordFlag
+from ampel.log.LogFlag import LogFlag
 from ampel.model.UnitModel import UnitModel
 from ampel.model.ingest.T1CombineModel import T1CombineModel
 from ampel.model.AlertProcessorDirective import AlertProcessorDirective
@@ -377,9 +377,9 @@ class IngestionHandler:
 
 			if 'err' in logd:
 				del logd['err']
-				flag = LogRecordFlag.ERROR
+				flag = LogFlag.ERROR
 			else:
-				flag = LogRecordFlag.INFO
+				flag = LogFlag.INFO
 
 			log = self.log
 			extra = {
@@ -393,7 +393,7 @@ class IngestionHandler:
 			logd['logs'] = []
 		else:
 			self.log(
-				LogRecordFlag.INFO,
+				LogFlag.INFO,
 				None,
 				extra={
 					"channel": chans,

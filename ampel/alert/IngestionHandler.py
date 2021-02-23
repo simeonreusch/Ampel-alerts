@@ -38,14 +38,21 @@ class IngestionHandler:
 		'stock_t2_ingesters', 'point_t2_ingesters', 'state_t2_ingesters', \
 		't1_ingesters', 'retro_complete', 'ingest_stats', 'log', 'logd'
 
+	#: Creates StockDocument
 	stock_ingester: AbsStockIngester
+	#: Creates DataPoints
 	datapoint_ingester: Optional[AbsAlertContentIngester[AmpelAlert, DataPoint]]
+	#: Creates T2Documents bound to stocks
 	stock_t2_ingesters: List[AbsStockT2Ingester]
+	#: Creates T2Documents bound to datapoints
 	point_t2_ingesters: List[AbsPointT2Ingester]
+	#: Creates T2Documents bound to compounds
 	state_t2_ingesters: Dict[AbsCompoundIngester, List[AbsStateT2Ingester]]
+	#: Creates compounds
 	t1_ingesters: Dict[AbsCompoundIngester, List[AbsStateT2Ingester]]
 	updates_buffer: DBUpdatesBuffer
 	logd: LogsBufferDict
+	#: 
 	retro_complete: List[ChannelId]
 	ingest_stats: List[float]
 
@@ -97,8 +104,9 @@ class IngestionHandler:
 		logger: AmpelLogger, **kwargs
 	) -> None:
 		"""
-		:param kwargs: are passed to method new_admin_unit from UnitLoader instance
-		typically, these are: updates_buffer, logd, run_id
+		:param kwargs:
+		  are passed to method new_admin_unit from UnitLoader instance.
+		  Typically these are ``updates_buffer``, ``logd``, ``run_id``.
 		"""
 
 		# An AP can for now only have a unique stock ingester
@@ -278,6 +286,14 @@ class IngestionHandler:
 		alert: AmpelAlert,
 		filter_results: List[Tuple[ChannelId, Union[bool, int]]]
 	) -> None:
+		"""
+		Create database documents in response to ``alert``.
+
+		:param alert: the alert under consideration
+		:param filter_results: the value returned from
+		  :func:`~ampel.abstract.AbsAlertFilter.AbsAlertFilter.apply` for each
+		  channel's filter
+		"""
 
 		self.updates_buffer._block_autopush = True
 		stock_id = alert.stock_id

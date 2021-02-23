@@ -14,6 +14,9 @@ from ampel.log.AmpelLogger import AmpelLogger
 
 class TarAlertLoader:
 	"""
+	Load alerts from a ``tar`` file. The archive must be laid out like the
+	`ZTF public alert archive <https://ztf.uw.edu/alerts/public/>`_, i.e. one
+	alert per file.
 	"""
 
 	def __init__(
@@ -99,8 +102,6 @@ class TarAlertLoader:
 
 
 	def get_chained_next(self) -> Optional[IO[bytes]]:
-		"""
-		"""
 		assert self.chained_tal is not None
 		file_obj = next(self.chained_tal, None)
 		if file_obj is None:

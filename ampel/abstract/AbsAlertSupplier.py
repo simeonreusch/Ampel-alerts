@@ -28,14 +28,16 @@ def identity(arg: Dict) -> Dict:
 class AbsAlertSupplier(Generic[T], AmpelABC, AmpelBaseModel, abstract=True):
 	"""
 	Iterable class that, for each alert payload provided by the underlying alert_loader,
-	returns an AmpelAlert (or sub-class of AmpelAlert such as PhotoAlert) instance.
+	returns an :class:`~ampel.alert.AmpelAlert.AmpelAlert` (or subclass such as
+	:class:`~ampel.alert.PhotoAlert.PhotoAlert`) instance.
 
 	:param deserialize: if the alert_loader returns bytes/file_like objects,
-	deserialization is required to turn them into dicts.
-	Currently supported built-in deserialization: 'avro' or 'json'.
-	If you need other deserialization:
-	- Either implement the deserialization in your own alert_loader (that will return dicts)
-	- Provide a callable as parameter for `deserialize`
+	  deserialization is required to turn them into dicts.
+	  Currently supported built-in deserialization: 'avro' or 'json'.
+	  If you need other deserialization:
+
+	  - Either implement the deserialization in your own alert_loader (that will return dicts)
+	  - Provide a callable as parameter for `deserialize`
 	"""
 
 	deserialize: Union[None, Literal["avro", "json"], Callable[[Any], Dict]] = None # type: ignore
@@ -69,7 +71,7 @@ class AbsAlertSupplier(Generic[T], AmpelABC, AmpelBaseModel, abstract=True):
 	def set_alert_source(self, alert_loader: Iterable[IOBase]) -> None:
 		"""
 		:param alert_loader: iterable that returns alerts content
-		as as file-like objects / bytes
+		  as as file-like objects / bytes
 		"""
 		self.alert_loader = alert_loader
 

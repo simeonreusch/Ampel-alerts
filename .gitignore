@@ -7,3 +7,7 @@ __pycache__
 .DS_Store
 .mypy_cache
 .ipynb_checkpoints
+.vscode
+build
+dist
+setup.py

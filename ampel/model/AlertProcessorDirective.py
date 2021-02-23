@@ -13,8 +13,11 @@ from ampel.model.AutoStockMatchModel import AutoStockMatchModel
 from ampel.model.ingest.IngestionDirective import IngestionDirective
 
 class FilterModel(UnitModel):
+	#: How to store rejection records
 	reject: Optional[Dict[Literal['log', 'register'], UnitModel]]
 
 class AlertProcessorDirective(IngestionDirective):
+	#: How to select alerts 
 	filter: Optional[FilterModel]
+	#: How to handle new data after a stock passes the filter for the first time
 	stock_match: Optional[AutoStockMatchModel]

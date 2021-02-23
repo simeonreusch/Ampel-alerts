@@ -8,7 +8,7 @@
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 from time import time
-from logging import DEBUG, WARNING, LogDocument
+from logging import DEBUG, WARNING, LogRecord
 from typing import Dict, Any, List, Union, Optional
 from pymongo.errors import BulkWriteError
 from pymongo.operations import UpdateOne
@@ -36,7 +36,7 @@ class DBRejectedLogsHandler(AdminUnit):
 	aggregate_interval: int = 1
 	flush_len: int = 1000
 	log_dicts: List[Dict[str, Any]] = []
-	prev_record: Optional[Union[LightLogRecord, LogDocument]] = None
+	prev_record: Optional[Union[LightLogRecord, LogRecord]] = None
 	run_id: Optional[Union[int, List[int]]] = None
 
 
@@ -68,7 +68,7 @@ class DBRejectedLogsHandler(AdminUnit):
 		return self.run_id
 
 
-	def handle(self, record: Union[LightLogRecord, LogDocument]) -> None:
+	def handle(self, record: Union[LightLogRecord, LogRecord]) -> None:
 
 		try:
 

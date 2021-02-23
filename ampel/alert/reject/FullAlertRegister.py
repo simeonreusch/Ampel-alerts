@@ -15,7 +15,9 @@ from ampel.alert.reject.BaseAlertRegister import BaseAlertRegister
 
 
 class FullAlertRegister(BaseAlertRegister):
-	""" Logs: alert_id, stock_id, timestamp, filter_res """
+	"""
+	Record: alert_id, stock_id, timestamp, filter_res
+	"""
 
 	__slots__: ClassVar[Tuple[str, ...]] = '_write', # type: ignore
 	struct: Literal['<QQIB'] = '<QQIB' # type: ignore[assignment]

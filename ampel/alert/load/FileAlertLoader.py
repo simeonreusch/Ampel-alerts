@@ -13,11 +13,17 @@ from ampel.log.AmpelLogger import AmpelLogger
 
 
 class FileAlertLoader:
+	"""
+	Load alerts from one of more files.
+	"""
 
 	def __init__(self,
 		files: Optional[Union[List[str], str]] = None,
 		logger: Optional[AmpelLogger] = None
 	) -> None:
+		"""
+		:param files: paths to files to load
+		"""
 
 		self.logger = AmpelLogger.get_logger() if logger is None else logger
 		self.files: List[str] = []

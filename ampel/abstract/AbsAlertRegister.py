@@ -16,9 +16,15 @@ from ampel.core.AmpelRegister import AmpelRegister
 
 class AbsAlertRegister(AmpelRegister, AdminUnit, abstract=True):
 	"""
-	Ensemble of classes used mainly for saving information regarding rejected alerts
+	Record of the results of filter evaluation, in particular for rejected alerts.
 	"""
 
 	@abstractmethod
 	def file(self, alert: AmpelAlert, filter_res: Optional[int] = None) -> None:
+		"""
+		Record the result of the filter.
+
+		:param alert: the alert a filter was applied to
+		:param filter_res: result of the filter; ``None`` if the alert was rejected
+		"""
 		...

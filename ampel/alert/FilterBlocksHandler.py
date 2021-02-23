@@ -17,55 +17,57 @@ from ampel.model.AlertProcessorDirective import AlertProcessorDirective
 
 class FilterBlocksHandler:
 	"""
-	:param db_log_format: 'compact' (saves RAM by reducing the number of indexed document) or 'standard'. \
-	Compact log entries can be later converted into 'standard' format using the aggregation pipeline.
-	Avoid using 'compact' if you run the alert processor with a single channel.
-	Examples: (Abbreviations: s: stock, a: alert, f: flag, r: run, c: channel, m: msg)
-	- 'compact': embed channel information withing log record 'msg' field. \
-	```
-	{
-		"_id" : ObjectId("5be4aa6254048041edbac352"),
-		"s" : NumberLong(1810101032122523),
-		"a" : NumberLong(404105201415015004),
-		"f" : 572784643,
-		"r" : 509,
-		"m" : [
-			{
-				"c" : "NO_FILTER",
-				"m": "Alert accepted"
-			},
-			{
-				"c" : "HU_RANDOM",
-				"m": "Alert accepted"
-			}
-		]
-	}
-	```
-	- 'standard': channel info are encoded in log parameter 'extra'. \
-	For a given alert, one log entry is created per channel since log concatenation \
-	cannot happen (the 'extra' dicts from the two log entries differ): \
-	```
-	{
-		"_id" : ObjectId("5be4aa6254048041edbac353"),
-		"s" : NumberLong(1810101032122523),
-		"a" : NumberLong(404105201415015004),
-		"f" : 572784643,
-		"r" : 509,
-		"c" : "NO_FILTER",
-		"m" : "Alert accepted"
-	}
-	{
-		"_id" : ObjectId("5be4aa6254048041edbac352"),
-		"s" : NumberLong(1810101032122523),
-		"a" : NumberLong(404105201415015004),
-		"f" : 572784643,
-		"r" : 509,
-		"c" : "HU_RANDOM",
-		"m" : "Alert accepted"
-	}
-	```
+	:param db_log_format:
+	  'compact' (saves RAM by reducing the number of indexed document) or 'standard'. \
+	  Compact log entries can be later converted into 'standard' format using the aggregation pipeline.
+	  Avoid using 'compact' if you run the alert processor with a single channel.
+	  
+	  Examples: (Abbreviations: s: stock, a: alert, f: flag, r: run, c: channel, m: msg)
+	  
+	  - 'compact': embed channel information withing log record 'msg' field::
+	    
+	      {
+	      	"_id" : ObjectId("5be4aa6254048041edbac352"),
+	      	"s" : NumberLong(1810101032122523),
+	      	"a" : NumberLong(404105201415015004),
+	      	"f" : 572784643,
+	      	"r" : 509,
+	      	"m" : [
+	      		{
+	      			"c" : "NO_FILTER",
+	      			"m": "Alert accepted"
+	      		},
+	      		{
+	      			"c" : "HU_RANDOM",
+	      			"m": "Alert accepted"
+	      		}
+	      	]
+	      }
 
-	:param run_type: LogRecordFlag.SCHEDULED_RUN or LogRecordFlag.MANUAL_RUN
+	  - 'standard': channel info are encoded in log parameter 'extra'.
+	    For a given alert, one log entry is created per channel since log concatenation
+	    cannot happen (the 'extra' dicts from the two log entries differ)::
+	      
+	      [
+	          {
+	              "_id" : ObjectId("5be4aa6254048041edbac353"),
+	              "s" : NumberLong(1810101032122523),
+	              "a" : NumberLong(404105201415015004),
+	              "f" : 572784643,
+	              "r" : 509,
+	              "c" : "NO_FILTER",
+	              "m" : "Alert accepted"
+	          },
+	          {
+	              "_id" : ObjectId("5be4aa6254048041edbac352"),
+	              "s" : NumberLong(1810101032122523),
+	              "a" : NumberLong(404105201415015004),
+	              "f" : 572784643,
+	              "r" : 509,
+	              "c" : "HU_RANDOM",
+	              "m" : "Alert accepted"
+	          }
+		  ]
 	"""
 
 	def __init__(self,

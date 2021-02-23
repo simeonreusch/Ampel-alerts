@@ -15,7 +15,7 @@ from pymongo.operations import UpdateOne
 
 from ampel.type import ChannelId
 from ampel.log.AmpelLogger import AmpelLogger
-from ampel.log.LighterLogRecord import LighterLogRecord
+from ampel.log.LightLogRecord import LightLogRecord
 from ampel.log.AmpelLoggingError import AmpelLoggingError
 from ampel.log.LoggingErrorReporter import LoggingErrorReporter
 from ampel.core.AdminUnit import AdminUnit
@@ -36,7 +36,7 @@ class DBRejectedLogsHandler(AdminUnit):
 	aggregate_interval: int = 1
 	flush_len: int = 1000
 	log_dicts: List[Dict[str, Any]] = []
-	prev_record: Optional[Union[LighterLogRecord, LogRecord]] = None
+	prev_record: Optional[Union[LightLogRecord, LogRecord]] = None
 	run_id: Optional[Union[int, List[int]]] = None
 
 
@@ -68,7 +68,7 @@ class DBRejectedLogsHandler(AdminUnit):
 		return self.run_id
 
 
-	def handle(self, record: Union[LighterLogRecord, LogRecord]) -> None:
+	def handle(self, record: Union[LightLogRecord, LogRecord]) -> None:
 
 		try:
 

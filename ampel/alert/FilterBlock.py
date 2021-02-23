@@ -17,8 +17,8 @@ from ampel.model.AlertProcessorDirective import FilterModel
 from ampel.log.AmpelLogger import AmpelLogger, INFO
 from ampel.log.handlers.EnclosedChanRecordBufHandler import EnclosedChanRecordBufHandler
 from ampel.log.handlers.ChanRecordBufHandler import ChanRecordBufHandler
-from ampel.log.LighterLogRecord import LighterLogRecord
-from ampel.log.LogRecordFlag import LogRecordFlag
+from ampel.log.LightLogRecord import LightLogRecord
+from ampel.log.LogFlag import LogFlag
 from ampel.protocol.LoggingHandlerProtocol import LoggingHandlerProtocol
 from ampel.abstract.AbsAlertFilter import AbsAlertFilter
 from ampel.abstract.AbsAlertRegister import AbsAlertRegister
@@ -96,7 +96,7 @@ class FilterBlock:
 				sub_type = AbsAlertFilter,
 				logger = AmpelLogger.get_logger(
 					name = "buf_" + self.chan_str,
-					base_flag = (getattr(logger, 'base_flag', 0) & ~LogRecordFlag.CORE) | LogRecordFlag.UNIT,
+					base_flag = (getattr(logger, 'base_flag', 0) & ~LogFlag.CORE) | LogFlag.UNIT,
 					console = False,
 					handlers = [self.buf_hdlr]
 				)
@@ -121,7 +121,7 @@ class FilterBlock:
 
 			self.ac = self.bypass or self.overrule
 
-			self.rej_log_handle: Optional[Callable[[Union[LighterLogRecord, LogRecord]], None]] = None
+			self.rej_log_handle: Optional[Callable[[Union[LightLogRecord, LogRecord]], None]] = None
 			self.rej_log_handler: Optional[LoggingHandlerProtocol] = None
 			self.file: Optional[Callable[[AmpelAlert, Optional[int]], None]] = None
 			self.register: Optional[AbsAlertRegister] = None
@@ -226,7 +226,7 @@ class FilterBlock:
 					# Log minimal entry if channel did not log anything
 					else:
 						if self.rej_log_handle:
-							lrec = LighterLogRecord(0, 0, None)
+							lrec = LightLogRecord(0, 0, None)
 							lrec.stock = stock_id
 							lrec.extra = extra_ac
 							self.rej_log_handle(lrec)

@@ -14,7 +14,7 @@ from typing import Sequence, List, Dict, Union, Any, Iterable, Tuple, Optional, 
 
 from ampel.type import ChannelId
 from ampel.core.AmpelContext import AmpelContext
-from ampel.core.UnitLoader import UnitLoader
+from ampel.base.AuxUnitRegister import AuxUnitRegister
 from ampel.util.mappings import merge_dict
 from ampel.util.freeze import recursive_unfreeze
 from ampel.db.DBUpdatesBuffer import DBUpdatesBuffer
@@ -24,10 +24,10 @@ from ampel.alert.IngestionHandler import IngestionHandler
 from ampel.abstract.AbsProcessorUnit import AbsProcessorUnit
 from ampel.abstract.AbsAlertSupplier import AbsAlertSupplier, T
 
-from ampel.log import AmpelLogger, LogRecordFlag, DBEventDoc, VERBOSE
+from ampel.log import AmpelLogger, LogFlag, DBEventDoc, VERBOSE
 from ampel.log.utils import report_exception
 from ampel.log.AmpelLoggingError import AmpelLoggingError
-from ampel.log.LighterLogRecord import LighterLogRecord
+from ampel.log.LightLogRecord import LightLogRecord
 
 from ampel.model.UnitModel import UnitModel
 from ampel.model.AlertProcessorDirective import AlertProcessorDirective
@@ -46,43 +46,40 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 	* Filter alert based on the configured T0 filter
 	* Ingest alert based on the configured ingester
 
-	:param iter_max: main loop (in method run()) will stop processing alerts when this limit is reached
-	:param error_max: main loop (in method run()) will stop processing alerts when this limit is reached
-	:param directives:
-		mandatory alert processor directives (AlertProcessorDirective). This parameter will
-		determine how the underlying FilterBlocksHandler and IngestionHandler instances are set up.
-	:param db_log_format: see `ampel.alert.FilterBlocksHandler.FilterBlocksHandler` docstring
-	:param supplier: alert supplier, no time explain more currently
-
-	:param log_profile: See AbsProcessorUnit docstring
-	:param db_handler_kwargs: See AbsProcessorUnit docstring
-	:param base_log_flag: See AbsProcessorUnit docstring
-	:param raise_exc: See AbsProcessorUnit docstring (default False)
-
 	Potential update: maybe allow an alternative way of initialization for this class
 	through direct input of (possibly customized, that is the point) FilterBlocksHandler and
 	IngestionHandler instances rather than through (deserialized) directives.
 	"""
 
 	# General options
+	#: Maximum number of alerts to consume in :func:`run`
 	iter_max: int = 50000
+	#: Maximum number of exceptions to catch before cancelling :func:`run`
 	error_max: int = 20
+	#: Mandatory alert processor directives. This parameter will
+	#: determines how the underlying :class:`~ampel.alert.FilterBlocksHandler.FilterBlocksHandler`
+	#: and :class:`~ampel.alert.IngestionHandler.IngestionHandler` instances are set up.
 	directives: Sequence[AlertProcessorDirective]
+	#: How to store log record in the database (see :class:`~ampel.alert.FilterBlocksHandler.FilterBlocksHandler`)
 	db_log_format: str = "standard"
+	#: Store alert rejection records in a single collection rather than per-channel
 	single_rej_col: bool = False
+	#: Unit to use to supply alerts
 	supplier: Optional[Union[AbsAlertSupplier, UnitModel, str]]
-	shout: int = LogRecordFlag.SHOUT
+	#: Flag to use for log records with a level between INFO and WARN
+	shout: int = LogFlag.SHOUT
 
 
 	@classmethod
 	def from_process(cls, context: AmpelContext, process_name: str, override: Optional[Dict] = None):
 		"""
-		Convenience method instantiating an AP using the config entry from a given T0 process.
+		Convenience method instantiating an AlertProcessor using the config entry from a given T0 process.
+		
 		Example::
-
-			AlertProcessor.from_process(
-				context, process_name="VAL_TEST2/T0/ztf_uw_public", override={'publish_stats': []}
-			)
+		    
+		  AlertProcessor.from_process(
+		      context, process_name="VAL_TEST2/T0/ztf_uw_public", override={'iter_max': 100}
+		  )
 		"""
 		args = context.get_config().get( # type: ignore
 			f"process.{process_name}.processor.config", dict
@@ -100,7 +97,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 	def __init__(self, **kwargs) -> None:
 		"""
 		:raises:
-			ValueError if no process can be loaded or if a process is
+			:class:`ValueError` if no process can be loaded or if a process is
 			associated with an unknown channel
 		"""
 
@@ -121,7 +118,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 			else:
 				if isinstance(self.supplier, str):
 					self.supplier = UnitModel(unit=self.supplier)
-				self.alert_supplier = UnitLoader.new_aux_unit(
+				self.alert_supplier = AuxUnitRegister.new_unit(
 					unit_model = self.supplier, sub_type = AbsAlertSupplier
 				)
 		else:
@@ -181,9 +178,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 
 	def set_supplier(self, alert_supplier: AbsAlertSupplier[T]) -> 'AlertProcessor':
 		"""
-		Allows to set a custom alert supplier.
-		AlertSupplier instances provide AmpelAlert instances
-		and need to be sourced by an alert loader instance
+		Set a custom :class:`AlertSupplier <ampel.abstract.AbsAlertSupplier.AbsAlertSupplier>`.
 		"""
 		self.alert_supplier = alert_supplier
 		return self
@@ -191,10 +186,10 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 
 	def set_loader(self, alert_loader: Iterable) -> 'AlertProcessor':
 		"""
-		Source the current alert suplier with the provided alert loader.
-		AlertLoader instances typically provide file-like objects
+		Set the source of the current alert supplier. Alert loaders typically
+		provide file-like objects.
 
-		:raises ValueError: if self.alert_supplier is None
+		:raises ValueError: if :attr:`alert_supplier` is None
 		"""
 		if not self.alert_supplier:
 			raise ValueError("Please set alert supplier first")
@@ -205,7 +200,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 
 	def process_alerts(self, alert_loader: Iterable[IOBase]) -> None:
 		"""
-		shortcut method to process all alerts from a given loader until its dries out
+		Convenience method to process all alerts from a given loader until its dries out
 
 		:param alert_loader: iterable returning alert payloads
 		:raises ValueError: if self.alert_supplier is None
@@ -224,6 +219,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 		"""
 		Run alert processing using the internal alert_loader/alert_supplier
 
+		:returns: Number of alerts processed
 		:raises: LogFlushingError, PyMongoError
 		"""
 
@@ -247,7 +243,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 
 		logger = AmpelLogger.from_profile(
 			self.context, self.log_profile, run_id,
-			base_flag = LogRecordFlag.T0 | LogRecordFlag.CORE | self.base_log_flag
+			base_flag = LogFlag.T0 | LogFlag.CORE | self.base_log_flag
 		)
 
 		if logger.verbose:
@@ -406,10 +402,10 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 					# cause rejection messages were alreary logged into the console
 					# by the StreamHandler in channel specific RecordBufferingHandler instances.
 					# So we address directly db_logging_handler, and for that, we create
-					# a LogRecord manually.
-					lr = LighterLogRecord(
+					# a LogDocument manually.
+					lr = LightLogRecord(
 						logger.name,
-						LogRecordFlag.INFO | logger.base_flag
+						LogFlag.INFO | logger.base_flag
 					)
 					lr.stock = stock_id
 					lr.channel = reduced_chan_names # type: ignore[assignment]

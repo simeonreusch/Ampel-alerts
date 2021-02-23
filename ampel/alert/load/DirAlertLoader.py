@@ -14,6 +14,9 @@ from io import BytesIO
 
 
 class DirAlertLoader:
+	"""
+	Load alerts from a (flat) directory.
+	"""
 
 
 	def __init__(self, logger: AmpelLogger = None, verbose: bool = False):

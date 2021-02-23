@@ -15,69 +15,69 @@ from ampel.log import VERBOSE
 
 
 class BaseAlertRegister(AbsAlertRegister, abstract=True):
-	""" # noqa: E101
+	# noqa: E101
+	""" 
 
-	See also AmpelRegister docstring
+	There are two possible setups:
 
-	:param path_channel_folder: if true, a folder whose name equals the parameter `channel`
-	will be created under path `path_base`
+	1) Name register files according to ``run_id``::
+	     
+	     <path>/<channel>/121.register.gz
+	     <path>/<channel>/122.register.gz
+	     <path>/<channel>/123.register.gz
+	     ...
 
-	:param file_prefix: use $run_id to save file as <run>.bin.gz (whereby <run> equals the constructor parameter run),
-	$channel to save file as <channel>.bin.gz or any string to save file as <string>.bin.gz
+	   The register header is updated before each file is closed to save min and max alert IDs
+	   and min and max stock ids. That way, a potential query for a given alert rejection could
+	   go through all register files, parse only the header and check if min_alert < target_alert < max_alert,
+	   and will by that not have to go through the file if the condition is not fulfilled.
 
-	:param file_cap: additionaly to the parent's class (AmpelRegister) ability to rename the current register when
-	the number of blocks reaches a given threshold, this class can also rename the current file when
-	the number of registered run ids in the header reaches a limit.
-	Both parameters (runs and blocks) can be used together, the first criteria fulfilled will trigger a file rename.
-	Note1: file rename occurs during the opening of registers, which means that once a register is opened,
-	no check is performed (a register can thus grow beyond the defined limits as long as a process keeps it open).
-	Note2: the current file suffix number is encoded in the header. If the current suffix number is 10 and
-	you move files to another folder, the next rename will create ampel_register.bin.gz.11 nonetheless.
+	   Pro:
+	     - Avoids any potential concurency issue (this setup should be used for re-runs)
+	     - Fast query
+	   Con:
+	     - Can generate numerous files (which should not be a problem for any modern file system)
 
+	2) Name register files according to ``channel_id``::
+	     
+	     <path>/AMPEL_CHANNEL1.register.gz
+	     <path>/AMPEL_CHANNEL2.register.gz
+	     ...
 
-	Possible setups:
-	----------------
+	   Register could be capped based on file size (file_cap='blocks') or number of run_ids (file_cap='runs').
 
-	1) Register files are named after run_id:
-	<path>/<channel>/121.register.gz
-	<path>/<channel>/122.register.gz
-	<path>/<channel>/123.register.gz
-	...
-
-	The register header is updated before each file is closed to save min and max alert IDs
-	and min and max stock ids. That way, a potential query for a given alert rejection could
-	go through all register files, parse only the header and check if min_alert < target_alert < max_alert,
-	and will by that not have to go through the file if the condition is not fulfilled.
-
-	Pro:
-	- Avoids any potential concurency issue (this setup should be used for re-runs)
-	- Fast query
-	Cons:
-	- Can generate numerous files (which should not be a pblm for any modern file system)
-
-	2) register file are named after channel id:
-	<path>/AMPEL_CHANNEL1.register.gz
-	<path>/AMPEL_CHANNEL2.register.gz
-	...
-
-	Register could be capped based on file size (file_cap='blocks') or number of run_ids (file_cap='runs').
-
-	Pro:
-	- Less files
-	Cons:
-	- beware: re-run should not use this scheme, as concurent updates to a register are not supported!
+	   Pro:
+	     - Fewer files
+	   Con:
+	     - beware: re-run should not use this scheme, as concurent updates to a register are not supported!
 	"""
 
 	__slots__: ClassVar[Tuple[str, ...]] = '_write', # type: ignore
 	_write: Any
 
+	#: channel to record results for
 	channel: ChannelId
+	#: current run number
 	run_id: int
 
-	path_channel_folder: bool = True # save files in <path_base>/<channel>/<file>
-	file_prefix: Union[str, Literal['$run_id', '$channel']] = '$channel' # save file as <run_id|channel|string>.bin.gz
+	#: save files in <path_channel_folder>/<channel>/<file>
+	path_channel_folder: bool = True 
+	#: save file as <run_id|channel|string>.bin.gz
+	file_prefix: Union[str, Literal['$run_id', '$channel']] = '$channel'
 
-	# Override
+	#: additionaly to the parent's class (AmpelRegister) ability to rename the current register when
+	#: the number of blocks reaches a given threshold, this class can also rename the current file when
+	#: the number of registered run ids in the header reaches a limit.
+	#: Both parameters (runs and blocks) can be used together, the first criteria fulfilled will trigger a file rename.
+	#:
+	#: .. note::
+	#:   
+	#:   File rename occurs during the opening of registers, which means that once a register is opened,
+	#:   no check is performed (a register can thus grow beyond the defined limits as long as a process keeps it open).
+	#: .. note::
+	#:   
+	#:   The current file suffix number is encoded in the header. If the current suffix number is 10 and
+	#:   you move files to another folder, the next rename will create ampel_register.bin.gz.11 nonetheless.
 	file_cap: Optional[Dict[Literal['runs', 'blocks'], int]] # type: ignore[assignment]
 
 	header_bounds: ClassVar[Optional[Sequence[str]]] = None
@@ -181,9 +181,11 @@ class BaseAlertRegister(AbsAlertRegister, abstract=True):
 		"""
 		:param f: file path (str) or file handle (which will not be closed)
 		:param kwargs: see method `ampel.util.register.find` docstring.
-		Example:
-		In []: <Class>.find_alert('/Users/hu/Documents/ZTF/test/aa/aa.bin.gz', alert_id=1242886)
-		Out[]: [(1242886, 16)]
+		
+		Example::
+		  
+		  In []: register.find_alert('/Users/hu/Documents/ZTF/test/aa/aa.bin.gz', alert_id=1242886)
+		  Out[]: [(1242886, 16)]
 		"""
 		return find(
 			f, match_int=alert_id, int_bytes_len=alert_id_bytes_len,
@@ -198,9 +200,10 @@ class BaseAlertRegister(AbsAlertRegister, abstract=True):
 	) -> Optional[List[Tuple[int, ...]]]:
 		"""
 		:param f: file path (str) or file handle (which will not be closed)
-		:param stock_offset: position of the stock values within each block.
-		(ex: if the blocks are made of '<QQB' and stock is the second Q,
-		then stock_offset should be set to 8)
+		:param stock_offset:
+		  position of the stock values within each block. For example, if the
+		  blocks are made of '<QQB' and stock is the second Q, then stock_offset
+		  should be set to 8.
 		:returns: list of rejection info of the alerts matching the provided stock id
 		"""
 		return find(

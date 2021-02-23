@@ -1,0 +1,499 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ampel.alert.IngestionHandler &#8212; ampel-alerts 0.7.1-alpha.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/sphinxdoc.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">ampel-alerts 0.7.1-alpha.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">ampel.alert.IngestionHandler</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for ampel.alert.IngestionHandler</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="c1"># File              : Ampel-alerts/ampel/alert/IngestionHandler.py</span>
+<span class="c1"># License           : BSD-3-Clause</span>
+<span class="c1"># Author            : vb &lt;vbrinnel@physik.hu-berlin.de&gt;</span>
+<span class="c1"># Date              : 01.05.2020</span>
+<span class="c1"># Last Modified Date: 20.11.2020</span>
+<span class="c1"># Last Modified By  : Jakob van Santen &lt;jakob.van.santen@desy.de&gt;</span>
+
+<span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">time</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Type</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span> <span class="nn">ampel.type</span> <span class="kn">import</span> <span class="n">ChannelId</span>
+<span class="kn">from</span> <span class="nn">ampel.core.UnitLoader</span> <span class="kn">import</span> <span class="n">PT</span>
+<span class="kn">from</span> <span class="nn">ampel.core.AmpelContext</span> <span class="kn">import</span> <span class="n">AmpelContext</span>
+<span class="kn">from</span> <span class="nn">ampel.util.mappings</span> <span class="kn">import</span> <span class="n">build_unsafe_dict_id</span>
+<span class="kn">from</span> <span class="nn">ampel.db.DBUpdatesBuffer</span> <span class="kn">import</span> <span class="n">DBUpdatesBuffer</span>
+<span class="kn">from</span> <span class="nn">ampel.alert.AmpelAlert</span> <span class="kn">import</span> <span class="n">AmpelAlert</span>
+<span class="kn">from</span> <span class="nn">ampel.content.DataPoint</span> <span class="kn">import</span> <span class="n">DataPoint</span>
+<span class="kn">from</span> <span class="nn">ampel.abstract.ingest.AbsStockT2Ingester</span> <span class="kn">import</span> <span class="n">AbsStockT2Ingester</span>
+<span class="kn">from</span> <span class="nn">ampel.abstract.ingest.AbsCompoundIngester</span> <span class="kn">import</span> <span class="n">AbsCompoundIngester</span>
+<span class="kn">from</span> <span class="nn">ampel.abstract.ingest.AbsStateT2Ingester</span> <span class="kn">import</span> <span class="n">AbsStateT2Ingester</span>
+<span class="kn">from</span> <span class="nn">ampel.abstract.ingest.AbsAlertContentIngester</span> <span class="kn">import</span> <span class="n">AbsAlertContentIngester</span>
+<span class="kn">from</span> <span class="nn">ampel.abstract.ingest.AbsPointT2Ingester</span> <span class="kn">import</span> <span class="n">AbsPointT2Ingester</span>
+<span class="kn">from</span> <span class="nn">ampel.abstract.ingest.AbsStockIngester</span> <span class="kn">import</span> <span class="n">AbsStockIngester</span>
+<span class="kn">from</span> <span class="nn">ampel.log</span> <span class="kn">import</span> <span class="n">AmpelLogger</span><span class="p">,</span> <span class="n">VERBOSE</span>
+<span class="kn">from</span> <span class="nn">ampel.log.utils</span> <span class="kn">import</span> <span class="n">log_exception</span>
+<span class="kn">from</span> <span class="nn">ampel.log.LogsBufferDict</span> <span class="kn">import</span> <span class="n">LogsBufferDict</span>
+<span class="kn">from</span> <span class="nn">ampel.log.LogFlag</span> <span class="kn">import</span> <span class="n">LogFlag</span>
+<span class="kn">from</span> <span class="nn">ampel.model.UnitModel</span> <span class="kn">import</span> <span class="n">UnitModel</span>
+<span class="kn">from</span> <span class="nn">ampel.model.ingest.T1CombineModel</span> <span class="kn">import</span> <span class="n">T1CombineModel</span>
+<span class="kn">from</span> <span class="nn">ampel.model.AlertProcessorDirective</span> <span class="kn">import</span> <span class="n">AlertProcessorDirective</span>
+<span class="kn">from</span> <span class="nn">ampel.alert.AlertProcessorMetrics</span> <span class="kn">import</span> <span class="n">stat_time</span>
+
+
+<div class="viewcode-block" id="IngestionHandler"><a class="viewcode-back" href="../../../api.html#ampel.alert.IngestionHandler.IngestionHandler">[docs]</a><span class="k">class</span> <span class="nc">IngestionHandler</span><span class="p">:</span>
+
+	<span class="vm">__slots__</span> <span class="o">=</span> <span class="s1">&#39;__dict__&#39;</span><span class="p">,</span> <span class="s1">&#39;updates_buffer&#39;</span><span class="p">,</span> <span class="s1">&#39;stock_ingester&#39;</span><span class="p">,</span> <span class="s1">&#39;datapoint_ingester&#39;</span><span class="p">,</span> \
+		<span class="s1">&#39;stock_t2_ingesters&#39;</span><span class="p">,</span> <span class="s1">&#39;point_t2_ingesters&#39;</span><span class="p">,</span> <span class="s1">&#39;state_t2_ingesters&#39;</span><span class="p">,</span> \
+		<span class="s1">&#39;t1_ingesters&#39;</span><span class="p">,</span> <span class="s1">&#39;retro_complete&#39;</span><span class="p">,</span> <span class="s1">&#39;ingest_stats&#39;</span><span class="p">,</span> <span class="s1">&#39;log&#39;</span><span class="p">,</span> <span class="s1">&#39;logd&#39;</span>
+
+	<span class="c1">#: Creates StockDocument</span>
+	<span class="n">stock_ingester</span><span class="p">:</span> <span class="n">AbsStockIngester</span>
+	<span class="c1">#: Creates DataPoints</span>
+	<span class="n">datapoint_ingester</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">AbsAlertContentIngester</span><span class="p">[</span><span class="n">AmpelAlert</span><span class="p">,</span> <span class="n">DataPoint</span><span class="p">]]</span>
+	<span class="c1">#: Creates T2Documents bound to stocks</span>
+	<span class="n">stock_t2_ingesters</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbsStockT2Ingester</span><span class="p">]</span>
+	<span class="c1">#: Creates T2Documents bound to datapoints</span>
+	<span class="n">point_t2_ingesters</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbsPointT2Ingester</span><span class="p">]</span>
+	<span class="c1">#: Creates T2Documents bound to compounds</span>
+	<span class="n">state_t2_ingesters</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">AbsCompoundIngester</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">AbsStateT2Ingester</span><span class="p">]]</span>
+	<span class="c1">#: Creates compounds</span>
+	<span class="n">t1_ingesters</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">AbsCompoundIngester</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">AbsStateT2Ingester</span><span class="p">]]</span>
+	<span class="n">updates_buffer</span><span class="p">:</span> <span class="n">DBUpdatesBuffer</span>
+	<span class="n">logd</span><span class="p">:</span> <span class="n">LogsBufferDict</span>
+	<span class="c1">#: </span>
+	<span class="n">retro_complete</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">ChannelId</span><span class="p">]</span>
+	<span class="n">ingest_stats</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span>
+
+
+	<span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+		<span class="n">context</span><span class="p">:</span> <span class="n">AmpelContext</span><span class="p">,</span>
+		<span class="n">directives</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">AlertProcessorDirective</span><span class="p">],</span>
+		<span class="n">updates_buffer</span><span class="p">:</span> <span class="n">DBUpdatesBuffer</span><span class="p">,</span>
+		<span class="n">logger</span><span class="p">:</span> <span class="n">AmpelLogger</span><span class="p">,</span>
+		<span class="n">run_id</span><span class="p">:</span> <span class="nb">int</span>
+	<span class="p">):</span>
+
+		<span class="bp">self</span><span class="o">.</span><span class="n">updates_buffer</span> <span class="o">=</span> <span class="n">updates_buffer</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">logger</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logger</span><span class="o">.</span><span class="n">log</span>
+
+		<span class="c1"># Collects logs accross the different ingesters, every ingester can</span>
+		<span class="c1"># append values to extra without breaking log aggregation</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">logd</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;logs&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;extra&#39;</span><span class="p">:</span> <span class="p">{}}</span>
+
+		<span class="bp">self</span><span class="o">.</span><span class="n">ingest_stats</span> <span class="o">=</span> <span class="p">[]</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">retro_complete</span> <span class="o">=</span> <span class="p">[]</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">state_t2_ingesters</span> <span class="o">=</span> <span class="p">{}</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">t1_ingesters</span> <span class="o">=</span> <span class="p">{}</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">point_t2_ingesters</span> <span class="o">=</span> <span class="p">[]</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">stock_t2_ingesters</span> <span class="o">=</span> <span class="p">[]</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">datapoint_ingester</span> <span class="o">=</span> <span class="kc">None</span>
+
+		<span class="k">if</span> <span class="ow">not</span> <span class="n">directives</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Need at least 1 directive&quot;</span><span class="p">)</span>
+		<span class="k">for</span> <span class="n">directive</span> <span class="ow">in</span> <span class="n">directives</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">setup_ingesters</span><span class="p">(</span>
+				<span class="n">context</span><span class="p">,</span> <span class="n">directive</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">updates_buffer</span><span class="o">=</span><span class="n">updates_buffer</span><span class="p">,</span>
+				<span class="n">logd</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">logd</span><span class="p">,</span> <span class="n">run_id</span><span class="o">=</span><span class="n">run_id</span>
+			<span class="p">)</span>
+
+		<span class="k">if</span> <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+			<span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">VERBOSE</span><span class="p">,</span>
+				<span class="sa">f</span><span class="s2">&quot;Ingesters: datapoint: 1, stock: 1, &quot;</span>
+				<span class="sa">f</span><span class="s2">&quot;compound: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state_t2_ingesters</span><span class="p">)</span><span class="si">}</span><span class="s2">, &quot;</span>
+				<span class="sa">f</span><span class="s2">&quot;t2_state: </span><span class="si">{</span><span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_t2_ingesters</span><span class="o">.</span><span class="n">values</span><span class="p">())</span><span class="si">}</span><span class="s2">, &quot;</span>
+				<span class="sa">f</span><span class="s2">&quot;t2_point: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">point_t2_ingesters</span><span class="p">)</span><span class="si">}</span><span class="s2">, &quot;</span>
+				<span class="sa">f</span><span class="s2">&quot;t2_stock: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stock_t2_ingesters</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+			<span class="p">)</span>
+
+
+<div class="viewcode-block" id="IngestionHandler.setup_ingesters"><a class="viewcode-back" href="../../../api.html#ampel.alert.IngestionHandler.IngestionHandler.setup_ingesters">[docs]</a>	<span class="k">def</span> <span class="nf">setup_ingesters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+		<span class="n">context</span><span class="p">:</span> <span class="n">AmpelContext</span><span class="p">,</span> <span class="n">directive</span><span class="p">:</span> <span class="n">AlertProcessorDirective</span><span class="p">,</span>
+		<span class="n">logger</span><span class="p">:</span> <span class="n">AmpelLogger</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+	<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">		:param kwargs:</span>
+<span class="sd">		  are passed to method new_admin_unit from UnitLoader instance.</span>
+<span class="sd">		  Typically these are ``updates_buffer``, ``logd``, ``run_id``.</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+
+		<span class="c1"># An AP can for now only have a unique stock ingester</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;stock_ingester&#39;</span><span class="p">):</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">stock_ingester</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">loader</span><span class="o">.</span><span class="n">new_admin_unit</span><span class="p">(</span>
+				<span class="n">unit_model</span> <span class="o">=</span> <span class="n">directive</span><span class="o">.</span><span class="n">stock_update</span><span class="p">,</span> <span class="c1"># type: ignore[arg-type]</span>
+				<span class="n">context</span> <span class="o">=</span> <span class="n">context</span><span class="p">,</span>
+				<span class="n">sub_type</span> <span class="o">=</span> <span class="n">AbsStockIngester</span><span class="p">,</span>
+				<span class="o">**</span><span class="n">kwargs</span>
+			<span class="p">)</span>
+
+		<span class="k">if</span> <span class="n">t0_add</span> <span class="o">:=</span> <span class="n">directive</span><span class="o">.</span><span class="n">t0_add</span><span class="p">:</span>
+
+			<span class="c1"># An AP can for now only have a unique datapoint ingester</span>
+			<span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">datapoint_ingester</span><span class="p">:</span>
+				<span class="bp">self</span><span class="o">.</span><span class="n">datapoint_ingester</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">loader</span><span class="o">.</span><span class="n">new_admin_unit</span><span class="p">(</span>
+					<span class="n">unit_model</span> <span class="o">=</span> <span class="n">t0_add</span><span class="p">,</span>
+					<span class="n">context</span> <span class="o">=</span> <span class="n">context</span><span class="p">,</span>
+					<span class="n">sub_type</span> <span class="o">=</span> <span class="n">AbsAlertContentIngester</span><span class="p">,</span>
+					<span class="o">**</span><span class="n">kwargs</span>
+				<span class="p">)</span>
+
+			<span class="c1"># States, and T2s based thereon</span>
+			<span class="k">for</span> <span class="n">t1_combine</span> <span class="ow">in</span> <span class="n">t0_add</span><span class="o">.</span><span class="n">t1_combine</span> <span class="ow">or</span> <span class="p">[]:</span>
+				<span class="bp">self</span><span class="o">.</span><span class="n">_setup_t1_combine</span><span class="p">(</span>
+					<span class="n">context</span><span class="p">,</span>
+					<span class="n">t1_combine</span><span class="p">,</span>
+					<span class="n">directive</span><span class="o">.</span><span class="n">channel</span><span class="p">,</span>
+					<span class="bp">self</span><span class="o">.</span><span class="n">state_t2_ingesters</span><span class="p">,</span>
+					<span class="n">logger</span><span class="p">,</span>
+					<span class="o">**</span><span class="n">kwargs</span>
+				<span class="p">)</span>
+
+			<span class="c1"># DataPoint T2s</span>
+			<span class="k">if</span> <span class="n">point_t2</span> <span class="o">:=</span> <span class="n">t0_add</span><span class="o">.</span><span class="n">t2_compute</span><span class="p">:</span>
+
+				<span class="n">point_ingester</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_ingester</span><span class="p">(</span>
+					<span class="n">context</span><span class="p">,</span> <span class="n">point_t2</span><span class="p">,</span> <span class="n">AbsPointT2Ingester</span><span class="p">,</span>
+					<span class="bp">self</span><span class="o">.</span><span class="n">point_t2_ingesters</span><span class="p">,</span> <span class="n">directive</span><span class="o">.</span><span class="n">channel</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+				<span class="p">)</span>
+
+				<span class="k">if</span> <span class="n">point_ingester</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">point_t2_ingesters</span><span class="p">:</span>
+					<span class="bp">self</span><span class="o">.</span><span class="n">point_t2_ingesters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">point_ingester</span><span class="p">)</span>
+
+				<span class="c1"># Update point ingester internal config</span>
+				<span class="n">point_ingester</span><span class="o">.</span><span class="n">add_ingest_models</span><span class="p">(</span><span class="n">directive</span><span class="o">.</span><span class="n">channel</span><span class="p">,</span> <span class="n">point_t2</span><span class="o">.</span><span class="n">units</span><span class="p">)</span>
+
+		<span class="c1"># Standalone T1 processes</span>
+		<span class="k">for</span> <span class="n">t1_combine</span> <span class="ow">in</span> <span class="n">directive</span><span class="o">.</span><span class="n">t1_combine</span> <span class="ow">or</span> <span class="p">[]:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">_setup_t1_combine</span><span class="p">(</span>
+				<span class="n">context</span><span class="p">,</span>
+				<span class="n">t1_combine</span><span class="p">,</span>
+				<span class="n">directive</span><span class="o">.</span><span class="n">channel</span><span class="p">,</span>
+				<span class="bp">self</span><span class="o">.</span><span class="n">t1_ingesters</span><span class="p">,</span>
+				<span class="n">logger</span><span class="p">,</span>
+				<span class="o">**</span><span class="n">kwargs</span>
+			<span class="p">)</span>
+
+		<span class="c1"># Stock T2s</span>
+		<span class="k">if</span> <span class="n">directive</span><span class="o">.</span><span class="n">t2_compute</span><span class="p">:</span>
+
+			<span class="n">stock_t2_ingester</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_ingester</span><span class="p">(</span>
+				<span class="n">context</span><span class="p">,</span> <span class="n">directive</span><span class="o">.</span><span class="n">t2_compute</span><span class="p">,</span> <span class="n">AbsStockT2Ingester</span><span class="p">,</span>
+				<span class="bp">self</span><span class="o">.</span><span class="n">stock_t2_ingesters</span><span class="p">,</span> <span class="n">directive</span><span class="o">.</span><span class="n">channel</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+			<span class="p">)</span>
+
+			<span class="k">if</span> <span class="n">stock_t2_ingester</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stock_t2_ingesters</span><span class="p">:</span>
+				<span class="bp">self</span><span class="o">.</span><span class="n">stock_t2_ingesters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">stock_t2_ingester</span><span class="p">)</span>
+
+			<span class="n">stock_t2_ingester</span><span class="o">.</span><span class="n">add_ingest_models</span><span class="p">(</span>
+				<span class="n">directive</span><span class="o">.</span><span class="n">channel</span><span class="p">,</span> <span class="n">directive</span><span class="o">.</span><span class="n">t2_compute</span><span class="o">.</span><span class="n">units</span>
+			<span class="p">)</span></div>
+
+
+	<span class="k">def</span> <span class="nf">_setup_t1_combine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+		<span class="n">context</span><span class="p">:</span> <span class="n">AmpelContext</span><span class="p">,</span> <span class="n">t1_combine</span><span class="p">:</span> <span class="n">T1CombineModel</span><span class="p">,</span> <span class="n">channel</span><span class="p">:</span> <span class="n">ChannelId</span><span class="p">,</span>
+		<span class="n">store</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">AbsCompoundIngester</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">AbsStateT2Ingester</span><span class="p">]],</span>
+		<span class="n">logger</span><span class="p">:</span> <span class="n">AmpelLogger</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+	<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">		Add the ingesters specified in ``t1_combine`` to ``store``, reusing</span>
+<span class="sd">		existing instances if possible.</span>
+<span class="sd">		</span>
+<span class="sd">		:param t1_combine: subclause of ingestion directive</span>
+<span class="sd">		:param channel: channel of parent directive</span>
+<span class="sd">		:param store: cache of existing ingesters</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="c1"># Build compound ingester id</span>
+		<span class="n">comp_ingester</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_ingester</span><span class="p">(</span>
+			<span class="n">context</span><span class="p">,</span> <span class="n">t1_combine</span><span class="p">,</span> <span class="n">AbsCompoundIngester</span><span class="p">,</span>
+			<span class="n">store</span><span class="p">,</span> <span class="n">channel</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+		<span class="p">)</span>
+		<span class="k">if</span> <span class="n">comp_ingester</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">store</span><span class="p">:</span>
+			<span class="n">store</span><span class="p">[</span><span class="n">comp_ingester</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+		<span class="c1"># Notify compound ingester that the current channel</span>
+		<span class="c1"># requires the creation of states/compounds</span>
+		<span class="n">comp_ingester</span><span class="o">.</span><span class="n">add_channel</span><span class="p">(</span><span class="n">channel</span><span class="p">)</span>
+
+		<span class="c1"># State T2s (should be defined along with t1 ingesters usually)</span>
+		<span class="k">if</span> <span class="n">state_t2</span> <span class="o">:=</span> <span class="n">t1_combine</span><span class="o">.</span><span class="n">t2_compute</span><span class="p">:</span>
+
+			<span class="c1"># Retrieve list of associated t2 ingesters (we allow</span>
+			<span class="c1"># the definition of multiple different t2 ingesters)</span>
+			<span class="n">t2_ingesters</span> <span class="o">=</span> <span class="n">store</span><span class="p">[</span><span class="n">comp_ingester</span><span class="p">]</span> <span class="c1"># type: ignore</span>
+
+			<span class="n">t2_ingester</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_ingester</span><span class="p">(</span>
+				<span class="n">context</span><span class="p">,</span> <span class="n">state_t2</span><span class="p">,</span> <span class="n">AbsStateT2Ingester</span><span class="p">,</span>
+				<span class="n">t2_ingesters</span><span class="p">,</span> <span class="n">channel</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+			<span class="p">)</span>
+
+			<span class="k">if</span> <span class="n">t2_ingester</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">t2_ingesters</span><span class="p">:</span>
+				<span class="n">t2_ingesters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t2_ingester</span><span class="p">)</span>
+
+			<span class="c1"># Update state ingester internal config</span>
+			<span class="n">t2_ingester</span><span class="o">.</span><span class="n">add_ingest_models</span><span class="p">(</span><span class="n">channel</span><span class="p">,</span> <span class="n">state_t2</span><span class="o">.</span><span class="n">units</span><span class="p">)</span>
+
+
+	<span class="k">def</span> <span class="nf">_get_ingester</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+		<span class="n">context</span><span class="p">:</span> <span class="n">AmpelContext</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">UnitModel</span><span class="p">,</span> <span class="n">sub_type</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">PT</span><span class="p">],</span>
+		<span class="n">it</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">channel</span><span class="p">:</span> <span class="n">ChannelId</span><span class="p">,</span> <span class="n">logger</span><span class="p">:</span> <span class="n">AmpelLogger</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+	<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PT</span><span class="p">:</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">		Method used internally to instantiate ingesters.</span>
+<span class="sd">		If a request for instantiation is made with the same / a similar*</span>
+<span class="sd">		config than a previous request (contained in the parameter it),</span>
+<span class="sd">		then the previous ingester instance is returned.</span>
+<span class="sd">		*: build_unsafe_dict_id sorts lists by default, see its docstring for details</span>
+
+<span class="sd">		:raises: ValueError if new ingester instance cannot be created</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+
+		<span class="c1"># Identifies ingesters using hashed unit id and config</span>
+		<span class="n">md</span> <span class="o">=</span> <span class="n">build_unsafe_dict_id</span><span class="p">({</span><span class="s2">&quot;unit&quot;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">unit_name</span><span class="p">,</span> <span class="s2">&quot;config&quot;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">config</span><span class="p">},</span> <span class="nb">int</span><span class="p">)</span>
+
+		<span class="k">if</span> <span class="n">ingester</span> <span class="o">:=</span> <span class="nb">next</span><span class="p">((</span><span class="n">el</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">it</span> <span class="k">if</span> <span class="n">el</span><span class="o">.</span><span class="n">hash</span> <span class="o">==</span> <span class="n">md</span><span class="p">),</span> <span class="kc">None</span><span class="p">):</span>
+
+			<span class="k">if</span> <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+				<span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+					<span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="n">channel</span><span class="si">}</span><span class="s2">] Updating ingester with model </span><span class="si">{</span><span class="n">model</span><span class="si">}</span><span class="s2"> (hash=</span><span class="si">{</span><span class="n">md</span><span class="si">}</span><span class="s2">)&quot;</span>
+				<span class="p">)</span>
+			<span class="k">elif</span> <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+				<span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">VERBOSE</span><span class="p">,</span>
+					<span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="n">channel</span><span class="si">}</span><span class="s2">] Updating ingester with id ..</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">md</span><span class="p">)[</span><span class="o">-</span><span class="mi">6</span><span class="p">:]</span><span class="si">}</span><span class="s2">&quot;</span>
+				<span class="p">)</span>
+
+			<span class="k">return</span> <span class="n">ingester</span>
+
+		<span class="k">if</span> <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+			<span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+				<span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="n">channel</span><span class="si">}</span><span class="s2">] Creating new ingester with model </span><span class="si">{</span><span class="n">model</span><span class="si">}</span><span class="s2"> (hash=</span><span class="si">{</span><span class="n">md</span><span class="si">}</span><span class="s2">)&quot;</span>
+			<span class="p">)</span>
+		<span class="k">elif</span> <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+			<span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">VERBOSE</span><span class="p">,</span>
+				<span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="n">channel</span><span class="si">}</span><span class="s2">] Creating new </span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">unit_name</span><span class="si">}</span><span class="s2"> with id ..</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">md</span><span class="p">)[</span><span class="o">-</span><span class="mi">6</span><span class="p">:]</span><span class="si">}</span><span class="s2">&quot;</span>
+			<span class="p">)</span>
+
+		<span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;hash&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">md</span>
+
+		<span class="c1"># Spawn new instance</span>
+		<span class="n">ingester</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">loader</span><span class="o">.</span><span class="n">new_admin_unit</span><span class="p">(</span>
+			<span class="n">unit_model</span> <span class="o">=</span> <span class="n">model</span><span class="p">,</span>
+			<span class="n">context</span> <span class="o">=</span> <span class="n">context</span><span class="p">,</span>
+			<span class="n">sub_type</span> <span class="o">=</span> <span class="n">sub_type</span><span class="p">,</span>
+			<span class="o">**</span><span class="n">kwargs</span>
+		<span class="p">)</span>
+
+		<span class="k">if</span> <span class="n">ingester</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">()</span>
+
+		<span class="k">return</span> <span class="n">ingester</span>
+
+	<span class="c1"># prettier in Python 3.9</span>
+	<span class="n">stat_time</span> <span class="o">=</span> <span class="n">stat_time</span><span class="o">.</span><span class="n">labels</span><span class="p">(</span><span class="s2">&quot;ingest&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<div class="viewcode-block" id="IngestionHandler.ingest"><a class="viewcode-back" href="../../../api.html#ampel.alert.IngestionHandler.IngestionHandler.ingest">[docs]</a>	<span class="nd">@stat_time</span>
+	<span class="k">def</span> <span class="nf">ingest</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+		<span class="n">alert</span><span class="p">:</span> <span class="n">AmpelAlert</span><span class="p">,</span>
+		<span class="n">filter_results</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="n">ChannelId</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]]</span>
+	<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">		Create database documents in response to ``alert``.</span>
+
+<span class="sd">		:param alert: the alert under consideration</span>
+<span class="sd">		:param filter_results: the value returned from</span>
+<span class="sd">		  :func:`~ampel.abstract.AbsAlertFilter.AbsAlertFilter.apply` for each</span>
+<span class="sd">		  channel&#39;s filter</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+
+		<span class="bp">self</span><span class="o">.</span><span class="n">updates_buffer</span><span class="o">.</span><span class="n">_block_autopush</span> <span class="o">=</span> <span class="kc">True</span>
+		<span class="n">stock_id</span> <span class="o">=</span> <span class="n">alert</span><span class="o">.</span><span class="n">stock_id</span>
+		<span class="n">ingester_start</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">logd</span><span class="p">[</span><span class="s1">&#39;extra&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="n">alert</span><span class="o">.</span><span class="n">id</span><span class="p">}</span>
+
+		<span class="c1"># T0 ingestion</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">datapoint_ingester</span><span class="p">:</span>
+			<span class="n">datapoints</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">datapoint_ingester</span><span class="o">.</span><span class="n">ingest</span><span class="p">(</span><span class="n">alert</span><span class="p">)</span> <span class="c1"># type: ignore[union-attr]</span>
+
+		<span class="c1"># Stock T2 ingestions</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">stock_t2_ingesters</span><span class="p">:</span>
+			<span class="k">for</span> <span class="n">stock_t2_ingester</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stock_t2_ingesters</span><span class="p">:</span>
+				<span class="n">stock_t2_ingester</span><span class="o">.</span><span class="n">ingest</span><span class="p">(</span><span class="n">stock_id</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">)</span>
+
+		<span class="c1"># Point T2 ingestions</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">point_t2_ingesters</span><span class="p">:</span>
+			<span class="k">for</span> <span class="n">point_ingester</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">point_t2_ingesters</span><span class="p">:</span>
+				<span class="n">point_ingester</span><span class="o">.</span><span class="n">ingest</span><span class="p">(</span><span class="n">stock_id</span><span class="p">,</span> <span class="n">datapoints</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">)</span>
+
+		<span class="c1"># Alert T1 and associated T2 ingestions</span>
+		<span class="k">for</span> <span class="n">comp_ingester</span><span class="p">,</span> <span class="n">t2_ingesters</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_t2_ingesters</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+			<span class="n">comp_blueprint</span> <span class="o">=</span> <span class="n">comp_ingester</span><span class="o">.</span><span class="n">ingest</span><span class="p">(</span><span class="n">stock_id</span><span class="p">,</span> <span class="n">datapoints</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">)</span>
+			<span class="k">if</span> <span class="n">comp_blueprint</span><span class="p">:</span>
+				<span class="k">for</span> <span class="n">state_ingester</span> <span class="ow">in</span> <span class="n">t2_ingesters</span><span class="p">:</span>
+					<span class="n">state_ingester</span><span class="o">.</span><span class="n">ingest</span><span class="p">(</span><span class="n">stock_id</span><span class="p">,</span> <span class="n">comp_blueprint</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">)</span>
+
+		<span class="c1"># Standalone T1 and associated T2 ingestions</span>
+		<span class="k">for</span> <span class="n">comp_ingester</span><span class="p">,</span> <span class="n">t2_ingesters</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">t1_ingesters</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+			<span class="n">comp_blueprint</span> <span class="o">=</span> <span class="n">comp_ingester</span><span class="o">.</span><span class="n">ingest</span><span class="p">(</span><span class="n">stock_id</span><span class="p">,</span> <span class="n">datapoints</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">)</span>
+			<span class="k">if</span> <span class="n">comp_blueprint</span><span class="p">:</span>
+				<span class="k">for</span> <span class="n">state_ingester</span> <span class="ow">in</span> <span class="n">t2_ingesters</span><span class="p">:</span>
+					<span class="n">state_ingester</span><span class="o">.</span><span class="n">ingest</span><span class="p">(</span><span class="n">stock_id</span><span class="p">,</span> <span class="n">comp_blueprint</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">)</span>
+
+		<span class="bp">self</span><span class="o">.</span><span class="n">stock_ingester</span><span class="o">.</span><span class="n">ingest</span><span class="p">(</span><span class="n">stock_id</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;alert&#39;</span><span class="p">:</span> <span class="n">alert</span><span class="o">.</span><span class="n">id</span><span class="p">})</span>
+
+
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">retro_complete</span><span class="p">:</span>
+
+			<span class="k">try</span><span class="p">:</span>
+
+				<span class="c1"># Part 1: Recreate previous alerts</span>
+				<span class="c1">##################################</span>
+
+				<span class="c1"># Build prev_det_sequences.</span>
+				<span class="c1"># If datapoints looked like this:</span>
+				<span class="c1"># [{&#39;_id&#39;: 12}, {&#39;_id&#39;: -11}, {&#39;_id&#39;: 10}, {&#39;_id&#39;: -8}, {&#39;_id&#39;: -7}, {&#39;_id&#39;: 6}, {&#39;_id&#39;: -4}]</span>
+				<span class="c1"># prev_det_sequences would be: [</span>
+				<span class="c1"># 	[{&quot;_id&quot;: 10}, {&quot;_id&quot;: -8}, {&quot;_id&quot;: -7}, {&quot;_id&quot;: 6}, {&quot;_id&quot;: -4}],</span>
+				<span class="c1"># 	[{&quot;_id&quot;: 6}, {&quot;_id&quot;: -4}]</span>
+				<span class="c1"># ]</span>
+
+				<span class="n">prev_det_sequences</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DataPoint</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+				<span class="n">el</span> <span class="o">=</span> <span class="n">datapoints</span>
+				<span class="k">while</span> <span class="n">el</span> <span class="o">:=</span> <span class="n">alert</span><span class="o">.</span><span class="n">_prev_det_seq</span><span class="p">(</span><span class="n">el</span><span class="p">):</span> <span class="c1"># type: ignore[assignment]</span>
+					<span class="n">prev_det_sequences</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">el</span><span class="p">)</span>
+
+				<span class="k">if</span> <span class="n">prev_det_sequences</span><span class="p">:</span>
+
+					<span class="c1"># Reduce filter_results to the channels requesting &#39;retro/accept&#39; auto-complete</span>
+					<span class="n">filter_results</span> <span class="o">=</span> <span class="p">[</span><span class="n">el</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">filter_results</span> <span class="k">if</span> <span class="n">el</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">retro_complete</span><span class="p">]</span>
+
+					<span class="c1"># Part 2: Ingest simulated alerts</span>
+					<span class="c1">#################################</span>
+
+					<span class="c1"># For every reconstructed previous alerts contents</span>
+					<span class="k">for</span> <span class="n">prev_datapoints</span> <span class="ow">in</span> <span class="n">prev_det_sequences</span><span class="p">:</span>
+
+						<span class="c1"># Point T2 ingestions</span>
+						<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">point_t2_ingesters</span><span class="p">:</span>
+							<span class="k">for</span> <span class="n">point_ingester</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">point_t2_ingesters</span><span class="p">:</span>
+								<span class="n">point_ingester</span><span class="o">.</span><span class="n">ingest</span><span class="p">(</span><span class="n">stock_id</span><span class="p">,</span> <span class="n">prev_datapoints</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">)</span>
+
+						<span class="c1"># T1 and associated T2 ingestions</span>
+						<span class="k">for</span> <span class="n">comp_ingester</span><span class="p">,</span> <span class="n">t2_ingesters</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_t2_ingesters</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+							<span class="n">comp_blueprint</span> <span class="o">=</span> <span class="n">comp_ingester</span><span class="o">.</span><span class="n">ingest</span><span class="p">(</span><span class="n">stock_id</span><span class="p">,</span> <span class="n">prev_datapoints</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">)</span>
+							<span class="k">if</span> <span class="n">comp_blueprint</span><span class="p">:</span>
+								<span class="k">for</span> <span class="n">state_ingester</span> <span class="ow">in</span> <span class="n">t2_ingesters</span><span class="p">:</span>
+									<span class="n">state_ingester</span><span class="o">.</span><span class="n">ingest</span><span class="p">(</span><span class="n">stock_id</span><span class="p">,</span> <span class="n">comp_blueprint</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">)</span>
+
+						<span class="c1"># Update transient journal</span>
+						<span class="bp">self</span><span class="o">.</span><span class="n">stock_ingester</span><span class="o">.</span><span class="n">ingest</span><span class="p">(</span>
+							<span class="n">stock_id</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;ac&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;alert&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">alert</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">prev_datapoints</span><span class="p">)]}</span>
+						<span class="p">)</span>
+
+			<span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+				<span class="n">log_exception</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+
+			<span class="k">finally</span><span class="p">:</span>
+				<span class="bp">self</span><span class="o">.</span><span class="n">retro_complete</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+
+		<span class="c1"># Log ingester messages</span>
+		<span class="n">logd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">logd</span>
+		<span class="n">chans</span> <span class="o">=</span> <span class="p">[</span><span class="n">el</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">filter_results</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">filter_results</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">filter_results</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+
+		<span class="k">if</span> <span class="n">logd</span><span class="p">[</span><span class="s1">&#39;logs&#39;</span><span class="p">]:</span>
+
+			<span class="k">if</span> <span class="s1">&#39;err&#39;</span> <span class="ow">in</span> <span class="n">logd</span><span class="p">:</span>
+				<span class="k">del</span> <span class="n">logd</span><span class="p">[</span><span class="s1">&#39;err&#39;</span><span class="p">]</span>
+				<span class="n">flag</span> <span class="o">=</span> <span class="n">LogFlag</span><span class="o">.</span><span class="n">ERROR</span>
+			<span class="k">else</span><span class="p">:</span>
+				<span class="n">flag</span> <span class="o">=</span> <span class="n">LogFlag</span><span class="o">.</span><span class="n">INFO</span>
+
+			<span class="n">log</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">log</span>
+			<span class="n">extra</span> <span class="o">=</span> <span class="p">{</span>
+				<span class="s2">&quot;channel&quot;</span><span class="p">:</span> <span class="n">chans</span><span class="p">,</span>
+				<span class="s2">&quot;stock&quot;</span><span class="p">:</span> <span class="n">stock_id</span><span class="p">,</span>
+				<span class="o">**</span><span class="p">(</span><span class="n">logd</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;extra&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span>
+			<span class="p">}</span>
+			<span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">logd</span><span class="p">[</span><span class="s1">&#39;logs&#39;</span><span class="p">]:</span>
+				<span class="n">log</span><span class="p">(</span><span class="n">flag</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="n">extra</span><span class="p">)</span>
+
+			<span class="n">logd</span><span class="p">[</span><span class="s1">&#39;logs&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span>
+				<span class="n">LogFlag</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span>
+				<span class="kc">None</span><span class="p">,</span>
+				<span class="n">extra</span><span class="o">=</span><span class="p">{</span>
+					<span class="s2">&quot;channel&quot;</span><span class="p">:</span> <span class="n">chans</span><span class="p">,</span>
+					<span class="s2">&quot;stock&quot;</span><span class="p">:</span> <span class="n">stock_id</span><span class="p">,</span>
+					<span class="o">**</span><span class="p">(</span><span class="n">logd</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;extra&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span>
+				<span class="p">}</span>
+			<span class="p">)</span>
+
+		<span class="bp">self</span><span class="o">.</span><span class="n">ingest_stats</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">ingester_start</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">updates_buffer</span><span class="o">.</span><span class="n">_block_autopush</span> <span class="o">=</span> <span class="kc">False</span></div></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/ampel.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">ampel-alerts 0.7.1-alpha.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">ampel.alert.IngestionHandler</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018-2021, Ampel Project.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.5.1.
+    </div>
+  </body>
+</html>

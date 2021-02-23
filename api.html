@@ -104,9 +104,141 @@ as as file-like objects / bytes</p>
 <div class="section" id="alert-ingestion">
 <h2>Alert ingestion<a class="headerlink" href="#alert-ingestion" title="Permalink to this headline">¶</a></h2>
 <dl class="py class">
+<dt id="ampel.alert.AlertProcessor.AlertProcessor">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">ampel.alert.AlertProcessor.</span></code><code class="sig-name descname"><span class="pre">AlertProcessor</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ampel/alert/AlertProcessor.html#AlertProcessor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ampel.alert.AlertProcessor.AlertProcessor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">ampel.abstract.AbsAlertSupplier.T</span></code>], <a class="reference external" href="https://ampelproject.github.io/Ampel-core/api.html#ampel.abstract.AbsProcessorUnit.AbsProcessorUnit" title="(in ampel-core v0.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ampel.abstract.AbsProcessorUnit.AbsProcessorUnit</span></code></a></p>
+<p>Class handling the processing of alerts (T0 level).
+For each alert, following tasks are performed:</p>
+<ul class="simple">
+<li><p>Load the alert</p></li>
+<li><p>Filter alert based on the configured T0 filter</p></li>
+<li><p>Ingest alert based on the configured ingester</p></li>
+</ul>
+<p>Potential update: maybe allow an alternative way of initialization for this class
+through direct input of (possibly customized, that is the point) FilterBlocksHandler and
+IngestionHandler instances rather than through (deserialized) directives.</p>
+<dl class="py attribute">
+<dt id="ampel.alert.AlertProcessor.AlertProcessor.iter_max">
+<code class="sig-name descname"><span class="pre">iter_max</span></code><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></em><em class="property"> <span class="pre">=</span> <span class="pre">50000</span></em><a class="headerlink" href="#ampel.alert.AlertProcessor.AlertProcessor.iter_max" title="Permalink to this definition">¶</a></dt>
+<dd><p>Maximum number of alerts to consume in <a class="reference internal" href="#ampel.alert.AlertProcessor.AlertProcessor.run" title="ampel.alert.AlertProcessor.AlertProcessor.run"><code class="xref py py-func docutils literal notranslate"><span class="pre">run()</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="ampel.alert.AlertProcessor.AlertProcessor.error_max">
+<code class="sig-name descname"><span class="pre">error_max</span></code><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></em><em class="property"> <span class="pre">=</span> <span class="pre">20</span></em><a class="headerlink" href="#ampel.alert.AlertProcessor.AlertProcessor.error_max" title="Permalink to this definition">¶</a></dt>
+<dd><p>Maximum number of exceptions to catch before cancelling <a class="reference internal" href="#ampel.alert.AlertProcessor.AlertProcessor.run" title="ampel.alert.AlertProcessor.AlertProcessor.run"><code class="xref py py-func docutils literal notranslate"><span class="pre">run()</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="ampel.alert.AlertProcessor.AlertProcessor.directives">
+<code class="sig-name descname"><span class="pre">directives</span></code><em class="property"><span class="pre">:</span> <span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#ampel.model.AlertProcessorDirective.AlertProcessorDirective" title="ampel.model.AlertProcessorDirective.AlertProcessorDirective"><span class="pre">ampel.model.AlertProcessorDirective.AlertProcessorDirective</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ampel.alert.AlertProcessor.AlertProcessor.directives" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mandatory alert processor directives. This parameter will
+determines how the underlying <a class="reference internal" href="#ampel.alert.FilterBlocksHandler.FilterBlocksHandler" title="ampel.alert.FilterBlocksHandler.FilterBlocksHandler"><code class="xref py py-class docutils literal notranslate"><span class="pre">FilterBlocksHandler</span></code></a>
+and <a class="reference internal" href="#ampel.alert.IngestionHandler.IngestionHandler" title="ampel.alert.IngestionHandler.IngestionHandler"><code class="xref py py-class docutils literal notranslate"><span class="pre">IngestionHandler</span></code></a> instances are set up.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="ampel.alert.AlertProcessor.AlertProcessor.db_log_format">
+<code class="sig-name descname"><span class="pre">db_log_format</span></code><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a></em><em class="property"> <span class="pre">=</span> <span class="pre">'standard'</span></em><a class="headerlink" href="#ampel.alert.AlertProcessor.AlertProcessor.db_log_format" title="Permalink to this definition">¶</a></dt>
+<dd><p>How to store log record in the database (see <a class="reference internal" href="#ampel.alert.FilterBlocksHandler.FilterBlocksHandler" title="ampel.alert.FilterBlocksHandler.FilterBlocksHandler"><code class="xref py py-class docutils literal notranslate"><span class="pre">FilterBlocksHandler</span></code></a>)</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="ampel.alert.AlertProcessor.AlertProcessor.single_rej_col">
+<code class="sig-name descname"><span class="pre">single_rej_col</span></code><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><span class="pre">bool</span></a></em><em class="property"> <span class="pre">=</span> <span class="pre">False</span></em><a class="headerlink" href="#ampel.alert.AlertProcessor.AlertProcessor.single_rej_col" title="Permalink to this definition">¶</a></dt>
+<dd><p>Store alert rejection records in a single collection rather than per-channel</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="ampel.alert.AlertProcessor.AlertProcessor.shout">
+<code class="sig-name descname"><span class="pre">shout</span></code><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></em><em class="property"> <span class="pre">=</span> <span class="pre">2048</span></em><a class="headerlink" href="#ampel.alert.AlertProcessor.AlertProcessor.shout" title="Permalink to this definition">¶</a></dt>
+<dd><p>Flag to use for log records with a level between INFO and WARN</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ampel.alert.AlertProcessor.AlertProcessor.from_process">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">from_process</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">process_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ampel/alert/AlertProcessor.html#AlertProcessor.from_process"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ampel.alert.AlertProcessor.AlertProcessor.from_process" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience method instantiating an AlertProcessor using the config entry from a given T0 process.</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">AlertProcessor</span><span class="o">.</span><span class="n">from_process</span><span class="p">(</span>
+    <span class="n">context</span><span class="p">,</span> <span class="n">process_name</span><span class="o">=</span><span class="s2">&quot;VAL_TEST2/T0/ztf_uw_public&quot;</span><span class="p">,</span> <span class="n">override</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;iter_max&#39;</span><span class="p">:</span> <span class="mi">100</span><span class="p">}</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="ampel.alert.AlertProcessor.AlertProcessor.supplier">
+<code class="sig-name descname"><span class="pre">supplier</span></code><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#ampel.abstract.AbsAlertSupplier.AbsAlertSupplier" title="ampel.abstract.AbsAlertSupplier.AbsAlertSupplier"><span class="pre">ampel.abstract.AbsAlertSupplier.AbsAlertSupplier</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://ampelproject.github.io/Ampel-interface/api.html#ampel.model.UnitModel.UnitModel" title="(in ampel-interface v0.7)"><span class="pre">ampel.model.UnitModel.UnitModel</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ampel.alert.AlertProcessor.AlertProcessor.supplier" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unit to use to supply alerts</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ampel.alert.AlertProcessor.AlertProcessor.set_supplier">
+<code class="sig-name descname"><span class="pre">set_supplier</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alert_supplier</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ampel/alert/AlertProcessor.html#AlertProcessor.set_supplier"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ampel.alert.AlertProcessor.AlertProcessor.set_supplier" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set a custom <a class="reference internal" href="#ampel.abstract.AbsAlertSupplier.AbsAlertSupplier" title="ampel.abstract.AbsAlertSupplier.AbsAlertSupplier"><code class="xref py py-class docutils literal notranslate"><span class="pre">AlertSupplier</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#ampel.alert.AlertProcessor.AlertProcessor" title="ampel.alert.AlertProcessor.AlertProcessor"><code class="xref py py-class docutils literal notranslate"><span class="pre">AlertProcessor</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ampel.alert.AlertProcessor.AlertProcessor.set_loader">
+<code class="sig-name descname"><span class="pre">set_loader</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alert_loader</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ampel/alert/AlertProcessor.html#AlertProcessor.set_loader"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ampel.alert.AlertProcessor.AlertProcessor.set_loader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the source of the current alert supplier. Alert loaders typically
+provide file-like objects.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.9)"><strong>ValueError</strong></a> – if <code class="xref py py-attr docutils literal notranslate"><span class="pre">alert_supplier</span></code> is None</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="#ampel.alert.AlertProcessor.AlertProcessor" title="ampel.alert.AlertProcessor.AlertProcessor"><code class="xref py py-class docutils literal notranslate"><span class="pre">AlertProcessor</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ampel.alert.AlertProcessor.AlertProcessor.process_alerts">
+<code class="sig-name descname"><span class="pre">process_alerts</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alert_loader</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ampel/alert/AlertProcessor.html#AlertProcessor.process_alerts"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ampel.alert.AlertProcessor.AlertProcessor.process_alerts" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience method to process all alerts from a given loader until its dries out</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>alert_loader</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterable" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Iterable</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/io.html#io.IOBase" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">IOBase</span></code></a>]) – iterable returning alert payloads</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.9)"><strong>ValueError</strong></a> – if self.alert_supplier is None</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ampel.alert.AlertProcessor.AlertProcessor.run">
+<code class="sig-name descname"><span class="pre">run</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ampel/alert/AlertProcessor.html#AlertProcessor.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ampel.alert.AlertProcessor.AlertProcessor.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run alert processing using the internal alert_loader/alert_supplier</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Number of alerts processed</p>
+</dd>
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><p>LogFlushingError, PyMongoError</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
 <dt id="ampel.model.AlertProcessorDirective.AlertProcessorDirective">
 <em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">ampel.model.AlertProcessorDirective.</span></code><code class="sig-name descname"><span class="pre">AlertProcessorDirective</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ampel/model/AlertProcessorDirective.html#AlertProcessorDirective"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ampel.model.AlertProcessorDirective.AlertProcessorDirective" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ampel.model.ingest.IngestionDirective.IngestionDirective</span></code></p>
+<dd><p>Bases: <a class="reference external" href="https://ampelproject.github.io/Ampel-core/api.html#ampel.model.ingest.IngestionDirective.IngestionDirective" title="(in ampel-core v0.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ampel.model.ingest.IngestionDirective.IngestionDirective</span></code></a></p>
 <dl class="py attribute">
 <dt id="ampel.model.AlertProcessorDirective.AlertProcessorDirective.filter">
 <code class="sig-name descname"><span class="pre">filter</span></code><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#ampel.model.AlertProcessorDirective.FilterModel" title="ampel.model.AlertProcessorDirective.FilterModel"><span class="pre">ampel.model.AlertProcessorDirective.FilterModel</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ampel.model.AlertProcessorDirective.AlertProcessorDirective.filter" title="Permalink to this definition">¶</a></dt>
@@ -129,6 +261,147 @@ as as file-like objects / bytes</p>
 <dt id="ampel.model.AlertProcessorDirective.FilterModel.reject">
 <code class="sig-name descname"><span class="pre">reject</span></code><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="pre">log</span><span class="p"><span class="pre">,</span> </span><span class="pre">register</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://ampelproject.github.io/Ampel-interface/api.html#ampel.model.UnitModel.UnitModel" title="(in ampel-interface v0.7)"><span class="pre">ampel.model.UnitModel.UnitModel</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ampel.model.AlertProcessorDirective.FilterModel.reject" title="Permalink to this definition">¶</a></dt>
 <dd><p>How to store rejection records</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="ampel.alert.FilterBlocksHandler.FilterBlocksHandler">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">ampel.alert.FilterBlocksHandler.</span></code><code class="sig-name descname"><span class="pre">FilterBlocksHandler</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">logger</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">directives</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">process_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">db_log_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'standard'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ampel/alert/FilterBlocksHandler.html#FilterBlocksHandler"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ampel.alert.FilterBlocksHandler.FilterBlocksHandler" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>db_log_format</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>) – <p>‘compact’ (saves RAM by reducing the number of indexed document) or ‘standard’.         Compact log entries can be later converted into ‘standard’ format using the aggregation pipeline.
+Avoid using ‘compact’ if you run the alert processor with a single channel.</p>
+<p>Examples: (Abbreviations: s: stock, a: alert, f: flag, r: run, c: channel, m: msg)</p>
+<ul>
+<li><p>’compact’: embed channel information withing log record ‘msg’ field:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="s2">&quot;_id&quot;</span> <span class="p">:</span> <span class="n">ObjectId</span><span class="p">(</span><span class="s2">&quot;5be4aa6254048041edbac352&quot;</span><span class="p">),</span>
+  <span class="s2">&quot;s&quot;</span> <span class="p">:</span> <span class="n">NumberLong</span><span class="p">(</span><span class="mi">1810101032122523</span><span class="p">),</span>
+  <span class="s2">&quot;a&quot;</span> <span class="p">:</span> <span class="n">NumberLong</span><span class="p">(</span><span class="mi">404105201415015004</span><span class="p">),</span>
+  <span class="s2">&quot;f&quot;</span> <span class="p">:</span> <span class="mi">572784643</span><span class="p">,</span>
+  <span class="s2">&quot;r&quot;</span> <span class="p">:</span> <span class="mi">509</span><span class="p">,</span>
+  <span class="s2">&quot;m&quot;</span> <span class="p">:</span> <span class="p">[</span>
+          <span class="p">{</span>
+                  <span class="s2">&quot;c&quot;</span> <span class="p">:</span> <span class="s2">&quot;NO_FILTER&quot;</span><span class="p">,</span>
+                  <span class="s2">&quot;m&quot;</span><span class="p">:</span> <span class="s2">&quot;Alert accepted&quot;</span>
+          <span class="p">},</span>
+          <span class="p">{</span>
+                  <span class="s2">&quot;c&quot;</span> <span class="p">:</span> <span class="s2">&quot;HU_RANDOM&quot;</span><span class="p">,</span>
+                  <span class="s2">&quot;m&quot;</span><span class="p">:</span> <span class="s2">&quot;Alert accepted&quot;</span>
+          <span class="p">}</span>
+  <span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</li>
+<li><p>’standard’: channel info are encoded in log parameter ‘extra’.
+For a given alert, one log entry is created per channel since log concatenation
+cannot happen (the ‘extra’ dicts from the two log entries differ):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;_id&quot;</span> <span class="p">:</span> <span class="n">ObjectId</span><span class="p">(</span><span class="s2">&quot;5be4aa6254048041edbac353&quot;</span><span class="p">),</span>
+        <span class="s2">&quot;s&quot;</span> <span class="p">:</span> <span class="n">NumberLong</span><span class="p">(</span><span class="mi">1810101032122523</span><span class="p">),</span>
+        <span class="s2">&quot;a&quot;</span> <span class="p">:</span> <span class="n">NumberLong</span><span class="p">(</span><span class="mi">404105201415015004</span><span class="p">),</span>
+        <span class="s2">&quot;f&quot;</span> <span class="p">:</span> <span class="mi">572784643</span><span class="p">,</span>
+        <span class="s2">&quot;r&quot;</span> <span class="p">:</span> <span class="mi">509</span><span class="p">,</span>
+        <span class="s2">&quot;c&quot;</span> <span class="p">:</span> <span class="s2">&quot;NO_FILTER&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;m&quot;</span> <span class="p">:</span> <span class="s2">&quot;Alert accepted&quot;</span>
+    <span class="p">},</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;_id&quot;</span> <span class="p">:</span> <span class="n">ObjectId</span><span class="p">(</span><span class="s2">&quot;5be4aa6254048041edbac352&quot;</span><span class="p">),</span>
+        <span class="s2">&quot;s&quot;</span> <span class="p">:</span> <span class="n">NumberLong</span><span class="p">(</span><span class="mi">1810101032122523</span><span class="p">),</span>
+        <span class="s2">&quot;a&quot;</span> <span class="p">:</span> <span class="n">NumberLong</span><span class="p">(</span><span class="mi">404105201415015004</span><span class="p">),</span>
+        <span class="s2">&quot;f&quot;</span> <span class="p">:</span> <span class="mi">572784643</span><span class="p">,</span>
+        <span class="s2">&quot;r&quot;</span> <span class="p">:</span> <span class="mi">509</span><span class="p">,</span>
+        <span class="s2">&quot;c&quot;</span> <span class="p">:</span> <span class="s2">&quot;HU_RANDOM&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;m&quot;</span> <span class="p">:</span> <span class="s2">&quot;Alert accepted&quot;</span>
+    <span class="p">}</span>
+    <span class="p">]</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt id="ampel.alert.IngestionHandler.IngestionHandler">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">ampel.alert.IngestionHandler.</span></code><code class="sig-name descname"><span class="pre">IngestionHandler</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">directives</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">updates_buffer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">logger</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ampel/alert/IngestionHandler.html#IngestionHandler"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ampel.alert.IngestionHandler.IngestionHandler" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="py attribute">
+<dt id="ampel.alert.IngestionHandler.IngestionHandler.stock_ingester">
+<code class="sig-name descname"><span class="pre">stock_ingester</span></code><a class="headerlink" href="#ampel.alert.IngestionHandler.IngestionHandler.stock_ingester" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates StockDocument</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="ampel.alert.IngestionHandler.IngestionHandler.retro_complete">
+<code class="sig-name descname"><span class="pre">retro_complete</span></code><a class="headerlink" href="#ampel.alert.IngestionHandler.IngestionHandler.retro_complete" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="ampel.alert.IngestionHandler.IngestionHandler.state_t2_ingesters">
+<code class="sig-name descname"><span class="pre">state_t2_ingesters</span></code><a class="headerlink" href="#ampel.alert.IngestionHandler.IngestionHandler.state_t2_ingesters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates T2Documents bound to compounds</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="ampel.alert.IngestionHandler.IngestionHandler.t1_ingesters">
+<code class="sig-name descname"><span class="pre">t1_ingesters</span></code><a class="headerlink" href="#ampel.alert.IngestionHandler.IngestionHandler.t1_ingesters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates compounds</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="ampel.alert.IngestionHandler.IngestionHandler.point_t2_ingesters">
+<code class="sig-name descname"><span class="pre">point_t2_ingesters</span></code><a class="headerlink" href="#ampel.alert.IngestionHandler.IngestionHandler.point_t2_ingesters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates T2Documents bound to datapoints</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="ampel.alert.IngestionHandler.IngestionHandler.stock_t2_ingesters">
+<code class="sig-name descname"><span class="pre">stock_t2_ingesters</span></code><a class="headerlink" href="#ampel.alert.IngestionHandler.IngestionHandler.stock_t2_ingesters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates T2Documents bound to stocks</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="ampel.alert.IngestionHandler.IngestionHandler.datapoint_ingester">
+<code class="sig-name descname"><span class="pre">datapoint_ingester</span></code><a class="headerlink" href="#ampel.alert.IngestionHandler.IngestionHandler.datapoint_ingester" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates DataPoints</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ampel.alert.IngestionHandler.IngestionHandler.setup_ingesters">
+<code class="sig-name descname"><span class="pre">setup_ingesters</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">directive</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">logger</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ampel/alert/IngestionHandler.html#IngestionHandler.setup_ingesters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ampel.alert.IngestionHandler.IngestionHandler.setup_ingesters" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>kwargs</strong> – are passed to method new_admin_unit from UnitLoader instance.
+Typically these are <code class="docutils literal notranslate"><span class="pre">updates_buffer</span></code>, <code class="docutils literal notranslate"><span class="pre">logd</span></code>, <code class="docutils literal notranslate"><span class="pre">run_id</span></code>.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ampel.alert.IngestionHandler.IngestionHandler.ingest">
+<code class="sig-name descname"><span class="pre">ingest</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alert</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_results</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ampel/alert/IngestionHandler.html#IngestionHandler.ingest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ampel.alert.IngestionHandler.IngestionHandler.ingest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create database documents in response to <code class="docutils literal notranslate"><span class="pre">alert</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>alert</strong> (<a class="reference external" href="https://ampelproject.github.io/Ampel-interface/api.html#ampel.alert.AmpelAlert.AmpelAlert" title="(in ampel-interface v0.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">AmpelAlert</span></code></a>) – the alert under consideration</p></li>
+<li><p><strong>filter_results</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Tuple</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>], <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>]]]) – the value returned from
+<a class="reference internal" href="#ampel.abstract.AbsAlertFilter.AbsAlertFilter.apply" title="ampel.abstract.AbsAlertFilter.AbsAlertFilter.apply"><code class="xref py py-func docutils literal notranslate"><span class="pre">apply()</span></code></a> for each
+channel’s filter</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -212,19 +485,39 @@ alert per file.</p>
 <p>Facilities for tracking rejected alerts</p>
 <div class="section" id="database-storage">
 <h3>Database storage<a class="headerlink" href="#database-storage" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="ampel.alert.reject.DBRejectedLogsHandler.DBRejectedLogsHandler">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">ampel.alert.reject.DBRejectedLogsHandler.</span></code><code class="sig-name descname"><span class="pre">DBRejectedLogsHandler</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">arg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ampel/alert/reject/DBRejectedLogsHandler.html#DBRejectedLogsHandler"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ampel.alert.reject.DBRejectedLogsHandler.DBRejectedLogsHandler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Saves rejected log events (by T0 filters) into the NoSQL database.
+This class does not inherit logging.Handler but implements the method handle()
+so that this class can be used together with RecordBufferingHandler.forward() or copy()
+Note: isinstance(&lt;this class instance&gt;, LoggingHandlerProtocol) will return true</p>
+<dl class="py method">
+<dt id="ampel.alert.reject.DBRejectedLogsHandler.DBRejectedLogsHandler.flush">
+<code class="sig-name descname"><span class="pre">flush</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ampel/alert/reject/DBRejectedLogsHandler.html#DBRejectedLogsHandler.flush"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ampel.alert.reject.DBRejectedLogsHandler.DBRejectedLogsHandler.flush" title="Permalink to this definition">¶</a></dt>
+<dd><p>Will raise Exception if DB issue occurs</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
 </div>
 <div class="section" id="file-storage">
 <h3>File storage<a class="headerlink" href="#file-storage" title="Permalink to this headline">¶</a></h3>
 <p>In applications where most alerts are rejected, rejection records are likely to
 be written much more often than they are read. In such cases, it can be much
 more efficient to store (fixed-size) rejection records in an append-only log
-than in a document-oriented database. <a class="reference external" href="https://ampelproject.github.io/Ampel-core/api.html#ampel.core.AmpelRegister.AmpelRegister" title="(in ampel-core v0.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">AmpelRegister</span></code></a>
+than in a document-oriented database. <code class="xref py py-class docutils literal notranslate"><span class="pre">AmpelRegister</span></code>
 implements such a log, and several subclasses exist to store rejection records
 with various levels of detail.</p>
 <dl class="py class">
 <dt id="ampel.abstract.AbsAlertRegister.AbsAlertRegister">
 <em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">ampel.abstract.AbsAlertRegister.</span></code><code class="sig-name descname"><span class="pre">AbsAlertRegister</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">autoload</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ampel/abstract/AbsAlertRegister.html#AbsAlertRegister"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ampel.abstract.AbsAlertRegister.AbsAlertRegister" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://ampelproject.github.io/Ampel-core/api.html#ampel.core.AmpelRegister.AmpelRegister" title="(in ampel-core v0.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ampel.core.AmpelRegister.AmpelRegister</span></code></a>, <a class="reference external" href="https://ampelproject.github.io/Ampel-core/api.html#ampel.core.AdminUnit.AdminUnit" title="(in ampel-core v0.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ampel.core.AdminUnit.AdminUnit</span></code></a></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ampel.core.AmpelRegister.AmpelRegister</span></code>, <a class="reference external" href="https://ampelproject.github.io/Ampel-core/api.html#ampel.core.AdminUnit.AdminUnit" title="(in ampel-core v0.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ampel.core.AdminUnit.AdminUnit</span></code></a></p>
 <p>Record of the results of filter evaluation, in particular for rejected alerts.</p>
 <dl class="py method">
 <dt id="ampel.abstract.AbsAlertRegister.AbsAlertRegister.file">

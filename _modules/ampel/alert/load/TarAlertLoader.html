@@ -1,0 +1,188 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ampel.alert.load.TarAlertLoader &#8212; ampel-alerts 0.7.1-alpha.0 documentation</title>
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/sphinxdoc.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script src="../../../../_static/jquery.js"></script>
+    <script src="../../../../_static/underscore.js"></script>
+    <script src="../../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">ampel-alerts 0.7.1-alpha.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">ampel.alert.load.TarAlertLoader</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for ampel.alert.load.TarAlertLoader</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="c1"># File              : Ampel-alerts/ampel/alert/load/TarAlertLoader.py</span>
+<span class="c1"># License           : BSD-3-Clause</span>
+<span class="c1"># Author            : vb &lt;vbrinnel@physik.hu-berlin.de&gt;</span>
+<span class="c1"># Date              : 13.05.2018</span>
+<span class="c1"># Last Modified Date: 30.01.2020</span>
+<span class="c1"># Last Modified By  : vb &lt;vbrinnel@physik.hu-berlin.de&gt;</span>
+
+<span class="kn">import</span> <span class="nn">tarfile</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">IO</span>
+<span class="kn">from</span> <span class="nn">ampel.log.AmpelLogger</span> <span class="kn">import</span> <span class="n">AmpelLogger</span>
+
+
+<div class="viewcode-block" id="TarAlertLoader"><a class="viewcode-back" href="../../../../api.html#ampel.alert.load.TarAlertLoader.TarAlertLoader">[docs]</a><span class="k">class</span> <span class="nc">TarAlertLoader</span><span class="p">:</span>
+	<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">	Load alerts from a ``tar`` file. The archive must be laid out like the</span>
+<span class="sd">	`ZTF public alert archive &lt;https://ztf.uw.edu/alerts/public/&gt;`_, i.e. one</span>
+<span class="sd">	alert per file.</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+
+	<span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+		<span class="bp">self</span><span class="p">,</span> <span class="n">tar_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">file_obj</span><span class="p">:</span> <span class="n">IO</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">start</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+		<span class="n">tar_mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;r:gz&#39;</span><span class="p">,</span> <span class="n">logger</span><span class="p">:</span> <span class="n">AmpelLogger</span> <span class="o">=</span> <span class="kc">None</span>
+	<span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">AmpelLogger</span><span class="o">.</span><span class="n">get_logger</span><span class="p">()</span> <span class="k">if</span> <span class="n">logger</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">logger</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">chained_tal</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="s1">&#39;TarAlertLoader&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+		<span class="k">if</span> <span class="n">file_obj</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">tar_file</span> <span class="o">=</span> <span class="n">tarfile</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">fileobj</span><span class="o">=</span><span class="n">file_obj</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">tar_mode</span><span class="p">)</span>
+		<span class="k">elif</span> <span class="n">tar_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">tar_path</span> <span class="o">=</span> <span class="n">tar_path</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">tar_file</span> <span class="o">=</span> <span class="n">tarfile</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">tar_path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">tar_mode</span><span class="p">)</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Please provide value either for &#39;tar_path&#39; or &#39;file_obj&#39;&quot;</span><span class="p">)</span>
+
+		<span class="k">if</span> <span class="n">start</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+			<span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+			<span class="k">for</span> <span class="n">tarinfo</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tar_file</span><span class="p">:</span>
+				<span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+				<span class="k">if</span> <span class="n">count</span> <span class="o">&lt;</span> <span class="n">start</span><span class="p">:</span>
+					<span class="k">continue</span>
+
+
+	<span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="k">return</span> <span class="bp">self</span>
+
+
+	<span class="k">def</span> <span class="fm">__next__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">IO</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]:</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">		FYI:</span>
+<span class="sd">		from io import IOBase</span>
+<span class="sd">		In []: tar_file = tarfile.open(&quot;file.tar&quot;)</span>
+<span class="sd">		In []: tar_info = tar_file.next()</span>
+<span class="sd">		In []: isinstance(tar_file.extractfile(tar_info), IOBase)</span>
+<span class="sd">		Out[]: True</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="c1"># Free memory</span>
+		<span class="c1"># NB: .members is not in the typeshed stub because it&#39;s not part of the</span>
+		<span class="c1"># public interface. Beware the temptation to call getmembers() instead;</span>
+		<span class="c1"># while this does return .members, it also reads the entire archive as</span>
+		<span class="c1"># a side-effect.</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">tar_file</span><span class="o">.</span><span class="n">members</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span> <span class="c1">#  type: ignore</span>
+
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">chained_tal</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+			<span class="n">file_obj</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_chained_next</span><span class="p">()</span>
+			<span class="k">if</span> <span class="n">file_obj</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+				<span class="k">return</span> <span class="n">file_obj</span>
+
+		<span class="c1"># Get next element in tar archive</span>
+		<span class="n">tar_info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tar_file</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
+
+		<span class="c1"># Reach end of archive</span>
+		<span class="k">if</span> <span class="n">tar_info</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+			<span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;tar_path&quot;</span><span class="p">):</span>
+				<span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Reached end of tar file </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">tar_path</span><span class="p">)</span>
+				<span class="c1">#self.tar_file.close()</span>
+			<span class="k">else</span><span class="p">:</span>
+				<span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Reached end of tar&quot;</span><span class="p">)</span>
+			<span class="k">raise</span> <span class="ne">StopIteration</span>
+
+		<span class="c1"># Ignore non-file entries</span>
+		<span class="k">if</span> <span class="n">tar_info</span><span class="o">.</span><span class="n">isfile</span><span class="p">():</span>
+
+			<span class="c1"># extractfile returns a file like obj</span>
+			<span class="n">file_obj</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tar_file</span><span class="o">.</span><span class="n">extractfile</span><span class="p">(</span><span class="n">tar_info</span><span class="p">)</span>
+			<span class="k">assert</span> <span class="n">file_obj</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+
+			<span class="c1"># Handle tars with nested tars</span>
+			<span class="k">if</span> <span class="n">tar_info</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.tar.gz&#39;</span><span class="p">):</span>
+				<span class="bp">self</span><span class="o">.</span><span class="n">chained_tal</span> <span class="o">=</span> <span class="n">TarAlertLoader</span><span class="p">(</span><span class="n">file_obj</span><span class="o">=</span><span class="n">file_obj</span><span class="p">)</span>
+				<span class="k">if</span> <span class="p">(</span><span class="n">subfile_obj</span> <span class="o">:=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_chained_next</span><span class="p">())</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+					<span class="k">return</span> <span class="n">subfile_obj</span>
+				<span class="k">else</span><span class="p">:</span>
+					<span class="k">return</span> <span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+			<span class="k">return</span> <span class="n">file_obj</span>
+
+		<span class="k">return</span> <span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+
+	<span class="k">def</span> <span class="nf">get_chained_next</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">IO</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]]:</span>
+		<span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">chained_tal</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+		<span class="n">file_obj</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">chained_tal</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+		<span class="k">if</span> <span class="n">file_obj</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">chained_tal</span> <span class="o">=</span> <span class="kc">None</span>
+			<span class="k">return</span> <span class="kc">None</span>
+
+		<span class="k">return</span> <span class="n">file_obj</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../index.html">
+              <img class="logo" src="../../../../_static/ampel.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">ampel-alerts 0.7.1-alpha.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">ampel.alert.load.TarAlertLoader</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018-2021, Ampel Project.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.5.1.
+    </div>
+  </body>
+</html>

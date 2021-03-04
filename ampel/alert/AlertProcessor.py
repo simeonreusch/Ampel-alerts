@@ -24,7 +24,8 @@ from ampel.alert.IngestionHandler import IngestionHandler
 from ampel.abstract.AbsProcessorUnit import AbsProcessorUnit
 from ampel.abstract.AbsAlertSupplier import AbsAlertSupplier, T
 
-from ampel.log import AmpelLogger, LogFlag, DBEventDoc, VERBOSE
+from ampel.log import AmpelLogger, LogFlag, VERBOSE
+from ampel.core.EventHandler import EventHandler
 from ampel.log.utils import report_exception
 from ampel.log.AmpelLoggingError import AmpelLoggingError
 from ampel.log.LightLogRecord import LightLogRecord
@@ -254,7 +255,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 			db_logging_handler.auto_flush = False
 
 		# Add new doc in the 'events' collection
-		event_doc = DBEventDoc(
+		event_hdlr = EventHandler(
 			self._ampel_db, process_name=self.process_name,
 			run_id=run_id, tier=0
 		)
@@ -434,7 +435,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 			logger.flush()
 			self._fbh.done()
 
-			event_doc.update(logger)
+			event_hdlr.update(logger)
 
 		except Exception as e:
 

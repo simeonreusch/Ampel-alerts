@@ -4,43 +4,49 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 13.05.2018
-# Last Modified Date: 30.01.2020
+# Last Modified Date: 15.03.2021
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 import tarfile
 from typing import Optional, IO
 from ampel.log.AmpelLogger import AmpelLogger
+from ampel.base.AmpelBaseModel import AmpelBaseModel
 
 
-class TarAlertLoader:
+class TarAlertLoader(AmpelBaseModel):
 	"""
 	Load alerts from a ``tar`` file. The archive must be laid out like the
 	`ZTF public alert archive <https://ztf.uw.edu/alerts/public/>`_, i.e. one
 	alert per file.
 	"""
 
-	def __init__(
-		self, tar_path: str = None, file_obj: IO[bytes] = None, start: int = 0,
-		tar_mode: str = 'r:gz', logger: AmpelLogger = None
-	):
-		"""
-		"""
-		self.logger = AmpelLogger.get_logger() if logger is None else logger
+	tar_mode: str = 'r:gz'
+	start: int = 0
+	file_obj: Optional[IO[bytes]]
+	file_path: Optional[str]
+	logger: AmpelLogger # actually optional
+
+	def __init__(self, **kwargs) -> None:
+
+		if kwargs.get('logger') is None:
+			kwargs['logger'] = AmpelLogger.get_logger()
+
+		super().__init__(**kwargs)
+
 		self.chained_tal: Optional['TarAlertLoader'] = None
 
-		if file_obj is not None:
-			self.tar_file = tarfile.open(fileobj=file_obj, mode=tar_mode)
-		elif tar_path is not None:
-			self.tar_path = tar_path
-			self.tar_file = tarfile.open(tar_path, mode=tar_mode)
+		if self.file_obj:
+			self.tar_file = tarfile.open(fileobj=self.file_obj, mode=self.tar_mode)
+		elif self.file_path:
+			self.tar_file = tarfile.open(self.file_path, mode=self.tar_mode)
 		else:
-			raise ValueError("Please provide value either for 'tar_path' or 'file_obj'")
+			raise ValueError("Please provide value either for 'file_path' or 'file_obj'")
 
-		if start != 0:
+		if self.start != 0:
 			count = 0
 			for tarinfo in self.tar_file:
 				count += 1
-				if count < start:
+				if count < self.start:
 					continue
 
 
@@ -62,7 +68,7 @@ class TarAlertLoader:
 		# public interface. Beware the temptation to call getmembers() instead;
 		# while this does return .members, it also reads the entire archive as
 		# a side-effect.
-		self.tar_file.members.clear() #  type: ignore
+		self.tar_file.members.clear() # type: ignore
 
 		if self.chained_tal is not None:
 			file_obj = self.get_chained_next()
@@ -74,8 +80,8 @@ class TarAlertLoader:
 
 		# Reach end of archive
 		if tar_info is None:
-			if hasattr(self, "tar_path"):
-				self.logger.info("Reached end of tar file %s" % self.tar_path)
+			if hasattr(self, "file_path"):
+				self.logger.info("Reached end of tar file %s" % self.file_path)
 				#self.tar_file.close()
 			else:
 				self.logger.info("Reached end of tar")

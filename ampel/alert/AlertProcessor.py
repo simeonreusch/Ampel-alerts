@@ -4,7 +4,7 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 10.10.2017
-# Last Modified Date: 31.01.2021
+# Last Modified Date: 15.03.2021
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 import signal
@@ -31,6 +31,7 @@ from ampel.log.AmpelLoggingError import AmpelLoggingError
 from ampel.log.LightLogRecord import LightLogRecord
 
 from ampel.model.UnitModel import UnitModel
+from ampel.base.AmpelBaseModel import AmpelBaseModel
 from ampel.model.AlertProcessorDirective import AlertProcessorDirective
 from ampel.alert.AlertProcessorMetrics import stat_alerts, stat_accepted
 
@@ -55,18 +56,27 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 	# General options
 	#: Maximum number of alerts to consume in :func:`run`
 	iter_max: int = 50000
+
 	#: Maximum number of exceptions to catch before cancelling :func:`run`
 	error_max: int = 20
+
 	#: Mandatory alert processor directives. This parameter will
 	#: determines how the underlying :class:`~ampel.alert.FilterBlocksHandler.FilterBlocksHandler`
 	#: and :class:`~ampel.alert.IngestionHandler.IngestionHandler` instances are set up.
 	directives: Sequence[AlertProcessorDirective]
+
 	#: How to store log record in the database (see :class:`~ampel.alert.FilterBlocksHandler.FilterBlocksHandler`)
 	db_log_format: str = "standard"
+
 	#: Store alert rejection records in a single collection rather than per-channel
 	single_rej_col: bool = False
-	#: Unit to use to supply alerts
-	supplier: Optional[Union[AbsAlertSupplier, UnitModel, str]]
+
+	#: Unit to use to load alerts
+	loader: Optional[Union[UnitModel, AmpelBaseModel]]
+
+	#: Unit to use to supply alerts (str is just a shortcut for a configless UnitModel(unit=str))
+	supplier: Optional[Union[UnitModel, str, AbsAlertSupplier]]
+
 	#: Flag to use for log records with a level between INFO and WARN
 	shout: int = LogFlag.SHOUT
 
@@ -114,6 +124,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 		verbose = AmpelLogger.has_verbose_console(self.context, self.log_profile)
 
 		if self.supplier:
+			# Already instantiated object was supplied
 			if isinstance(self.supplier, AbsAlertSupplier):
 				self.alert_supplier: AbsAlertSupplier[T] = self.supplier
 			else:
@@ -124,6 +135,16 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 				)
 		else:
 			self.alert_supplier = None # type: ignore[assignment]
+
+		if self.loader:
+
+			if self.supplier is None:
+				raise ValueError("Alert supplier must be set when specifying alert loader")
+
+			self.alert_supplier.set_alert_source(
+				self.loader if isinstance(self.loader, AmpelBaseModel) else \
+					AuxUnitRegister.new_unit(unit_model = self.loader) # type: ignore
+			)
 
 		if verbose:
 			logger.log(VERBOSE, "AlertProcessor setup")

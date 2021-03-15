@@ -52,7 +52,6 @@ class IngestionHandler:
 	t1_ingesters: Dict[AbsCompoundIngester, List[AbsStateT2Ingester]]
 	updates_buffer: DBUpdatesBuffer
 	logd: LogsBufferDict
-	#: 
 	retro_complete: List[ChannelId]
 	ingest_stats: List[float]
 
@@ -316,15 +315,13 @@ class IngestionHandler:
 
 		# Alert T1 and associated T2 ingestions
 		for comp_ingester, t2_ingesters in self.state_t2_ingesters.items():
-			comp_blueprint = comp_ingester.ingest(stock_id, datapoints, filter_results)
-			if comp_blueprint:
+			if (comp_blueprint := comp_ingester.ingest(stock_id, datapoints, filter_results)):
 				for state_ingester in t2_ingesters:
 					state_ingester.ingest(stock_id, comp_blueprint, filter_results)
 
 		# Standalone T1 and associated T2 ingestions
 		for comp_ingester, t2_ingesters in self.t1_ingesters.items():
-			comp_blueprint = comp_ingester.ingest(stock_id, datapoints, filter_results)
-			if comp_blueprint:
+			if (comp_blueprint := comp_ingester.ingest(stock_id, datapoints, filter_results)):
 				for state_ingester in t2_ingesters:
 					state_ingester.ingest(stock_id, comp_blueprint, filter_results)
 

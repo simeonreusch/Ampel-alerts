@@ -4,42 +4,40 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 30.04.2018
-# Last Modified Date: 19.03.2020
+# Last Modified Date: 15.03.2021
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 from io import BytesIO
 from typing import List, Union, Optional
 from ampel.log.AmpelLogger import AmpelLogger
+from ampel.base.AmpelBaseModel import AmpelBaseModel
 
 
-class FileAlertLoader:
+class FileAlertLoader(AmpelBaseModel):
 	"""
 	Load alerts from one of more files.
 	"""
 
-	def __init__(self,
-		files: Optional[Union[List[str], str]] = None,
-		logger: Optional[AmpelLogger] = None
-	) -> None:
-		"""
-		:param files: paths to files to load
-		"""
+	#: paths to files to load
+	files: List[str] = []
 
-		self.logger = AmpelLogger.get_logger() if logger is None else logger
-		self.files: List[str] = []
+	def __init__(self, **kwargs) -> None:
+	
+		super().__init__(**kwargs)
 
-		if files:
-			self.add_files(files)
+		if self.files:
+			self.add_files(self.files)
 
 
-	def add_files(self, arg: Union[List[str], str]) -> None:
+	def add_files(self, arg: Union[List[str], str], logger: Optional[AmpelLogger] = None) -> None:
 
 		if isinstance(arg, str):
 			arg = [arg]
 
 		for fp in arg:
 			self.files.append(fp)
-			self.logger.debug(f"Adding {len(arg)} file(s) to the list")
+			if logger:
+				logger.info(f"Adding {len(arg)} file(s) to the list")
 
 		self.iter_files = iter(self.files)
 

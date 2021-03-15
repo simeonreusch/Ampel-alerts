@@ -4,32 +4,33 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 14.12.2017
-# Last Modified Date: 30.01.2020
+# Last Modified Date: 15.03.2021
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 from typing import List, Optional
-
-from ampel.log.AmpelLogger import AmpelLogger
 from io import BytesIO
+from ampel.log.AmpelLogger import AmpelLogger
+from ampel.base.AmpelBaseModel import AmpelBaseModel
 
 
-class DirAlertLoader:
-	"""
-	Load alerts from a (flat) directory.
-	"""
+class DirAlertLoader(AmpelBaseModel):
+	""" Load alerts from a (flat) directory. """
+
+	logger: AmpelLogger # actually optional
+	files: List[str] = []
+	min_index: Optional[int] = None
+	max_index: Optional[int] = None
+	max_entries: Optional[int] = None
+	folder = "/Users/hu/Documents/ZTF/IPAC-ZTF/ztf/src/pl/avroalerts/testprod"
+	extension = "*.avro"
 
 
-	def __init__(self, logger: AmpelLogger = None, verbose: bool = False):
-		""" """
+	def __init__(self, **kwargs) -> None:
 
-		self.verbose = verbose
-		self.files: List[str] = []
-		self.min_index: Optional[int] = None
-		self.max_index: Optional[int] = None
-		self.max_entries: Optional[int] = None
-		self.folder = "/Users/hu/Documents/ZTF/IPAC-ZTF/ztf/src/pl/avroalerts/testprod"
-		self.extension = "*.avro"
-		self.logger = AmpelLogger.get_logger() if logger is None else logger
+		if kwargs.get('logger') is None:
+			kwargs['logger'] = AmpelLogger.get_logger()
+
+		super().__init__(**kwargs)
 
 
 	def set_extension(self, extension: str) -> None:
@@ -111,7 +112,7 @@ class DirAlertLoader:
 		if fpath is None:
 			raise StopIteration
 
-		if self.verbose:
+		if self.logger.verbose > 1:
 			self.logger.debug("Loading " + fpath)
 
 		with open(fpath, "rb") as alert_file:

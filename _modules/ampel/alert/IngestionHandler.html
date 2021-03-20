@@ -374,11 +374,11 @@
 				<span class="c1">##################################</span>
 
 				<span class="c1"># Build prev_det_sequences.</span>
-				<span class="c1"># If datapoints looked like this:</span>
-				<span class="c1"># [{&#39;_id&#39;: 12}, {&#39;_id&#39;: -11}, {&#39;_id&#39;: 10}, {&#39;_id&#39;: -8}, {&#39;_id&#39;: -7}, {&#39;_id&#39;: 6}, {&#39;_id&#39;: -4}]</span>
+				<span class="c1"># If the (time-ordered) datapoints looked like this:</span>
+				<span class="c1"># [{&#39;_id&#39;: -4}, {&#39;_id&#39;: 6}, {&#39;_id&#39;: -7}, {&#39;_id&#39;: -8}, {&#39;_id&#39;: 10}, {&#39;_id&#39;: -11}, {&#39;_id&#39;: 12}]</span>
 				<span class="c1"># prev_det_sequences would be: [</span>
-				<span class="c1"># 	[{&quot;_id&quot;: 10}, {&quot;_id&quot;: -8}, {&quot;_id&quot;: -7}, {&quot;_id&quot;: 6}, {&quot;_id&quot;: -4}],</span>
-				<span class="c1"># 	[{&quot;_id&quot;: 6}, {&quot;_id&quot;: -4}]</span>
+				<span class="c1">#       [{&#39;_id&#39;: -4}, {&#39;_id&#39;: 6}, {&#39;_id&#39;: -7}, {&#39;_id&#39;: -8}, {&#39;_id&#39;: 10}],</span>
+				<span class="c1">#       [{&#39;_id&#39;: -4}, {&#39;_id&#39;: 6}]</span>
 				<span class="c1"># ]</span>
 
 				<span class="n">prev_det_sequences</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DataPoint</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>

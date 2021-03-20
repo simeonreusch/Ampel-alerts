@@ -511,13 +511,13 @@ Note: isinstance(&lt;this class instance&gt;, LoggingHandlerProtocol) will retur
 <p>In applications where most alerts are rejected, rejection records are likely to
 be written much more often than they are read. In such cases, it can be much
 more efficient to store (fixed-size) rejection records in an append-only log
-than in a document-oriented database. <code class="xref py py-class docutils literal notranslate"><span class="pre">AmpelRegister</span></code>
+than in a document-oriented database. <a class="reference external" href="https://ampelproject.github.io/Ampel-core/api.html#ampel.core.AmpelRegister.AmpelRegister" title="(in ampel-core v0.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">AmpelRegister</span></code></a>
 implements such a log, and several subclasses exist to store rejection records
 with various levels of detail.</p>
 <dl class="py class">
 <dt id="ampel.abstract.AbsAlertRegister.AbsAlertRegister">
 <em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">ampel.abstract.AbsAlertRegister.</span></code><code class="sig-name descname"><span class="pre">AbsAlertRegister</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">autoload</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ampel/abstract/AbsAlertRegister.html#AbsAlertRegister"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ampel.abstract.AbsAlertRegister.AbsAlertRegister" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ampel.core.AmpelRegister.AmpelRegister</span></code>, <a class="reference external" href="https://ampelproject.github.io/Ampel-core/api.html#ampel.core.AdminUnit.AdminUnit" title="(in ampel-core v0.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ampel.core.AdminUnit.AdminUnit</span></code></a></p>
+<dd><p>Bases: <a class="reference external" href="https://ampelproject.github.io/Ampel-core/api.html#ampel.core.AmpelRegister.AmpelRegister" title="(in ampel-core v0.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ampel.core.AmpelRegister.AmpelRegister</span></code></a>, <a class="reference external" href="https://ampelproject.github.io/Ampel-core/api.html#ampel.core.AdminUnit.AdminUnit" title="(in ampel-core v0.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ampel.core.AdminUnit.AdminUnit</span></code></a></p>
 <p>Record of the results of filter evaluation, in particular for rejected alerts.</p>
 <dl class="py method">
 <dt id="ampel.abstract.AbsAlertRegister.AbsAlertRegister.file">

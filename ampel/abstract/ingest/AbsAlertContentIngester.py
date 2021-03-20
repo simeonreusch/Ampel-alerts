@@ -30,6 +30,6 @@ class AbsAlertContentIngester(Generic[T, V], AbsIngester, abstract=True):
 	@abstractmethod
 	def ingest(self, alert: T) -> Sequence[V]:
 		"""
-		:returns: a sequence of DataPoints made of the shaped content \
+		:returns: a time-ordered sequence of DataPoints made of the shaped content \
 		from the alert together with the content from the DB
 		"""

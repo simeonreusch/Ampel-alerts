@@ -339,11 +339,11 @@ class IngestionHandler:
 				##################################
 
 				# Build prev_det_sequences.
-				# If datapoints looked like this:
-				# [{'_id': 12}, {'_id': -11}, {'_id': 10}, {'_id': -8}, {'_id': -7}, {'_id': 6}, {'_id': -4}]
+				# If the (time-ordered) datapoints looked like this:
+				# [{'_id': -4}, {'_id': 6}, {'_id': -7}, {'_id': -8}, {'_id': 10}, {'_id': -11}, {'_id': 12}]
 				# prev_det_sequences would be: [
-				# 	[{"_id": 10}, {"_id": -8}, {"_id": -7}, {"_id": 6}, {"_id": -4}],
-				# 	[{"_id": 6}, {"_id": -4}]
+				#       [{'_id': -4}, {'_id': 6}, {'_id': -7}, {'_id': -8}, {'_id': 10}],
+				#       [{'_id': -4}, {'_id': 6}]
 				# ]
 
 				prev_det_sequences: List[Sequence[DataPoint]] = []

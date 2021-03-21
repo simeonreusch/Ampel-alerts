@@ -258,7 +258,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 		if not self.alert_supplier or not self.alert_supplier.ready():
 			raise ValueError("Alert supplier not set or not sourced")
 
-		run_id = self.new_run_id()
+		run_id = self.context.new_run_id()
 
 		# Setup logging
 		###############

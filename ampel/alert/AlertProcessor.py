@@ -74,7 +74,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 	loader: Optional[Union[UnitModel, AmpelBaseModel]]
 
 	#: Unit to use to supply alerts (str is just a shortcut for a configless UnitModel(unit=str))
-	supplier: Optional[Union[UnitModel, str, AbsAlertSupplier]]
+	supplier: Optional[Union[AbsAlertSupplier, UnitModel, str]]
 
 	#: Flag to use for log records with a level between INFO and WARN
 	shout: int = LogFlag.SHOUT
@@ -330,7 +330,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 
 			# Iterate over alerts
 			for alert in self.alert_supplier:
-
+				
 				if self._cancel_run:
 
 					print("")

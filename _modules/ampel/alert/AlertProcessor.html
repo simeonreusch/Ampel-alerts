@@ -39,7 +39,7 @@
 <span class="c1"># License           : BSD-3-Clause</span>
 <span class="c1"># Author            : vb &lt;vbrinnel@physik.hu-berlin.de&gt;</span>
 <span class="c1"># Date              : 10.10.2017</span>
-<span class="c1"># Last Modified Date: 31.01.2021</span>
+<span class="c1"># Last Modified Date: 15.03.2021</span>
 <span class="c1"># Last Modified By  : vb &lt;vbrinnel@physik.hu-berlin.de&gt;</span>
 
 <span class="kn">import</span> <span class="nn">signal</span>
@@ -65,6 +65,7 @@
 <span class="kn">from</span> <span class="nn">ampel.log.LightLogRecord</span> <span class="kn">import</span> <span class="n">LightLogRecord</span>
 
 <span class="kn">from</span> <span class="nn">ampel.model.UnitModel</span> <span class="kn">import</span> <span class="n">UnitModel</span>
+<span class="kn">from</span> <span class="nn">ampel.base.AmpelBaseModel</span> <span class="kn">import</span> <span class="n">AmpelBaseModel</span>
 <span class="kn">from</span> <span class="nn">ampel.model.AlertProcessorDirective</span> <span class="kn">import</span> <span class="n">AlertProcessorDirective</span>
 <span class="kn">from</span> <span class="nn">ampel.alert.AlertProcessorMetrics</span> <span class="kn">import</span> <span class="n">stat_alerts</span><span class="p">,</span> <span class="n">stat_accepted</span>
 
@@ -89,18 +90,27 @@
 	<span class="c1"># General options</span>
 	<span class="c1">#: Maximum number of alerts to consume in :func:`run`</span>
 	<span class="n">iter_max</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50000</span>
+
 	<span class="c1">#: Maximum number of exceptions to catch before cancelling :func:`run`</span>
 	<span class="n">error_max</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span>
+
 	<span class="c1">#: Mandatory alert processor directives. This parameter will</span>
 	<span class="c1">#: determines how the underlying :class:`~ampel.alert.FilterBlocksHandler.FilterBlocksHandler`</span>
 	<span class="c1">#: and :class:`~ampel.alert.IngestionHandler.IngestionHandler` instances are set up.</span>
 	<span class="n">directives</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">AlertProcessorDirective</span><span class="p">]</span>
+
 	<span class="c1">#: How to store log record in the database (see :class:`~ampel.alert.FilterBlocksHandler.FilterBlocksHandler`)</span>
 	<span class="n">db_log_format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;standard&quot;</span>
+
 	<span class="c1">#: Store alert rejection records in a single collection rather than per-channel</span>
 	<span class="n">single_rej_col</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
-	<span class="c1">#: Unit to use to supply alerts</span>
-	<span class="n">supplier</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">AbsAlertSupplier</span><span class="p">,</span> <span class="n">UnitModel</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span>
+
+	<span class="c1">#: Unit to use to load alerts</span>
+	<span class="n">loader</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">UnitModel</span><span class="p">,</span> <span class="n">AmpelBaseModel</span><span class="p">]]</span>
+
+	<span class="c1">#: Unit to use to supply alerts (str is just a shortcut for a configless UnitModel(unit=str))</span>
+	<span class="n">supplier</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">UnitModel</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="n">AbsAlertSupplier</span><span class="p">]]</span>
+
 	<span class="c1">#: Flag to use for log records with a level between INFO and WARN</span>
 	<span class="n">shout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">LogFlag</span><span class="o">.</span><span class="n">SHOUT</span>
 
@@ -148,6 +158,7 @@
 		<span class="n">verbose</span> <span class="o">=</span> <span class="n">AmpelLogger</span><span class="o">.</span><span class="n">has_verbose_console</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">context</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_profile</span><span class="p">)</span>
 
 		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">supplier</span><span class="p">:</span>
+			<span class="c1"># Already instantiated object was supplied</span>
 			<span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">supplier</span><span class="p">,</span> <span class="n">AbsAlertSupplier</span><span class="p">):</span>
 				<span class="bp">self</span><span class="o">.</span><span class="n">alert_supplier</span><span class="p">:</span> <span class="n">AbsAlertSupplier</span><span class="p">[</span><span class="n">T</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">supplier</span>
 			<span class="k">else</span><span class="p">:</span>
@@ -158,6 +169,16 @@
 				<span class="p">)</span>
 		<span class="k">else</span><span class="p">:</span>
 			<span class="bp">self</span><span class="o">.</span><span class="n">alert_supplier</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># type: ignore[assignment]</span>
+
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">loader</span><span class="p">:</span>
+
+			<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">supplier</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+				<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Alert supplier must be set when specifying alert loader&quot;</span><span class="p">)</span>
+
+			<span class="bp">self</span><span class="o">.</span><span class="n">alert_supplier</span><span class="o">.</span><span class="n">set_alert_source</span><span class="p">(</span>
+				<span class="bp">self</span><span class="o">.</span><span class="n">loader</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loader</span><span class="p">,</span> <span class="n">AmpelBaseModel</span><span class="p">)</span> <span class="k">else</span> \
+					<span class="n">AuxUnitRegister</span><span class="o">.</span><span class="n">new_unit</span><span class="p">(</span><span class="n">unit_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loader</span><span class="p">)</span> <span class="c1"># type: ignore</span>
+			<span class="p">)</span>
 
 		<span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
 			<span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">VERBOSE</span><span class="p">,</span> <span class="s2">&quot;AlertProcessor setup&quot;</span><span class="p">)</span>

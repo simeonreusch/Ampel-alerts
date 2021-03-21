@@ -150,6 +150,12 @@ and <a class="reference internal" href="#ampel.alert.IngestionHandler.IngestionH
 </dd></dl>
 
 <dl class="py attribute">
+<dt id="ampel.alert.AlertProcessor.AlertProcessor.loader">
+<code class="sig-name descname"><span class="pre">loader</span></code><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://ampelproject.github.io/Ampel-interface/api.html#ampel.model.UnitModel.UnitModel" title="(in ampel-interface v0.7)"><span class="pre">ampel.model.UnitModel.UnitModel</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://ampelproject.github.io/Ampel-interface/api.html#ampel.base.AmpelBaseModel.AmpelBaseModel" title="(in ampel-interface v0.7)"><span class="pre">ampel.base.AmpelBaseModel.AmpelBaseModel</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ampel.alert.AlertProcessor.AlertProcessor.loader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unit to use to load alerts</p>
+</dd></dl>
+
+<dl class="py attribute">
 <dt id="ampel.alert.AlertProcessor.AlertProcessor.shout">
 <code class="sig-name descname"><span class="pre">shout</span></code><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></em><em class="property"> <span class="pre">=</span> <span class="pre">2048</span></em><a class="headerlink" href="#ampel.alert.AlertProcessor.AlertProcessor.shout" title="Permalink to this definition">¶</a></dt>
 <dd><p>Flag to use for log records with a level between INFO and WARN</p>
@@ -169,8 +175,8 @@ and <a class="reference internal" href="#ampel.alert.IngestionHandler.IngestionH
 
 <dl class="py attribute">
 <dt id="ampel.alert.AlertProcessor.AlertProcessor.supplier">
-<code class="sig-name descname"><span class="pre">supplier</span></code><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#ampel.abstract.AbsAlertSupplier.AbsAlertSupplier" title="ampel.abstract.AbsAlertSupplier.AbsAlertSupplier"><span class="pre">ampel.abstract.AbsAlertSupplier.AbsAlertSupplier</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://ampelproject.github.io/Ampel-interface/api.html#ampel.model.UnitModel.UnitModel" title="(in ampel-interface v0.7)"><span class="pre">ampel.model.UnitModel.UnitModel</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ampel.alert.AlertProcessor.AlertProcessor.supplier" title="Permalink to this definition">¶</a></dt>
-<dd><p>Unit to use to supply alerts</p>
+<code class="sig-name descname"><span class="pre">supplier</span></code><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://ampelproject.github.io/Ampel-interface/api.html#ampel.model.UnitModel.UnitModel" title="(in ampel-interface v0.7)"><span class="pre">ampel.model.UnitModel.UnitModel</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="#ampel.abstract.AbsAlertSupplier.AbsAlertSupplier" title="ampel.abstract.AbsAlertSupplier.AbsAlertSupplier"><span class="pre">ampel.abstract.AbsAlertSupplier.AbsAlertSupplier</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ampel.alert.AlertProcessor.AlertProcessor.supplier" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unit to use to supply alerts (str is just a shortcut for a configless UnitModel(unit=str))</p>
 </dd></dl>
 
 <dl class="py method">

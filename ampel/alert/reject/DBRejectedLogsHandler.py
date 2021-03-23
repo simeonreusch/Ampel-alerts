@@ -106,7 +106,7 @@ class DBRejectedLogsHandler(AdminUnit):
 				# otherwise, the AP made a mistake
 				d['_id'] = rd['alert']
 				d['stock'] = rd['stock']
-				d['dt'] = int(time())
+				d['ts'] = int(time())
 
 				if record.levelno > WARNING:
 					d['run'] = self.run_id

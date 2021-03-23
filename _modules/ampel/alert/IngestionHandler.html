@@ -44,7 +44,7 @@
 
 <span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">time</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Type</span><span class="p">,</span> <span class="n">Optional</span>
-<span class="kn">from</span> <span class="nn">ampel.type</span> <span class="kn">import</span> <span class="n">ChannelId</span>
+<span class="kn">from</span> <span class="nn">ampel.type</span> <span class="kn">import</span> <span class="n">ChannelId</span><span class="p">,</span> <span class="n">StockId</span>
 <span class="kn">from</span> <span class="nn">ampel.core.UnitLoader</span> <span class="kn">import</span> <span class="n">PT</span>
 <span class="kn">from</span> <span class="nn">ampel.core.AmpelContext</span> <span class="kn">import</span> <span class="n">AmpelContext</span>
 <span class="kn">from</span> <span class="nn">ampel.util.mappings</span> <span class="kn">import</span> <span class="n">build_unsafe_dict_id</span>
@@ -338,6 +338,12 @@
 		<span class="c1"># T0 ingestion</span>
 		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">datapoint_ingester</span><span class="p">:</span>
 			<span class="n">datapoints</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">datapoint_ingester</span><span class="o">.</span><span class="n">ingest</span><span class="p">(</span><span class="n">alert</span><span class="p">)</span> <span class="c1"># type: ignore[union-attr]</span>
+		
+		<span class="c1"># T2 ingestion associated with previous states</span>
+		<span class="c1"># NB: do this _before_ ingestion for the current state to preserve</span>
+		<span class="c1"># relative ordering</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">retro_complete</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">_apply_retro_complete</span><span class="p">(</span><span class="n">stock_id</span><span class="p">,</span> <span class="n">alert</span><span class="p">,</span> <span class="n">datapoints</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">)</span>
 
 		<span class="c1"># Stock T2 ingestions</span>
 		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">stock_t2_ingesters</span><span class="p">:</span>
@@ -364,61 +370,6 @@
 					<span class="n">state_ingester</span><span class="o">.</span><span class="n">ingest</span><span class="p">(</span><span class="n">stock_id</span><span class="p">,</span> <span class="n">comp_blueprint</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">)</span>
 
 		<span class="bp">self</span><span class="o">.</span><span class="n">stock_ingester</span><span class="o">.</span><span class="n">ingest</span><span class="p">(</span><span class="n">stock_id</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;alert&#39;</span><span class="p">:</span> <span class="n">alert</span><span class="o">.</span><span class="n">id</span><span class="p">})</span>
-
-
-		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">retro_complete</span><span class="p">:</span>
-
-			<span class="k">try</span><span class="p">:</span>
-
-				<span class="c1"># Part 1: Recreate previous alerts</span>
-				<span class="c1">##################################</span>
-
-				<span class="c1"># Build prev_det_sequences.</span>
-				<span class="c1"># If the (time-ordered) datapoints looked like this:</span>
-				<span class="c1"># [{&#39;_id&#39;: -4}, {&#39;_id&#39;: 6}, {&#39;_id&#39;: -7}, {&#39;_id&#39;: -8}, {&#39;_id&#39;: 10}, {&#39;_id&#39;: -11}, {&#39;_id&#39;: 12}]</span>
-				<span class="c1"># prev_det_sequences would be: [</span>
-				<span class="c1">#       [{&#39;_id&#39;: -4}, {&#39;_id&#39;: 6}, {&#39;_id&#39;: -7}, {&#39;_id&#39;: -8}, {&#39;_id&#39;: 10}],</span>
-				<span class="c1">#       [{&#39;_id&#39;: -4}, {&#39;_id&#39;: 6}]</span>
-				<span class="c1"># ]</span>
-
-				<span class="n">prev_det_sequences</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DataPoint</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
-				<span class="n">el</span> <span class="o">=</span> <span class="n">datapoints</span>
-				<span class="k">while</span> <span class="n">el</span> <span class="o">:=</span> <span class="n">alert</span><span class="o">.</span><span class="n">_prev_det_seq</span><span class="p">(</span><span class="n">el</span><span class="p">):</span> <span class="c1"># type: ignore[assignment]</span>
-					<span class="n">prev_det_sequences</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">el</span><span class="p">)</span>
-
-				<span class="k">if</span> <span class="n">prev_det_sequences</span><span class="p">:</span>
-
-					<span class="c1"># Reduce filter_results to the channels requesting &#39;retro/accept&#39; auto-complete</span>
-					<span class="n">filter_results</span> <span class="o">=</span> <span class="p">[</span><span class="n">el</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">filter_results</span> <span class="k">if</span> <span class="n">el</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">retro_complete</span><span class="p">]</span>
-
-					<span class="c1"># Part 2: Ingest simulated alerts</span>
-					<span class="c1">#################################</span>
-
-					<span class="c1"># For every reconstructed previous alerts contents</span>
-					<span class="k">for</span> <span class="n">prev_datapoints</span> <span class="ow">in</span> <span class="n">prev_det_sequences</span><span class="p">:</span>
-
-						<span class="c1"># Point T2 ingestions</span>
-						<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">point_t2_ingesters</span><span class="p">:</span>
-							<span class="k">for</span> <span class="n">point_ingester</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">point_t2_ingesters</span><span class="p">:</span>
-								<span class="n">point_ingester</span><span class="o">.</span><span class="n">ingest</span><span class="p">(</span><span class="n">stock_id</span><span class="p">,</span> <span class="n">prev_datapoints</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">)</span>
-
-						<span class="c1"># T1 and associated T2 ingestions</span>
-						<span class="k">for</span> <span class="n">comp_ingester</span><span class="p">,</span> <span class="n">t2_ingesters</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_t2_ingesters</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-							<span class="n">comp_blueprint</span> <span class="o">=</span> <span class="n">comp_ingester</span><span class="o">.</span><span class="n">ingest</span><span class="p">(</span><span class="n">stock_id</span><span class="p">,</span> <span class="n">prev_datapoints</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">)</span>
-							<span class="k">if</span> <span class="n">comp_blueprint</span><span class="p">:</span>
-								<span class="k">for</span> <span class="n">state_ingester</span> <span class="ow">in</span> <span class="n">t2_ingesters</span><span class="p">:</span>
-									<span class="n">state_ingester</span><span class="o">.</span><span class="n">ingest</span><span class="p">(</span><span class="n">stock_id</span><span class="p">,</span> <span class="n">comp_blueprint</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">)</span>
-
-						<span class="c1"># Update transient journal</span>
-						<span class="bp">self</span><span class="o">.</span><span class="n">stock_ingester</span><span class="o">.</span><span class="n">ingest</span><span class="p">(</span>
-							<span class="n">stock_id</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;ac&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;alert&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">alert</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">prev_datapoints</span><span class="p">)]}</span>
-						<span class="p">)</span>
-
-			<span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-				<span class="n">log_exception</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
-
-			<span class="k">finally</span><span class="p">:</span>
-				<span class="bp">self</span><span class="o">.</span><span class="n">retro_complete</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
 
 		<span class="c1"># Log ingester messages</span>
 		<span class="n">logd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">logd</span>
@@ -454,7 +405,69 @@
 			<span class="p">)</span>
 
 		<span class="bp">self</span><span class="o">.</span><span class="n">ingest_stats</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">ingester_start</span><span class="p">)</span>
-		<span class="bp">self</span><span class="o">.</span><span class="n">updates_buffer</span><span class="o">.</span><span class="n">_block_autopush</span> <span class="o">=</span> <span class="kc">False</span></div></div>
+		<span class="bp">self</span><span class="o">.</span><span class="n">updates_buffer</span><span class="o">.</span><span class="n">_block_autopush</span> <span class="o">=</span> <span class="kc">False</span></div>
+
+	<span class="k">def</span> <span class="nf">_apply_retro_complete</span><span class="p">(</span>
+		<span class="bp">self</span><span class="p">,</span>
+		<span class="n">stock_id</span><span class="p">:</span> <span class="n">StockId</span><span class="p">,</span>
+		<span class="n">alert</span><span class="p">:</span> <span class="n">AmpelAlert</span><span class="p">,</span>
+		<span class="n">datapoints</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">DataPoint</span><span class="p">],</span>
+		<span class="n">filter_results</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="n">ChannelId</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]]</span>
+	<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+		<span class="k">try</span><span class="p">:</span>
+
+			<span class="c1"># Part 1: Recreate previous alerts</span>
+			<span class="c1">##################################</span>
+
+			<span class="c1"># Build prev_det_sequences.</span>
+			<span class="c1"># If the (time-ordered) datapoints looked like this:</span>
+			<span class="c1"># [{&#39;_id&#39;: -4}, {&#39;_id&#39;: 6}, {&#39;_id&#39;: -7}, {&#39;_id&#39;: -8}, {&#39;_id&#39;: 10}, {&#39;_id&#39;: -11}, {&#39;_id&#39;: 12}]</span>
+			<span class="c1"># prev_det_sequences would be: [</span>
+			<span class="c1">#		[{&#39;_id&#39;: -4}, {&#39;_id&#39;: 6}],</span>
+			<span class="c1">#       [{&#39;_id&#39;: -4}, {&#39;_id&#39;: 6}, {&#39;_id&#39;: -7}, {&#39;_id&#39;: -8}, {&#39;_id&#39;: 10}]</span>
+			<span class="c1"># ]</span>
+
+			<span class="n">prev_det_sequences</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DataPoint</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+			<span class="n">el</span> <span class="o">=</span> <span class="n">datapoints</span>
+			<span class="k">while</span> <span class="n">el</span> <span class="o">:=</span> <span class="n">alert</span><span class="o">.</span><span class="n">_prev_det_seq</span><span class="p">(</span><span class="n">el</span><span class="p">):</span> <span class="c1"># type: ignore[assignment]</span>
+				<span class="n">prev_det_sequences</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">el</span><span class="p">)</span>
+
+			<span class="k">if</span> <span class="n">prev_det_sequences</span><span class="p">:</span>
+
+				<span class="c1"># Reduce filter_results to the channels requesting &#39;retro/accept&#39; auto-complete</span>
+				<span class="n">filter_results</span> <span class="o">=</span> <span class="p">[</span><span class="n">el</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">filter_results</span> <span class="k">if</span> <span class="n">el</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">retro_complete</span><span class="p">]</span>
+
+				<span class="c1"># Part 2: Ingest simulated alerts</span>
+				<span class="c1">#################################</span>
+
+				<span class="c1"># For every reconstructed previous alerts contents</span>
+				<span class="c1"># NB: process in order of increasing size to preserve the</span>
+				<span class="c1"># relative order of T2 documents, regardless of how the</span>
+				<span class="c1"># underlying detections were divided into alert packets</span>
+				<span class="k">for</span> <span class="n">prev_datapoints</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">prev_det_sequences</span><span class="p">):</span>
+
+					<span class="c1"># Point T2 ingestions</span>
+					<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">point_t2_ingesters</span><span class="p">:</span>
+						<span class="k">for</span> <span class="n">point_ingester</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">point_t2_ingesters</span><span class="p">:</span>
+							<span class="n">point_ingester</span><span class="o">.</span><span class="n">ingest</span><span class="p">(</span><span class="n">stock_id</span><span class="p">,</span> <span class="n">prev_datapoints</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">)</span>
+
+					<span class="c1"># T1 and associated T2 ingestions</span>
+					<span class="k">for</span> <span class="n">comp_ingester</span><span class="p">,</span> <span class="n">t2_ingesters</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_t2_ingesters</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+						<span class="n">comp_blueprint</span> <span class="o">=</span> <span class="n">comp_ingester</span><span class="o">.</span><span class="n">ingest</span><span class="p">(</span><span class="n">stock_id</span><span class="p">,</span> <span class="n">prev_datapoints</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">)</span>
+						<span class="k">if</span> <span class="n">comp_blueprint</span><span class="p">:</span>
+							<span class="k">for</span> <span class="n">state_ingester</span> <span class="ow">in</span> <span class="n">t2_ingesters</span><span class="p">:</span>
+								<span class="n">state_ingester</span><span class="o">.</span><span class="n">ingest</span><span class="p">(</span><span class="n">stock_id</span><span class="p">,</span> <span class="n">comp_blueprint</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">)</span>
+
+					<span class="c1"># Update transient journal</span>
+					<span class="bp">self</span><span class="o">.</span><span class="n">stock_ingester</span><span class="o">.</span><span class="n">ingest</span><span class="p">(</span>
+						<span class="n">stock_id</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;ac&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;alert&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">alert</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">prev_datapoints</span><span class="p">)]}</span>
+					<span class="p">)</span>
+
+		<span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+			<span class="n">log_exception</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+
+		<span class="k">finally</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">retro_complete</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span></div>
 </pre></div>
 
             <div class="clearer"></div>

@@ -74,16 +74,17 @@ def test_legacy_directive(dev_context, legacy_directive):
 
     t2 = dev_context.db.get_collection("t2")
     assert len(docs := list(t2.find({}))) == 2 + 3
-    print(docs)
-    assert docs[0]["stock"] == "stockystock"
-    assert docs[0]["unit"] == "DummyStockT2Unit"
-    assert docs[0]["link"] == "stockystock"
-    assert docs[0]["col"] == "stock"
-    for i in range(1, 3):
+    stock_doc = docs.pop(next(i for i,doc in enumerate(docs) if doc["unit"] == "DummyStockT2Unit"))
+    assert stock_doc["stock"] == "stockystock"
+    assert stock_doc["link"] == "stockystock"
+    assert stock_doc["col"] == "stock"
+    # retro-complete interleaves T2 docs in order of increasing state length
+    for i in range(0, 4, 2):
         assert docs[i]["stock"] == "stockystock"
         assert docs[i]["unit"] == "DemoPointT2Unit"
         assert isinstance(docs[i]["link"], int)
-    for i in range(3, 5):
+        assert (docs[i]["link"] == i//2)
+    for i in range(1, 4, 2):
         assert docs[i]["stock"] == "stockystock"
         assert docs[i]["unit"] == "DummyStateT2Unit"
         assert len(docs[i]["link"]) == 1

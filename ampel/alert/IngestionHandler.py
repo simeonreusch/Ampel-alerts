@@ -9,7 +9,7 @@
 
 from time import time
 from typing import Sequence, List, Dict, Union, Iterable, Tuple, Type, Optional
-from ampel.type import ChannelId
+from ampel.type import ChannelId, StockId
 from ampel.core.UnitLoader import PT
 from ampel.core.AmpelContext import AmpelContext
 from ampel.util.mappings import build_unsafe_dict_id
@@ -303,6 +303,12 @@ class IngestionHandler:
 		# T0 ingestion
 		if self.datapoint_ingester:
 			datapoints = self.datapoint_ingester.ingest(alert) # type: ignore[union-attr]
+		
+		# T2 ingestion associated with previous states
+		# NB: do this _before_ ingestion for the current state to preserve
+		# relative ordering
+		if self.retro_complete:
+			self._apply_retro_complete(stock_id, alert, datapoints, filter_results)
 
 		# Stock T2 ingestions
 		if self.stock_t2_ingesters:
@@ -329,61 +335,6 @@ class IngestionHandler:
 					state_ingester.ingest(stock_id, comp_blueprint, filter_results)
 
 		self.stock_ingester.ingest(stock_id, filter_results, {'alert': alert.id})
-
-
-		if self.retro_complete:
-
-			try:
-
-				# Part 1: Recreate previous alerts
-				##################################
-
-				# Build prev_det_sequences.
-				# If the (time-ordered) datapoints looked like this:
-				# [{'_id': -4}, {'_id': 6}, {'_id': -7}, {'_id': -8}, {'_id': 10}, {'_id': -11}, {'_id': 12}]
-				# prev_det_sequences would be: [
-				#       [{'_id': -4}, {'_id': 6}, {'_id': -7}, {'_id': -8}, {'_id': 10}],
-				#       [{'_id': -4}, {'_id': 6}]
-				# ]
-
-				prev_det_sequences: List[Sequence[DataPoint]] = []
-				el = datapoints
-				while el := alert._prev_det_seq(el): # type: ignore[assignment]
-					prev_det_sequences.append(el)
-
-				if prev_det_sequences:
-
-					# Reduce filter_results to the channels requesting 'retro/accept' auto-complete
-					filter_results = [el for el in filter_results if el[0] in self.retro_complete]
-
-					# Part 2: Ingest simulated alerts
-					#################################
-
-					# For every reconstructed previous alerts contents
-					for prev_datapoints in prev_det_sequences:
-
-						# Point T2 ingestions
-						if self.point_t2_ingesters:
-							for point_ingester in self.point_t2_ingesters:
-								point_ingester.ingest(stock_id, prev_datapoints, filter_results)
-
-						# T1 and associated T2 ingestions
-						for comp_ingester, t2_ingesters in self.state_t2_ingesters.items():
-							comp_blueprint = comp_ingester.ingest(stock_id, prev_datapoints, filter_results)
-							if comp_blueprint:
-								for state_ingester in t2_ingesters:
-									state_ingester.ingest(stock_id, comp_blueprint, filter_results)
-
-						# Update transient journal
-						self.stock_ingester.ingest(
-							stock_id, filter_results, {'ac': True, 'alert': [alert.id, len(prev_datapoints)]}
-						)
-
-			except Exception as e:
-				log_exception(self.logger, e)
-
-			finally:
-				self.retro_complete.clear()
 
 		# Log ingester messages
 		logd = self.logd
@@ -420,3 +371,65 @@ class IngestionHandler:
 
 		self.ingest_stats.append(time() - ingester_start)
 		self.updates_buffer._block_autopush = False
+
+	def _apply_retro_complete(
+		self,
+		stock_id: StockId,
+		alert: AmpelAlert,
+		datapoints: Sequence[DataPoint],
+		filter_results: List[Tuple[ChannelId, Union[bool, int]]]
+	) -> None:
+		try:
+
+			# Part 1: Recreate previous alerts
+			##################################
+
+			# Build prev_det_sequences.
+			# If the (time-ordered) datapoints looked like this:
+			# [{'_id': -4}, {'_id': 6}, {'_id': -7}, {'_id': -8}, {'_id': 10}, {'_id': -11}, {'_id': 12}]
+			# prev_det_sequences would be: [
+			#		[{'_id': -4}, {'_id': 6}],
+			#       [{'_id': -4}, {'_id': 6}, {'_id': -7}, {'_id': -8}, {'_id': 10}]
+			# ]
+
+			prev_det_sequences: List[Sequence[DataPoint]] = []
+			el = datapoints
+			while el := alert._prev_det_seq(el): # type: ignore[assignment]
+				prev_det_sequences.append(el)
+
+			if prev_det_sequences:
+
+				# Reduce filter_results to the channels requesting 'retro/accept' auto-complete
+				filter_results = [el for el in filter_results if el[0] in self.retro_complete]
+
+				# Part 2: Ingest simulated alerts
+				#################################
+
+				# For every reconstructed previous alerts contents
+				# NB: process in order of increasing size to preserve the
+				# relative order of T2 documents, regardless of how the
+				# underlying detections were divided into alert packets
+				for prev_datapoints in reversed(prev_det_sequences):
+
+					# Point T2 ingestions
+					if self.point_t2_ingesters:
+						for point_ingester in self.point_t2_ingesters:
+							point_ingester.ingest(stock_id, prev_datapoints, filter_results)
+
+					# T1 and associated T2 ingestions
+					for comp_ingester, t2_ingesters in self.state_t2_ingesters.items():
+						comp_blueprint = comp_ingester.ingest(stock_id, prev_datapoints, filter_results)
+						if comp_blueprint:
+							for state_ingester in t2_ingesters:
+								state_ingester.ingest(stock_id, comp_blueprint, filter_results)
+
+					# Update transient journal
+					self.stock_ingester.ingest(
+						stock_id, filter_results, {'ac': True, 'alert': [alert.id, len(prev_datapoints)]}
+					)
+
+		except Exception as e:
+			log_exception(self.logger, e)
+
+		finally:
+			self.retro_complete.clear()

@@ -140,10 +140,10 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 			if self.supplier is None:
 				raise ValueError("Alert supplier must be set when specifying alert loader")
 
-			self.alert_supplier.set_alert_source(
+			self.alert_supplier.set_alert_source(iter(
 				self.loader if isinstance(self.loader, AmpelBaseModel) else \
 					AuxUnitRegister.new_unit(unit_model = self.loader) # type: ignore
-			)
+			))
 
 		if verbose:
 			logger.log(VERBOSE, "AlertProcessor setup")

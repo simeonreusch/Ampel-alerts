@@ -175,10 +175,10 @@
 			<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">supplier</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
 				<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Alert supplier must be set when specifying alert loader&quot;</span><span class="p">)</span>
 
-			<span class="bp">self</span><span class="o">.</span><span class="n">alert_supplier</span><span class="o">.</span><span class="n">set_alert_source</span><span class="p">(</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">alert_supplier</span><span class="o">.</span><span class="n">set_alert_source</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span>
 				<span class="bp">self</span><span class="o">.</span><span class="n">loader</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loader</span><span class="p">,</span> <span class="n">AmpelBaseModel</span><span class="p">)</span> <span class="k">else</span> \
 					<span class="n">AuxUnitRegister</span><span class="o">.</span><span class="n">new_unit</span><span class="p">(</span><span class="n">unit_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loader</span><span class="p">)</span> <span class="c1"># type: ignore</span>
-			<span class="p">)</span>
+			<span class="p">))</span>
 
 		<span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
 			<span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">VERBOSE</span><span class="p">,</span> <span class="s2">&quot;AlertProcessor setup&quot;</span><span class="p">)</span>

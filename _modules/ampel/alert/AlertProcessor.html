@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ampel.alert.AlertProcessor &#8212; ampel-alerts 0.7.1-alpha.3 documentation</title>
+    <title>ampel.alert.AlertProcessor &#8212; ampel-alerts 0.7.1-alpha.4 documentation</title>
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/sphinxdoc.css" type="text/css" />
     <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
@@ -21,7 +21,7 @@
         <li class="right" style="margin-right: 10px">
           <a href="../../../genindex.html" title="General Index"
              accesskey="I">index</a></li>
-        <li class="nav-item nav-item-0"><a href="../../../index.html">ampel-alerts 0.7.1-alpha.3 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">ampel-alerts 0.7.1-alpha.4 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">ampel.alert.AlertProcessor</a></li> 
       </ul>
@@ -42,6 +42,8 @@
 <span class="c1"># Last Modified Date: 15.03.2021</span>
 <span class="c1"># Last Modified By  : vb &lt;vbrinnel@physik.hu-berlin.de&gt;</span>
 
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">contextlib</span>
 <span class="kn">import</span> <span class="nn">signal</span>
 <span class="kn">from</span> <span class="nn">io</span> <span class="kn">import</span> <span class="n">IOBase</span>
 <span class="kn">from</span> <span class="nn">pymongo.errors</span> <span class="kn">import</span> <span class="n">PyMongoError</span>
@@ -216,9 +218,6 @@
 
 				<span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">VERBOSE</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">channel</span><span class="si">}</span><span class="s2"> combined on match t2 units: </span><span class="si">{</span><span class="n">t2_units</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
-		<span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGTERM</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sig_exit</span><span class="p">)</span>
-		<span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGINT</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sig_exit</span><span class="p">)</span>
-
 		<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;AlertProcessor setup completed&quot;</span><span class="p">)</span>
 
 
@@ -361,51 +360,72 @@
 		<span class="c1"># The extra is just a feedback for the console stream handler</span>
 		<span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shout</span><span class="p">,</span> <span class="s2">&quot;Processing alerts&quot;</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;r&#39;</span><span class="p">:</span> <span class="n">run_id</span><span class="p">})</span>
 
-		<span class="k">with</span> <span class="n">updates_buffer</span><span class="o">.</span><span class="n">run_in_thread</span><span class="p">():</span>
+		<span class="n">updates_buffer</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+		<span class="k">try</span><span class="p">:</span>
 
 			<span class="c1"># Iterate over alerts</span>
 			<span class="k">for</span> <span class="n">alert</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">alert_supplier</span><span class="p">:</span>
-				
-				<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cancel_run</span><span class="p">:</span>
-
-					<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
-					<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cancel_run</span> <span class="o">==</span> <span class="n">INTERRUPTED</span><span class="p">:</span>
-						<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Interrupting run() procedure&quot;</span><span class="p">)</span>
-						<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Interrupting run() procedure&quot;</span><span class="p">)</span>
-					<span class="k">else</span><span class="p">:</span> <span class="c1"># updates_buffer requested to stop processing</span>
-						<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Abording run() procedure&quot;</span><span class="p">)</span>
-
-					<span class="n">logger</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
-					<span class="bp">self</span><span class="o">.</span><span class="n">_fbh</span><span class="o">.</span><span class="n">done</span><span class="p">()</span>
-					<span class="k">return</span> <span class="n">iter_count</span>
 
 				<span class="c1"># Associate upcoming log entries with the current transient id</span>
 				<span class="n">stock_id</span> <span class="o">=</span> <span class="n">alert</span><span class="o">.</span><span class="n">stock_id</span>
 				<span class="n">extra</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;alert&#39;</span><span class="p">:</span> <span class="n">alert</span><span class="o">.</span><span class="n">id</span><span class="p">}</span>
 
-				<span class="k">if</span> <span class="n">any_filter</span><span class="p">:</span>
+				<span class="k">with</span> <span class="n">defer_signals</span><span class="p">():</span>
+					<span class="k">if</span> <span class="n">any_filter</span><span class="p">:</span>
 
-					<span class="n">filter_results</span> <span class="o">=</span> <span class="p">[]</span>
+						<span class="n">filter_results</span> <span class="o">=</span> <span class="p">[]</span>
 
-					<span class="c1"># Loop through filter blocks</span>
-					<span class="k">for</span> <span class="n">fblock</span> <span class="ow">in</span> <span class="n">fblocks</span><span class="p">:</span>
+						<span class="c1"># Loop through filter blocks</span>
+						<span class="k">for</span> <span class="n">fblock</span> <span class="ow">in</span> <span class="n">fblocks</span><span class="p">:</span>
+							<span class="k">try</span><span class="p">:</span>
+								<span class="c1"># Apply filter (returns None/False in case of rejection or True/int in case of match)</span>
+								<span class="k">if</span> <span class="n">res</span> <span class="o">:=</span> <span class="n">fblock</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">alert</span><span class="p">):</span>
+									<span class="n">filter_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+
+							<span class="c1"># Unrecoverable (logging related) errors</span>
+							<span class="k">except</span> <span class="p">(</span><span class="n">PyMongoError</span><span class="p">,</span> <span class="n">AmpelLoggingError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+								<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">: abording run() procedure&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+								<span class="bp">self</span><span class="o">.</span><span class="n">_report_ap_error</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="n">extra</span><span class="p">)</span>
+								<span class="k">raise</span> <span class="n">e</span>
+
+							<span class="c1"># Possibly tolerable errors (could be an error from a contributed filter)</span>
+							<span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+
+								<span class="n">fblock</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">db_logging_handler</span><span class="p">,</span> <span class="n">stock</span><span class="o">=</span><span class="n">stock_id</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="n">extra</span><span class="p">)</span>
+								<span class="bp">self</span><span class="o">.</span><span class="n">_report_ap_error</span><span class="p">(</span>
+									<span class="n">e</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">extra</span><span class="p">,</span> <span class="s1">&#39;section&#39;</span><span class="p">:</span> <span class="s1">&#39;filter&#39;</span><span class="p">,</span> <span class="s1">&#39;channel&#39;</span><span class="p">:</span> <span class="n">fblock</span><span class="o">.</span><span class="n">channel</span><span class="p">}</span>
+								<span class="p">)</span>
+
+								<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">raise_exc</span><span class="p">:</span>
+									<span class="k">raise</span> <span class="n">e</span>
+								<span class="k">else</span><span class="p">:</span>
+									<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">error_max</span><span class="p">:</span>
+										<span class="n">err</span> <span class="o">+=</span> <span class="mi">1</span>
+									<span class="k">if</span> <span class="n">err</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">error_max</span><span class="p">:</span>
+										<span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Max number of error reached, breaking alert processing&quot;</span><span class="p">)</span>
+										<span class="bp">self</span><span class="o">.</span><span class="n">set_cancel_run</span><span class="p">(</span><span class="n">TOO_MANY_ERRORS</span><span class="p">)</span>
+					<span class="k">else</span><span class="p">:</span>
+						<span class="c1"># if bypassing filters, track passing rates at top level</span>
+						<span class="k">for</span> <span class="n">counter</span> <span class="ow">in</span> <span class="n">stats</span><span class="p">[</span><span class="s2">&quot;filter_accepted&quot;</span><span class="p">]:</span>
+							<span class="n">counter</span><span class="o">.</span><span class="n">inc</span><span class="p">()</span>
+
+					<span class="k">if</span> <span class="n">filter_results</span><span class="p">:</span>
+
+						<span class="n">stats</span><span class="p">[</span><span class="s2">&quot;accepted&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">inc</span><span class="p">()</span>
+
 						<span class="k">try</span><span class="p">:</span>
-							<span class="c1"># Apply filter (returns None/False in case of rejection or True/int in case of match)</span>
-							<span class="k">if</span> <span class="n">res</span> <span class="o">:=</span> <span class="n">fblock</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">alert</span><span class="p">):</span>
-								<span class="n">filter_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
-
-						<span class="c1"># Unrecoverable (logging related) errors</span>
+							<span class="n">ing_hdlr</span><span class="o">.</span><span class="n">ingest</span><span class="p">(</span><span class="n">alert</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">)</span>
 						<span class="k">except</span> <span class="p">(</span><span class="n">PyMongoError</span><span class="p">,</span> <span class="n">AmpelLoggingError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+
 							<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">: abording run() procedure&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
 							<span class="bp">self</span><span class="o">.</span><span class="n">_report_ap_error</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="n">extra</span><span class="p">)</span>
 							<span class="k">raise</span> <span class="n">e</span>
 
-						<span class="c1"># Possibly tolerable errors (could be an error from a contributed filter)</span>
 						<span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
 
-							<span class="n">fblock</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">db_logging_handler</span><span class="p">,</span> <span class="n">stock</span><span class="o">=</span><span class="n">stock_id</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="n">extra</span><span class="p">)</span>
 							<span class="bp">self</span><span class="o">.</span><span class="n">_report_ap_error</span><span class="p">(</span>
-								<span class="n">e</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">extra</span><span class="p">,</span> <span class="s1">&#39;section&#39;</span><span class="p">:</span> <span class="s1">&#39;filter&#39;</span><span class="p">,</span> <span class="s1">&#39;channel&#39;</span><span class="p">:</span> <span class="n">fblock</span><span class="o">.</span><span class="n">channel</span><span class="p">}</span>
+								<span class="n">e</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">,</span>
+								<span class="n">extra</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">extra</span><span class="p">,</span> <span class="s1">&#39;section&#39;</span><span class="p">:</span> <span class="s1">&#39;ingest&#39;</span><span class="p">,</span> <span class="s1">&#39;alert&#39;</span><span class="p">:</span> <span class="n">alert</span><span class="o">.</span><span class="n">dict</span><span class="p">()}</span>
 							<span class="p">)</span>
 
 							<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">raise_exc</span><span class="p">:</span>
@@ -416,76 +436,55 @@
 								<span class="k">if</span> <span class="n">err</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">error_max</span><span class="p">:</span>
 									<span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Max number of error reached, breaking alert processing&quot;</span><span class="p">)</span>
 									<span class="bp">self</span><span class="o">.</span><span class="n">set_cancel_run</span><span class="p">(</span><span class="n">TOO_MANY_ERRORS</span><span class="p">)</span>
-				<span class="k">else</span><span class="p">:</span>
-					<span class="c1"># if bypassing filters, track passing rates at top level</span>
-					<span class="k">for</span> <span class="n">counter</span> <span class="ow">in</span> <span class="n">stats</span><span class="p">[</span><span class="s2">&quot;filter_accepted&quot;</span><span class="p">]:</span>
-						<span class="n">counter</span><span class="o">.</span><span class="n">inc</span><span class="p">()</span>
 
-				<span class="k">if</span> <span class="n">filter_results</span><span class="p">:</span>
+					<span class="k">else</span><span class="p">:</span>
 
-					<span class="n">stats</span><span class="p">[</span><span class="s2">&quot;accepted&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">inc</span><span class="p">()</span>
+						<span class="c1"># All channels reject this alert</span>
+						<span class="c1"># no log entries goes into the main logs collection sinces those are redirected to Ampel_rej.</span>
 
-					<span class="k">try</span><span class="p">:</span>
-						<span class="n">ing_hdlr</span><span class="o">.</span><span class="n">ingest</span><span class="p">(</span><span class="n">alert</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">)</span>
-					<span class="k">except</span> <span class="p">(</span><span class="n">PyMongoError</span><span class="p">,</span> <span class="n">AmpelLoggingError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-
-						<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">: abording run() procedure&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
-						<span class="bp">self</span><span class="o">.</span><span class="n">_report_ap_error</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="n">extra</span><span class="p">)</span>
-						<span class="k">raise</span> <span class="n">e</span>
-
-					<span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-
-						<span class="bp">self</span><span class="o">.</span><span class="n">_report_ap_error</span><span class="p">(</span>
-							<span class="n">e</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">filter_results</span><span class="p">,</span>
-							<span class="n">extra</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">extra</span><span class="p">,</span> <span class="s1">&#39;section&#39;</span><span class="p">:</span> <span class="s1">&#39;ingest&#39;</span><span class="p">,</span> <span class="s1">&#39;alert&#39;</span><span class="p">:</span> <span class="n">alert</span><span class="o">.</span><span class="n">dict</span><span class="p">()}</span>
+						<span class="c1"># So we add a notification manually. For that, we don&#39;t use logger</span>
+						<span class="c1"># cause rejection messages were alreary logged into the console</span>
+						<span class="c1"># by the StreamHandler in channel specific RecordBufferingHandler instances.</span>
+						<span class="c1"># So we address directly db_logging_handler, and for that, we create</span>
+						<span class="c1"># a LogDocument manually.</span>
+						<span class="n">lr</span> <span class="o">=</span> <span class="n">LightLogRecord</span><span class="p">(</span>
+							<span class="n">logger</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+							<span class="n">LogFlag</span><span class="o">.</span><span class="n">INFO</span> <span class="o">|</span> <span class="n">logger</span><span class="o">.</span><span class="n">base_flag</span>
 						<span class="p">)</span>
+						<span class="n">lr</span><span class="o">.</span><span class="n">stock</span> <span class="o">=</span> <span class="n">stock_id</span>
+						<span class="n">lr</span><span class="o">.</span><span class="n">channel</span> <span class="o">=</span> <span class="n">reduced_chan_names</span> <span class="c1"># type: ignore[assignment]</span>
+						<span class="n">lr</span><span class="o">.</span><span class="n">extra</span> <span class="o">=</span> <span class="p">{</span>
+							<span class="s1">&#39;alert&#39;</span><span class="p">:</span> <span class="n">alert</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+							<span class="s1">&#39;allout&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+						<span class="p">}</span>
+						<span class="k">if</span> <span class="n">db_logging_handler</span><span class="p">:</span>
+							<span class="n">db_logging_handler</span><span class="o">.</span><span class="n">handle</span><span class="p">(</span><span class="n">lr</span><span class="p">)</span>
 
-						<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">raise_exc</span><span class="p">:</span>
-							<span class="k">raise</span> <span class="n">e</span>
-						<span class="k">else</span><span class="p">:</span>
-							<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">error_max</span><span class="p">:</span>
-								<span class="n">err</span> <span class="o">+=</span> <span class="mi">1</span>
-							<span class="k">if</span> <span class="n">err</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">error_max</span><span class="p">:</span>
-								<span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Max number of error reached, breaking alert processing&quot;</span><span class="p">)</span>
-								<span class="bp">self</span><span class="o">.</span><span class="n">set_cancel_run</span><span class="p">(</span><span class="n">TOO_MANY_ERRORS</span><span class="p">)</span>
+					<span class="n">iter_count</span> <span class="o">+=</span> <span class="mi">1</span>
+					<span class="n">stats</span><span class="p">[</span><span class="s2">&quot;alerts&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">inc</span><span class="p">()</span>
 
-				<span class="k">else</span><span class="p">:</span>
+					<span class="k">if</span> <span class="n">iter_count</span> <span class="o">==</span> <span class="n">iter_max</span><span class="p">:</span>
+						<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Reached max number of iterations&quot;</span><span class="p">)</span>
+						<span class="k">break</span>
 
-					<span class="c1"># All channels reject this alert</span>
-					<span class="c1"># no log entries goes into the main logs collection sinces those are redirected to Ampel_rej.</span>
-
-					<span class="c1"># So we add a notification manually. For that, we don&#39;t use logger</span>
-					<span class="c1"># cause rejection messages were alreary logged into the console</span>
-					<span class="c1"># by the StreamHandler in channel specific RecordBufferingHandler instances.</span>
-					<span class="c1"># So we address directly db_logging_handler, and for that, we create</span>
-					<span class="c1"># a LogDocument manually.</span>
-					<span class="n">lr</span> <span class="o">=</span> <span class="n">LightLogRecord</span><span class="p">(</span>
-						<span class="n">logger</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-						<span class="n">LogFlag</span><span class="o">.</span><span class="n">INFO</span> <span class="o">|</span> <span class="n">logger</span><span class="o">.</span><span class="n">base_flag</span>
-					<span class="p">)</span>
-					<span class="n">lr</span><span class="o">.</span><span class="n">stock</span> <span class="o">=</span> <span class="n">stock_id</span>
-					<span class="n">lr</span><span class="o">.</span><span class="n">channel</span> <span class="o">=</span> <span class="n">reduced_chan_names</span> <span class="c1"># type: ignore[assignment]</span>
-					<span class="n">lr</span><span class="o">.</span><span class="n">extra</span> <span class="o">=</span> <span class="p">{</span>
-						<span class="s1">&#39;alert&#39;</span><span class="p">:</span> <span class="n">alert</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
-						<span class="s1">&#39;allout&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
-					<span class="p">}</span>
+					<span class="n">updates_buffer</span><span class="o">.</span><span class="n">check_push</span><span class="p">()</span>
 					<span class="k">if</span> <span class="n">db_logging_handler</span><span class="p">:</span>
-						<span class="n">db_logging_handler</span><span class="o">.</span><span class="n">handle</span><span class="p">(</span><span class="n">lr</span><span class="p">)</span>
+						<span class="n">db_logging_handler</span><span class="o">.</span><span class="n">check_flush</span><span class="p">()</span>
 
-				<span class="n">iter_count</span> <span class="o">+=</span> <span class="mi">1</span>
-				<span class="n">stats</span><span class="p">[</span><span class="s2">&quot;alerts&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">inc</span><span class="p">()</span>
-
-				<span class="k">if</span> <span class="n">iter_count</span> <span class="o">==</span> <span class="n">iter_max</span><span class="p">:</span>
-					<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Reached max number of iterations&quot;</span><span class="p">)</span>
-					<span class="k">break</span>
-
-				<span class="n">updates_buffer</span><span class="o">.</span><span class="n">check_push</span><span class="p">()</span>
-				<span class="k">if</span> <span class="n">db_logging_handler</span><span class="p">:</span>
-					<span class="n">db_logging_handler</span><span class="o">.</span><span class="n">check_flush</span><span class="p">()</span>
-
+		<span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">set_cancel_run</span><span class="p">(</span><span class="n">INTERRUPTED</span><span class="p">)</span>
+		<span class="k">finally</span><span class="p">:</span>
+			<span class="n">updates_buffer</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+			<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cancel_run</span><span class="p">:</span>
+					<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+					<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cancel_run</span> <span class="o">==</span> <span class="n">INTERRUPTED</span><span class="p">:</span>
+						<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Interrupting run() procedure&quot;</span><span class="p">)</span>
+						<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Interrupting run() procedure&quot;</span><span class="p">)</span>
+					<span class="k">else</span><span class="p">:</span> <span class="c1"># updates_buffer requested to stop processing</span>
+						<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Abording run() procedure&quot;</span><span class="p">)</span>
+			<span class="k">else</span><span class="p">:</span>
+				<span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shout</span><span class="p">,</span> <span class="s2">&quot;Processing completed&quot;</span><span class="p">)</span>
 		<span class="k">try</span><span class="p">:</span>
-			<span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shout</span><span class="p">,</span> <span class="s2">&quot;Processing completed&quot;</span><span class="p">)</span>
-
 			<span class="c1"># Flush loggers</span>
 			<span class="n">logger</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
 			<span class="bp">self</span><span class="o">.</span><span class="n">_fbh</span><span class="o">.</span><span class="n">done</span><span class="p">()</span>
@@ -500,13 +499,13 @@
 
 		<span class="c1"># Return number of processed alerts</span>
 		<span class="k">return</span> <span class="n">iter_count</span></div>
-
+	
 
 	<span class="k">def</span> <span class="nf">set_cancel_run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reason</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">CONNECTIVITY</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 		<span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">		Cancels current processing of alerts (when DB becomes unresponsive for example).</span>
 <span class="sd">		&quot;&quot;&quot;</span>
-		<span class="bp">self</span><span class="o">.</span><span class="n">_cancel_run</span> <span class="o">=</span> <span class="n">CONNECTIVITY</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_cancel_run</span> <span class="o">=</span> <span class="n">reason</span>
 
 
 	<span class="k">def</span> <span class="nf">_report_ap_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -530,6 +529,27 @@
 		<span class="c1"># Try to insert doc into trouble collection (raises no exception)</span>
 		<span class="c1"># Possible exception will be logged out to console in any case</span>
 		<span class="n">report_exception</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ampel_db</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">exc</span><span class="o">=</span><span class="n">arg_e</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="n">info</span><span class="p">)</span></div>
+
+
+<span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
+<span class="k">def</span> <span class="nf">defer_signals</span><span class="p">(</span><span class="n">target_signals</span><span class="o">=</span><span class="p">[</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGINT</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIGTERM</span><span class="p">]):</span>
+	<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">	Catch signals and re-send at the end of a critical section</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+	<span class="n">handlers</span> <span class="o">=</span> <span class="p">{}</span>
+	<span class="n">signals</span> <span class="o">=</span> <span class="p">[]</span>
+	<span class="n">defer</span> <span class="o">=</span> <span class="k">lambda</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">signals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+	<span class="k">for</span> <span class="n">sig</span> <span class="ow">in</span> <span class="n">target_signals</span><span class="p">:</span>
+		<span class="n">handlers</span><span class="p">[</span><span class="n">sig</span><span class="p">]</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span> <span class="n">defer</span><span class="p">)</span>
+	<span class="k">try</span><span class="p">:</span>
+		<span class="k">yield</span>
+	<span class="k">finally</span><span class="p">:</span>
+		<span class="c1"># restore previous handlers</span>
+		<span class="k">for</span> <span class="n">sig</span> <span class="ow">in</span> <span class="n">target_signals</span><span class="p">:</span>
+			<span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span> <span class="n">handlers</span><span class="p">[</span><span class="n">sig</span><span class="p">])</span>
+		<span class="c1"># issue any signals caught</span>
+		<span class="k">for</span> <span class="n">sig</span><span class="p">,</span> <span class="n">frame</span> <span class="ow">in</span> <span class="n">signals</span><span class="p">:</span>
+			<span class="n">os</span><span class="o">.</span><span class="n">kill</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">(),</span> <span class="n">sig</span><span class="p">)</span>
 </pre></div>
 
             <div class="clearer"></div>
@@ -561,7 +581,7 @@
         <li class="right" style="margin-right: 10px">
           <a href="../../../genindex.html" title="General Index"
              >index</a></li>
-        <li class="nav-item nav-item-0"><a href="../../../index.html">ampel-alerts 0.7.1-alpha.3 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">ampel-alerts 0.7.1-alpha.4 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">ampel.alert.AlertProcessor</a></li> 
       </ul>

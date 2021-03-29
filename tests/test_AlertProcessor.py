@@ -1,6 +1,10 @@
+import os
+import signal
+import time
+import threading
 from contextlib import contextmanager
 
-from ampel.alert.AlertProcessor import AlertProcessor
+from ampel.alert.AlertProcessor import AlertProcessor, INTERRUPTED
 from ampel.alert.AmpelAlert import AmpelAlert
 from ampel.alert.filter.BasicMultiFilter import BasicMultiFilter
 from ampel.dev.UnitTestAlertSupplier import UnitTestAlertSupplier
@@ -50,7 +54,15 @@ def test_no_filter(dev_context, legacy_directive):
         ]
         == 1
     )
-    assert stats[("ampel_alertprocessor_time_seconds_sum", (("section", "ingest"),),)] > 0
+    assert (
+        stats[
+            (
+                "ampel_alertprocessor_time_seconds_sum",
+                (("section", "ingest"),),
+            )
+        ]
+        > 0
+    )
     assert (
         stats[
             (
@@ -100,7 +112,15 @@ def test_with_filter(dev_context, legacy_directive):
         ]
         == 1
     )
-    assert stats[("ampel_alertprocessor_time_seconds_sum", (("section", "ingest"),),)] > 0
+    assert (
+        stats[
+            (
+                "ampel_alertprocessor_time_seconds_sum",
+                (("section", "ingest"),),
+            )
+        ]
+        > 0
+    )
     assert (
         stats[
             (
@@ -110,3 +130,48 @@ def test_with_filter(dev_context, legacy_directive):
         ]
         > 0
     )
+
+
+def test_suspend_in_supplier(dev_context, legacy_directive):
+    # simulate a producer that blocks while waiting fo upstream input
+    class BlockingAlertSupplier(UnitTestAlertSupplier):
+        def __next__(self):
+            time.sleep(3)
+            return super().__next__()
+
+    ap = AlertProcessor(
+        context=dev_context,
+        process_name="ap",
+        directives=[legacy_directive],
+        supplier=BlockingAlertSupplier(
+            alerts=[AmpelAlert(id="alert", stock_id="stockystock", dps=[])]
+        ),
+    )
+
+    def alarm():
+        time.sleep(0.5)
+        os.kill(os.getpid(), signal.SIGINT)
+
+    t = threading.Thread(target=alarm)
+    t.start()
+    t0 = time.time()
+    assert ap.run() == 0, "AP suspended before first alert was processed"
+    assert time.time() - t0 < 2, "AP suspended before supplier timed out"
+    t.join()
+
+
+def test_suspend_in_critical_section(dev_context, legacy_directive, monkeypatch):
+    monkeypatch.setattr(
+        BasicMultiFilter, "apply", lambda *args: os.kill(os.getpid(), signal.SIGINT)
+    )
+    legacy_directive.filter = FilterModel(unit=BasicMultiFilter, config={"filters": []})
+    ap = AlertProcessor(
+        context=dev_context,
+        process_name="ap",
+        directives=[legacy_directive],
+        supplier=UnitTestAlertSupplier(
+            alerts=[AmpelAlert(id="alert", stock_id="stockystock", dps=[])]
+        ),
+    )
+    assert ap.run() == 1, "AP successfully processes alert"
+    assert ap._cancel_run == INTERRUPTED

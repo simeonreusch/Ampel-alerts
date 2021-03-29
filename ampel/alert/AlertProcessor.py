@@ -7,6 +7,8 @@
 # Last Modified Date: 15.03.2021
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
+import os
+import contextlib
 import signal
 from io import IOBase
 from pymongo.errors import PyMongoError
@@ -181,9 +183,6 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 
 				logger.log(VERBOSE, f"{model.channel} combined on match t2 units: {t2_units}")
 
-		signal.signal(signal.SIGTERM, self.sig_exit)
-		signal.signal(signal.SIGINT, self.sig_exit)
-
 		logger.info("AlertProcessor setup completed")
 
 
@@ -326,51 +325,72 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 		# The extra is just a feedback for the console stream handler
 		logger.log(self.shout, "Processing alerts", extra={'r': run_id})
 
-		with updates_buffer.run_in_thread():
+		updates_buffer.start()
+		try:
 
 			# Iterate over alerts
 			for alert in self.alert_supplier:
-				
-				if self._cancel_run:
-
-					print("")
-					if self._cancel_run == INTERRUPTED:
-						logger.info("Interrupting run() procedure")
-						print("Interrupting run() procedure")
-					else: # updates_buffer requested to stop processing
-						print("Abording run() procedure")
-
-					logger.flush()
-					self._fbh.done()
-					return iter_count
 
 				# Associate upcoming log entries with the current transient id
 				stock_id = alert.stock_id
 				extra: Dict[str, Any] = {'alert': alert.id}
 
-				if any_filter:
+				with defer_signals():
+					if any_filter:
 
-					filter_results = []
+						filter_results = []
 
-					# Loop through filter blocks
-					for fblock in fblocks:
+						# Loop through filter blocks
+						for fblock in fblocks:
+							try:
+								# Apply filter (returns None/False in case of rejection or True/int in case of match)
+								if res := fblock.filter(alert):
+									filter_results.append(res)
+
+							# Unrecoverable (logging related) errors
+							except (PyMongoError, AmpelLoggingError) as e:
+								print("%s: abording run() procedure" % e.__class__.__name__)
+								self._report_ap_error(e, logger, run_id, extra=extra)
+								raise e
+
+							# Possibly tolerable errors (could be an error from a contributed filter)
+							except Exception as e:
+
+								fblock.forward(db_logging_handler, stock=stock_id, extra=extra)
+								self._report_ap_error(
+									e, logger, run_id, extra={**extra, 'section': 'filter', 'channel': fblock.channel}
+								)
+
+								if self.raise_exc:
+									raise e
+								else:
+									if self.error_max:
+										err += 1
+									if err == self.error_max:
+										logger.error("Max number of error reached, breaking alert processing")
+										self.set_cancel_run(TOO_MANY_ERRORS)
+					else:
+						# if bypassing filters, track passing rates at top level
+						for counter in stats["filter_accepted"]:
+							counter.inc()
+
+					if filter_results:
+
+						stats["accepted"].inc()
+
 						try:
-							# Apply filter (returns None/False in case of rejection or True/int in case of match)
-							if res := fblock.filter(alert):
-								filter_results.append(res)
-
-						# Unrecoverable (logging related) errors
+							ing_hdlr.ingest(alert, filter_results)
 						except (PyMongoError, AmpelLoggingError) as e:
+
 							print("%s: abording run() procedure" % e.__class__.__name__)
 							self._report_ap_error(e, logger, run_id, extra=extra)
 							raise e
 
-						# Possibly tolerable errors (could be an error from a contributed filter)
 						except Exception as e:
 
-							fblock.forward(db_logging_handler, stock=stock_id, extra=extra)
 							self._report_ap_error(
-								e, logger, run_id, extra={**extra, 'section': 'filter', 'channel': fblock.channel}
+								e, logger, run_id, filter_results,
+								extra={**extra, 'section': 'ingest', 'alert': alert.dict()}
 							)
 
 							if self.raise_exc:
@@ -381,76 +401,55 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 								if err == self.error_max:
 									logger.error("Max number of error reached, breaking alert processing")
 									self.set_cancel_run(TOO_MANY_ERRORS)
-				else:
-					# if bypassing filters, track passing rates at top level
-					for counter in stats["filter_accepted"]:
-						counter.inc()
 
-				if filter_results:
+					else:
 
-					stats["accepted"].inc()
+						# All channels reject this alert
+						# no log entries goes into the main logs collection sinces those are redirected to Ampel_rej.
 
-					try:
-						ing_hdlr.ingest(alert, filter_results)
-					except (PyMongoError, AmpelLoggingError) as e:
-
-						print("%s: abording run() procedure" % e.__class__.__name__)
-						self._report_ap_error(e, logger, run_id, extra=extra)
-						raise e
-
-					except Exception as e:
-
-						self._report_ap_error(
-							e, logger, run_id, filter_results,
-							extra={**extra, 'section': 'ingest', 'alert': alert.dict()}
+						# So we add a notification manually. For that, we don't use logger
+						# cause rejection messages were alreary logged into the console
+						# by the StreamHandler in channel specific RecordBufferingHandler instances.
+						# So we address directly db_logging_handler, and for that, we create
+						# a LogDocument manually.
+						lr = LightLogRecord(
+							logger.name,
+							LogFlag.INFO | logger.base_flag
 						)
+						lr.stock = stock_id
+						lr.channel = reduced_chan_names # type: ignore[assignment]
+						lr.extra = {
+							'alert': alert.id,
+							'allout': True,
+						}
+						if db_logging_handler:
+							db_logging_handler.handle(lr)
 
-						if self.raise_exc:
-							raise e
-						else:
-							if self.error_max:
-								err += 1
-							if err == self.error_max:
-								logger.error("Max number of error reached, breaking alert processing")
-								self.set_cancel_run(TOO_MANY_ERRORS)
+					iter_count += 1
+					stats["alerts"].inc()
 
-				else:
+					if iter_count == iter_max:
+						logger.info("Reached max number of iterations")
+						break
 
-					# All channels reject this alert
-					# no log entries goes into the main logs collection sinces those are redirected to Ampel_rej.
-
-					# So we add a notification manually. For that, we don't use logger
-					# cause rejection messages were alreary logged into the console
-					# by the StreamHandler in channel specific RecordBufferingHandler instances.
-					# So we address directly db_logging_handler, and for that, we create
-					# a LogDocument manually.
-					lr = LightLogRecord(
-						logger.name,
-						LogFlag.INFO | logger.base_flag
-					)
-					lr.stock = stock_id
-					lr.channel = reduced_chan_names # type: ignore[assignment]
-					lr.extra = {
-						'alert': alert.id,
-						'allout': True,
-					}
+					updates_buffer.check_push()
 					if db_logging_handler:
-						db_logging_handler.handle(lr)
+						db_logging_handler.check_flush()
 
-				iter_count += 1
-				stats["alerts"].inc()
-
-				if iter_count == iter_max:
-					logger.info("Reached max number of iterations")
-					break
-
-				updates_buffer.check_push()
-				if db_logging_handler:
-					db_logging_handler.check_flush()
-
+		except KeyboardInterrupt:
+			self.set_cancel_run(INTERRUPTED)
+		finally:
+			updates_buffer.stop()
+			if self._cancel_run:
+					print("")
+					if self._cancel_run == INTERRUPTED:
+						logger.info("Interrupting run() procedure")
+						print("Interrupting run() procedure")
+					else: # updates_buffer requested to stop processing
+						print("Abording run() procedure")
+			else:
+				logger.log(self.shout, "Processing completed")
 		try:
-			logger.log(self.shout, "Processing completed")
-
 			# Flush loggers
 			logger.flush()
 			self._fbh.done()
@@ -465,13 +464,13 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 
 		# Return number of processed alerts
 		return iter_count
-
+	
 
 	def set_cancel_run(self, reason: int = CONNECTIVITY) -> None:
 		"""
 		Cancels current processing of alerts (when DB becomes unresponsive for example).
 		"""
-		self._cancel_run = CONNECTIVITY
+		self._cancel_run = reason
 
 
 	def _report_ap_error(self,
@@ -495,3 +494,24 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 		# Try to insert doc into trouble collection (raises no exception)
 		# Possible exception will be logged out to console in any case
 		report_exception(self._ampel_db, logger, exc=arg_e, info=info)
+
+
+@contextlib.contextmanager
+def defer_signals(target_signals=[signal.SIGINT, signal.SIGTERM]):
+	"""
+	Catch signals and re-send at the end of a critical section
+	"""
+	handlers = {}
+	signals = []
+	defer = lambda *args: signals.append(args)
+	for sig in target_signals:
+		handlers[sig] = signal.signal(sig, defer)
+	try:
+		yield
+	finally:
+		# restore previous handlers
+		for sig in target_signals:
+			signal.signal(sig, handlers[sig])
+		# issue any signals caught
+		for sig, frame in signals:
+			os.kill(os.getpid(), sig)

@@ -4,22 +4,23 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 23.04.2018
-# Last Modified Date: 09.05.2020
+# Last Modified Date: 29.03.2021
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 import json
 from io import IOBase
 from typing import Iterable, Dict, Callable, Any, Literal, Generic, TypeVar, Union, Iterator
+
 from ampel.base import abstractmethod
-from ampel.alert.AmpelAlert import AmpelAlert
 from ampel.base.AmpelABC import AmpelABC
 from ampel.base.AmpelBaseModel import AmpelBaseModel
+from ampel.alert.AmpelAlert import AmpelAlert
 
 T = TypeVar("T", bound=AmpelAlert)
 
 def identity(arg: Dict) -> Dict:
 	"""
-	Covers the "no deserialization needed" which might occur
+	Covers the "no deserialization needed" case which might occur
 	if the underlying alert loader directly returns dicts
 	"""
 	return arg
@@ -40,17 +41,21 @@ class AbsAlertSupplier(Generic[T], AmpelABC, AmpelBaseModel, abstract=True):
 	  - Provide a callable as parameter for `deserialize`
 	"""
 
-	deserialize: Union[None, Literal["avro", "json"], Callable[[Any], Dict]] = None # type: ignore
+	deserialize: Union[None, Literal["avro", "json", "csv"], Callable[[Any], Dict]] = None # type: ignore
 
 	def __init__(self, **kwargs) -> None:
 
 		AmpelBaseModel.__init__(self, **kwargs) # type: ignore[call-arg]
 
 		if self.deserialize is None:
-			self.deserialize = identity # type: ignore[assignment]
+			self.deserialize = identity
 
 		elif self.deserialize == "json":
-			self.deserialize = json.load # type: ignore[assignment]
+			self.deserialize = json.load
+
+		elif self.deserialize == "csv":
+			from csv import DictReader
+			self.deserialize = DictReader # type: ignore
 
 		elif self.deserialize == "avro":
 
@@ -58,7 +63,7 @@ class AbsAlertSupplier(Generic[T], AmpelABC, AmpelBaseModel, abstract=True):
 			def avro_next(arg: IOBase): # noqa: E306
 				return reader(arg).next()
 
-			self.deserialize = avro_next # type: ignore[assignment]
+			self.deserialize = avro_next
 
 		elif callable(self.deserialize):
 			pass

@@ -7,8 +7,8 @@
 # Last Modified Date: 15.03.2021
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
-from typing import List, Optional
-from io import BytesIO
+from typing import List, Optional, Union
+from io import BytesIO, StringIO
 from ampel.log.AmpelLogger import AmpelLogger
 from ampel.base.AmpelBaseModel import AmpelBaseModel
 
@@ -23,6 +23,7 @@ class DirAlertLoader(AmpelBaseModel):
 	max_entries: Optional[int] = None
 	folder = "/Users/hu/Documents/ZTF/IPAC-ZTF/ztf/src/pl/avroalerts/testprod"
 	extension = "*.avro"
+	binary_mode: bool = True
 
 
 	def __init__(self, **kwargs) -> None:
@@ -31,21 +32,19 @@ class DirAlertLoader(AmpelBaseModel):
 			kwargs['logger'] = AmpelLogger.get_logger()
 
 		super().__init__(**kwargs)
+		self.open_mode = "rb" if self.binary_mode else "r"
 
 
 	def set_extension(self, extension: str) -> None:
-		""" """
 		self.extension = extension
 
 
 	def set_folder(self, arg: str) -> None:
-		""" """
 		self.folder = arg
 		self.logger.debug("Target incoming folder: " + self.folder)
 
 
 	def set_index_range(self, min_index: int = None, max_index: int = None) -> None:
-		""" """
 		self.min_index = min_index
 		self.max_index = max_index
 		self.logger.debug(f"Min index set to: {self.min_index}")
@@ -53,19 +52,17 @@ class DirAlertLoader(AmpelBaseModel):
 
 
 	def set_max_entries(self, max_entries: int):
-		""" """
 		self.max_entries = max_entries
 		self.logger.debug(f"Max entries set to: {self.max_entries}")
 
 
 	def add_files(self, arg: str):
-		""" """
 		self.files.append(arg)
 		self.logger.debug(f"Adding {len(arg)} files to the list")
 
 
 	def build_file_list(self) -> None:
-		""" """
+
 		self.logger.debug("Building internal file list")
 
 		import glob, os
@@ -100,20 +97,17 @@ class DirAlertLoader(AmpelBaseModel):
 		return self
 
 
-	def __next__(self) -> BytesIO:
-		"""
-		"""
+	def __next__(self) -> Union[StringIO, BytesIO]:
+
 		if not self.files:
 			self.build_file_list()
 			self.iter_files = iter(self.files)
 
-		fpath = next(self.iter_files, None)
-
-		if fpath is None:
+		if (fpath := next(self.iter_files, None)) is None:
 			raise StopIteration
 
 		if self.logger.verbose > 1:
 			self.logger.debug("Loading " + fpath)
 
-		with open(fpath, "rb") as alert_file:
-			return BytesIO(alert_file.read())
+		with open(fpath, self.open_mode) as alert_file:
+			return BytesIO(alert_file.read()) if self.binary_mode else StringIO(alert_file.read())

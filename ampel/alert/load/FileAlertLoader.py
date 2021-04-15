@@ -35,11 +35,10 @@ class FileAlertLoader(AmpelBaseModel):
 			arg = [arg]
 
 		for fp in arg:
-			self.files.append(fp)
 			if logger:
 				logger.info(f"Adding {len(arg)} file(s) to the list")
 
-		self.iter_files = iter(self.files)
+		self.iter_files = iter(arg)
 
 
 	def __iter__(self):

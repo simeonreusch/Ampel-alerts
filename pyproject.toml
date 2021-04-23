@@ -31,14 +31,10 @@ include = [
     'conf/*/*/*.yml',
 ]
 
-[[tool.poetry.source]]
-name = "testpypi"
-url = "https://test.pypi.org/simple"
-
 [tool.poetry.dependencies]
-ampel-interface = {version = "^0.7.1-alpha.8"}
-ampel-core = {version = "^0.7.1-alpha.6"}
-ampel-photometry = {version = "^0.7.1-alpha.1"}
+ampel-interface = {version = "^0.7.1"}
+ampel-core = {version = "^0.7.1"}
+ampel-photometry = {version = "^0.7.1"}
 python = "^3.8"
 Sphinx = {version = "^3.5.1", optional = true}
 sphinx-autodoc-typehints = {version = "^1.11.1", optional = true}

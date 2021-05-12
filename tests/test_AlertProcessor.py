@@ -3,6 +3,9 @@ import signal
 import time
 import threading
 from contextlib import contextmanager
+from unittest.mock import MagicMock
+
+from ampel.core.AmpelContext import AmpelContext
 
 from ampel.alert.AlertProcessor import AlertProcessor, INTERRUPTED
 from ampel.alert.AmpelAlert import AmpelAlert
@@ -175,3 +178,25 @@ def test_suspend_in_critical_section(dev_context, legacy_directive, monkeypatch)
     )
     assert ap.run() == 1, "AP successfully processes alert"
     assert ap._cancel_run == INTERRUPTED
+
+
+def test_error_reporting(dev_context: AmpelContext, legacy_directive, monkeypatch):
+    """
+    channel is set in troubles doc
+    """
+    monkeypatch.setattr(
+        BasicMultiFilter, "apply", MagicMock(side_effect=KeyError("baaaad"))
+    )
+    legacy_directive.filter = FilterModel(unit=BasicMultiFilter, config={"filters": []})
+    ap = AlertProcessor(
+        context=dev_context,
+        process_name="ap",
+        directives=[legacy_directive],
+        supplier=UnitTestAlertSupplier(
+            alerts=[AmpelAlert(id="alert", stock_id="stockystock", dps=[])]
+        ),
+    )
+    assert ap.run() == 1
+    assert (doc := dev_context.db.get_collection("troubles").find_one({}))
+    assert doc["channel"] == "TEST_CHANNEL"
+    assert "KeyError: 'baaaad" in "\n".join(doc["exception"])

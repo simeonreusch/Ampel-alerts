@@ -519,7 +519,7 @@
 <span class="sd">		&quot;&quot;&quot;</span>
 
 		<span class="bp">self</span><span class="o">.</span><span class="n">_exception</span> <span class="o">=</span> <span class="kc">True</span>
-		<span class="n">info</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;process&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_name</span><span class="p">}</span>
+		<span class="n">info</span> <span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;process&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_name</span><span class="p">}</span>
 
 		<span class="k">if</span> <span class="n">extra</span><span class="p">:</span>
 			<span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">extra</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>

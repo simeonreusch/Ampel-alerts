@@ -484,7 +484,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 		"""
 
 		self._exception = True
-		info = {'process': self.process_name}
+		info : Dict[str, Any] = {'process': self.process_name}
 
 		if extra:
 			for k in extra.keys():

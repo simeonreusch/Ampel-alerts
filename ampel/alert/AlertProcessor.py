@@ -318,6 +318,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 		self._fbh.ready(logger, run_id, ing_hdlr)
 
 		self._cancel_run = 0
+		self._exception = False
 
 		# Process alerts
 		################
@@ -454,7 +455,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 			logger.flush()
 			self._fbh.done()
 
-			event_doc.update(logger)
+			event_doc.update(logger, success=not self._exception)
 
 		except Exception as e:
 
@@ -482,7 +483,8 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 		:param extra: optional extra key/value fields to add to 'trouble' doc
 		"""
 
-		info = {}
+		self._exception = True
+		info = {'process': self.process_name}
 
 		if extra:
 			for k in extra.keys():

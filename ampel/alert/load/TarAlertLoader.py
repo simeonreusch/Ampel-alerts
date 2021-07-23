@@ -10,10 +10,10 @@
 import tarfile
 from typing import Optional, IO
 from ampel.log.AmpelLogger import AmpelLogger
-from ampel.base.AmpelBaseModel import AmpelBaseModel
+from ampel.abstract.AbsAlertLoader import AbsAlertLoader
 
 
-class TarAlertLoader(AmpelBaseModel):
+class TarAlertLoader(AbsAlertLoader[IO[bytes]]):
 	"""
 	Load alerts from a ``tar`` file. The archive must be laid out like the
 	`ZTF public alert archive <https://ztf.uw.edu/alerts/public/>`_, i.e. one
@@ -25,6 +25,7 @@ class TarAlertLoader(AmpelBaseModel):
 	file_obj: Optional[IO[bytes]]
 	file_path: Optional[str]
 	logger: AmpelLogger # actually optional
+
 
 	def __init__(self, **kwargs) -> None:
 

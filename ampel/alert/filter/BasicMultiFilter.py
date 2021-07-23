@@ -62,7 +62,7 @@ class BasicMultiFilter(AbsAlertFilter[PhotoAlert]):
 
 	filters: Sequence[BasicFilterCondition]
 
-	def apply(self, alert: PhotoAlert) -> bool:
+	def process(self, alert: PhotoAlert) -> bool:
 		"""
 		Filter alerts via AmpelAlert.get_values(). Criteria in each condition
 		are ANDed together, and conditions can be combined with AND or OR. For

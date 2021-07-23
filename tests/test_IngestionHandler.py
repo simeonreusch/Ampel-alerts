@@ -1,12 +1,12 @@
 import pytest
 
 from ampel.alert.AmpelAlert import AmpelAlert
-from ampel.alert.IngestionHandler import IngestionHandler
+from ampel.ingest.ChainedIngestionHandler import ChainedIngestionHandler
 from ampel.mongo.update.DBUpdatesBuffer import DBUpdatesBuffer
 from ampel.mongo.update.StockIngester import StockIngester
 from ampel.log.AmpelLogger import AmpelLogger, DEBUG
 from ampel.log.LogsBufferDict import LogsBufferDict
-from ampel.model.AlertProcessorDirective import AlertProcessorDirective
+from ampel.model.AlertConsumerDirective import AlertConsumerDirective
 
 from .dummy_units import DummyAlertContentIngester
 
@@ -16,7 +16,7 @@ def get_handler(context, directives):
     logger = AmpelLogger.get_logger(console={"level": DEBUG})
     updates_buffer = DBUpdatesBuffer(context.db, run_id=run_id, logger=logger)
     logd = LogsBufferDict({"logs": [], "extra": {}})
-    return IngestionHandler(
+    return ChainedIngestionHandler(
         context=context,
         logger=logger,
         run_id=0,
@@ -35,7 +35,7 @@ def test_minimal_directive(dev_context):
         "channel": "TEST_CHANNEL",
         "stock_update": {"unit": StockIngester},
     }
-    handler = get_handler(dev_context, [AlertProcessorDirective(**directive)])
+    handler = get_handler(dev_context, [AlertConsumerDirective(**directive)])
     assert isinstance(handler.stock_ingester, StockIngester)
     handler.logd["logs"].append(f"doing a good thing")
     handler.ingest(
@@ -129,7 +129,7 @@ def test_standalone_t1_channel_dispatch(dev_context, standalone_t1_directive):
     handler = get_handler(
         dev_context,
         [
-            AlertProcessorDirective(**directive)
+            AlertConsumerDirective(**directive)
             for directive in (long_channel, short_channel)
         ],
     )
@@ -165,7 +165,7 @@ def test_standalone_t1_elision(dev_context, standalone_t1_directive):
     handler = get_handler(
         dev_context,
         [
-            AlertProcessorDirective(**directive)
+            AlertConsumerDirective(**directive)
             for directive in (long_channel, short_channel)
         ],
     )

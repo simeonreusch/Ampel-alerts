@@ -8,7 +8,7 @@ from ampel.dev.DevAmpelContext import DevAmpelContext
 from ampel.mongo.update.PointT2Ingester import PointT2Ingester
 from ampel.mongo.update.StockIngester import StockIngester
 from ampel.mongo.update.StockT2Ingester import StockT2Ingester
-from ampel.model.AlertProcessorDirective import AlertProcessorDirective
+from ampel.model.AlertConsumerDirective import AlertConsumerDirective
 
 from .dummy_units import (
     DummyAlertContentIngester,
@@ -32,7 +32,7 @@ def dev_context(patch_mongo):
 
 @pytest.fixture
 def legacy_directive():
-    return AlertProcessorDirective(
+    return AlertConsumerDirective(
         **{
             "channel": "TEST_CHANNEL",
             "stock_update": {"unit": StockIngester},
@@ -62,7 +62,7 @@ def legacy_directive():
 
 @pytest.fixture
 def standalone_t1_directive():
-    return AlertProcessorDirective(
+    return AlertConsumerDirective(
         **{
             "channel": "TEST_CHANNEL",
             "stock_update": {"unit": StockIngester},

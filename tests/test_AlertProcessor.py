@@ -1,11 +1,11 @@
 from contextlib import contextmanager
 
-from ampel.alert.AlertProcessor import AlertProcessor
+from ampel.alert.AlertConsumer import AlertConsumer
 from ampel.alert.AmpelAlert import AmpelAlert
 from ampel.alert.filter.BasicMultiFilter import BasicMultiFilter
 from ampel.dev.UnitTestAlertSupplier import UnitTestAlertSupplier
 from ampel.metrics.AmpelMetricsRegistry import AmpelMetricsRegistry
-from ampel.model.AlertProcessorDirective import FilterModel
+from ampel.model.AlertConsumerDirective import FilterModel
 
 
 @contextmanager
@@ -29,7 +29,7 @@ def collect_diff(store):
 def test_no_filter(dev_context, legacy_directive):
     stats = {}
     with collect_diff(stats):
-        ap = AlertProcessor(
+        ap = AlertConsumer(
             context=dev_context,
             process_name="ap",
             directives=[legacy_directive],
@@ -79,7 +79,7 @@ def test_with_filter(dev_context, legacy_directive):
                 ]
             },
         )
-        ap = AlertProcessor(
+        ap = AlertConsumer(
             context=dev_context,
             process_name="ap",
             directives=[legacy_directive],

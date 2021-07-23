@@ -4,10 +4,12 @@ from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple, Union, 
 
 from pymongo import InsertOne, UpdateOne
 
+from ampel.types import ChannelId, StockId
+from ampel.struct.UnitResult import UnitResult
 from ampel.abstract.AbsStateT2Unit import AbsStateT2Unit
 from ampel.abstract.AbsStockT2Unit import AbsStockT2Unit
-from ampel.abstract.ingest.AbsAlertContentIngester import AbsAlertContentIngester
-from ampel.abstract.ingest.AbsCompoundIngester import AbsCompoundIngester
+from ampel.abstract.ingest.AbsAlertIngester import AbsAlertIngester
+from ampel.abstract.ingest.AbsT1Ingester import AbsT1Ingester
 from ampel.abstract.ingest.AbsStateT2Compiler import AbsStateT2Compiler
 from ampel.abstract.ingest.AbsStateT2Ingester import AbsStateT2Ingester
 from ampel.abstract.ingest.AbsT2Ingester import AbsT2Ingester
@@ -16,16 +18,15 @@ from ampel.content.T1Document import T1Document
 from ampel.content.DataPoint import DataPoint
 from ampel.content.StockDocument import StockDocument
 from ampel.content.T2Document import T2Document
-from ampel.compile.CompoundBluePrint import CompoundBluePrint
-from ampel.compile.T1DefaultCombiner import T1DefaultCombiner
+from ampel.ingest.T1Compiler import T1Compiler
+from ampel.t1.T1SimpleCombiner import T1SimpleCombiner
 from ampel.log.AmpelLogger import AmpelLogger
-from ampel.enum.T2DocumentCode import T2DocumentCode
-from ampel.type import ChannelId, StockId, T2UnitResult
+from ampel.enum.DocumentCode import DocumentCode
 
 if TYPE_CHECKING:
     from ampel.content.PhotoT1Document import PhotoT1Document
 
-class DummyAlertContentIngester(AbsAlertContentIngester[AmpelAlert, DataPoint]):
+class DummyAlertContentIngester(AbsAlertIngester[AmpelAlert, DataPoint]):
     alert_history_length = 1
 
     def ingest(self, alert: AmpelAlert) -> List[DataPoint]:
@@ -38,13 +39,13 @@ class DummyAlertContentIngester(AbsAlertContentIngester[AmpelAlert, DataPoint]):
         return dps
 
 
-class DummyCompoundIngester(AbsCompoundIngester):
-    """simplified PhotoCompoundIngester for testing"""
+class DummyCompoundIngester(AbsT1Ingester):
+    """simplified PhotoT1Ingester for testing"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.channels: Set[ChannelId] = set()
-        self.engine = T1DefaultCombiner(logger=AmpelLogger.get_logger(console=False))
+        self.engine = T1SimpleCombiner(logger=AmpelLogger.get_logger(console=False))
 
     def add_channel(self, channel: ChannelId) -> None:
         self.channels.add(channel)
@@ -54,7 +55,7 @@ class DummyCompoundIngester(AbsCompoundIngester):
         stock_id: StockId,
         datapoints: Sequence[DataPoint],
         chan_selection: List[Tuple[ChannelId, Union[bool, int]]],
-    ) -> Optional[CompoundBluePrint]:
+    ) -> Optional[T1Compiler]:
         chans = [k for k, v in chan_selection if k in self.channels]
 
         if not (blue_print := self.engine.combine(stock_id, datapoints, chans)):
@@ -79,7 +80,7 @@ class DummyCompoundIngester(AbsCompoundIngester):
             comp_set_on_ins: PhotoT1Document = {
                 "_id": eff_comp_id,
                 "stock": stock_id,
-                "tag": list(blue_print.get_comp_tags(eff_comp_id)),
+                "tag": list(blue_print.get_doc_tags(eff_comp_id)),
                 "tier": 0,
                 "added": time.time(),
                 "len": len(comp_dict),
@@ -97,7 +98,7 @@ class DummyCompoundIngester(AbsCompoundIngester):
         return blue_print
 
 
-class DummyExtendedCompoundIngester(AbsCompoundIngester):
+class DummyExtendedCompoundIngester(AbsT1Ingester):
     """
     Extended compound ingester creates compounds for datapoints that were not
     in the triggering alert.
@@ -122,7 +123,7 @@ class DummyExtendedCompoundIngester(AbsCompoundIngester):
         stock_id: StockId,
         datapoints: Sequence[DataPoint],
         chan_selection: List[Tuple[ChannelId, Union[bool, int]]],
-    ) -> Optional[CompoundBluePrint]:
+    ) -> Optional[T1Compiler]:
         if not (chans := [(k, v) for k, v in chan_selection if k in self.channels]):
             return None
 
@@ -143,7 +144,7 @@ class DummyStateT2Compiler(AbsStateT2Compiler):
     def compile(
         self,
         chan_selection: List[Tuple[ChannelId, Union[bool, int]]],
-        compound_blueprint: CompoundBluePrint,
+        compound_blueprint: T1Compiler,
     ) -> Dict[
         Tuple[str, Optional[int], Union[bytes, Tuple[bytes, ...]]], Set[ChannelId]
     ]:
@@ -164,12 +165,12 @@ class DummyStateT2Compiler(AbsStateT2Compiler):
 
 
 class DummyStateT2Ingester(AbsStateT2Ingester):
-    compiler: AbsStateT2Compiler[CompoundBluePrint] = DummyStateT2Compiler()
+    compiler: AbsStateT2Compiler[T1Compiler] = DummyStateT2Compiler()
 
     def ingest(
         self,
         stock_id: StockId,
-        comp_bp: CompoundBluePrint,
+        comp_bp: T1Compiler,
         chan_selection: List[Tuple[ChannelId, Union[bool, int]]],
     ) -> None:
         """
@@ -195,7 +196,7 @@ class DummyStateT2Ingester(AbsStateT2Ingester):
                 "stock": stock_id,
                 "unit": t2_id,
                 "config": run_config,
-                "code": T2DocumentCode.NEW.value,
+                "code": DocumentCode.NEW.value,
             }
 
             if self.tags:
@@ -223,10 +224,10 @@ class DummyStateT2Ingester(AbsStateT2Ingester):
 
 
 class DummyStateT2Unit(AbsStateT2Unit):
-    def run(self, compound: T1Document, datapoints: Iterable[DataPoint]) -> T2UnitResult:
+    def process(self, compound: T1Document, datapoints: Iterable[DataPoint]) -> Union[UBson, UnitResult]:
         return {"size": len(compound["body"])}
 
 
 class DummyStockT2Unit(AbsStockT2Unit):
-    def run(self, stock_doc: StockDocument) -> T2UnitResult:
+    def process(self, stock_doc: StockDocument) -> Union[UBson, UnitResult]:
         return {"name": stock_doc["name"]}

@@ -8,15 +8,14 @@
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 from typing import BinaryIO, Optional, Literal, Dict, Any, List, Union, Generator, Tuple, ClassVar, Sequence
-from ampel.type import ChannelId
+from ampel.types import ChannelId
 from ampel.abstract.AbsAlertRegister import AbsAlertRegister
 from ampel.util.register import find, reg_iter
 from ampel.log import VERBOSE
 
 
 class BaseAlertRegister(AbsAlertRegister, abstract=True):
-	# noqa: E101
-	""" 
+	"""
 
 	There are two possible setups:
 
@@ -61,7 +60,7 @@ class BaseAlertRegister(AbsAlertRegister, abstract=True):
 	run_id: int
 
 	#: save files in <path_channel_folder>/<channel>/<file>
-	path_channel_folder: bool = True 
+	path_channel_folder: bool = True
 	#: save file as <run_id|channel|string>.bin.gz
 	file_prefix: Union[str, Literal['$run_id', '$channel']] = '$channel'
 
@@ -71,11 +70,11 @@ class BaseAlertRegister(AbsAlertRegister, abstract=True):
 	#: Both parameters (runs and blocks) can be used together, the first criteria fulfilled will trigger a file rename.
 	#:
 	#: .. note::
-	#:   
+	#:
 	#:   File rename occurs during the opening of registers, which means that once a register is opened,
 	#:   no check is performed (a register can thus grow beyond the defined limits as long as a process keeps it open).
 	#: .. note::
-	#:   
+	#:
 	#:   The current file suffix number is encoded in the header. If the current suffix number is 10 and
 	#:   you move files to another folder, the next rename will create ampel_register.bin.gz.11 nonetheless.
 	file_cap: Optional[Dict[Literal['runs', 'blocks'], int]] # type: ignore[assignment]

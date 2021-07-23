@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# File              : Ampel-alerts/ampel/abstract/ingest/AbsAlertContentIngester.py
+# File              : Ampel-alerts/ampel/abstract/ingest/AbsAlertIngester.py
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 10.03.2020
@@ -8,16 +8,16 @@
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 from typing import Sequence, Generic, TypeVar
-from ampel.base import abstractmethod
+from ampel.base.decorator import abstractmethod
 from ampel.alert.AmpelAlert import AmpelAlert
 from ampel.content.DataPoint import DataPoint
-from ampel.abstract.ingest.AbsIngester import AbsIngester
+from ampel.abstract.AbsDocIngester import AbsDocIngester
 
 T = TypeVar("T", bound=AmpelAlert)
 V = TypeVar("V", bound=DataPoint)
 
 
-class AbsAlertContentIngester(Generic[T, V], AbsIngester, abstract=True):
+class AbsAlertIngester(Generic[T, V], AbsDocIngester[T], abstract=True):
 	"""
 	:param alert_history_length: alerts must not contain all available info for a given transient.
 	IPAC generated alerts for ZTF for example currently provide a photometric history of 30 days.

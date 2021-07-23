@@ -8,22 +8,23 @@
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 from typing import Optional, Union, Generic
-from ampel.type import T
-from ampel.base import abstractmethod, AmpelABC
-from ampel.base.DataUnit import DataUnit
+from ampel.types import T
+from ampel.base.AmpelABC import AmpelABC
+from ampel.base.decorator import abstractmethod
+from ampel.base.LogicalUnit import LogicalUnit
 
 
-class AbsAlertFilter(Generic[T], AmpelABC, DataUnit, abstract=True):
+class AbsAlertFilter(Generic[T], AmpelABC, LogicalUnit, abstract=True):
 	""" Base class for T0 alert filters """
 
 	@abstractmethod
-	def apply(self, alert: T) -> Optional[Union[bool, int]]:
+	def process(self, alert: T) -> Optional[Union[bool, int]]:
 		"""
 		Filters an alert.
 		
 		:return:
 			- None or False: reject the alert
 			- True: accept the alert and create all defined t2 documents
-			- positive integer: accept the alert and create t2 documents associated with this group id
-			- negative integer: filter rejection code (must not exceed 255)
+			- positive integer greater zero: accept the alert and create t2 documents associated with this group id
+			- negative integer: filter (own) rejection code (must not exceed 255)
 		"""

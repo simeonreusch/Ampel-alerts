@@ -39,13 +39,13 @@ class FilteringAlertSupplier(AbsAlertSupplier[T]):
 	def __init__(self, **kwargs) -> None:
 		super().__init__(**kwargs)
 		self.underlying_alert_supplier: AbsAlertSupplier[T] = AuxUnitRegister.new_unit(
-			unit_model = self.supplier, sub_type = AbsAlertSupplier
+			model = self.supplier, sub_type = AbsAlertSupplier
 		)
 
 
 	def __next__(self) -> T:
 		"""
-		:returns: a dict with a structure that AlertProcessor understands
+		:returns: a dict with a structure that AlertConsumer understands
 		:raises StopIteration: when alert_loader dries out.
 		:raises AttributeError: if alert_loader was not set properly before this method is called
 		"""

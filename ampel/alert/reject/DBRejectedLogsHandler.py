@@ -13,15 +13,15 @@ from typing import Dict, Any, List, Union, Optional
 from pymongo.errors import BulkWriteError
 from pymongo.operations import UpdateOne
 
-from ampel.type import ChannelId
+from ampel.types import ChannelId
 from ampel.log.AmpelLogger import AmpelLogger
 from ampel.log.LightLogRecord import LightLogRecord
 from ampel.log.AmpelLoggingError import AmpelLoggingError
 from ampel.log.LoggingErrorReporter import LoggingErrorReporter
-from ampel.core.AdminUnit import AdminUnit
+from ampel.core.ContextUnit import ContextUnit
 
 
-class DBRejectedLogsHandler(AdminUnit):
+class DBRejectedLogsHandler(ContextUnit):
 	"""
 	Saves rejected log events (by T0 filters) into the NoSQL database.
 	This class does not inherit logging.Handler but implements the method handle()

@@ -6,7 +6,7 @@
 <br><br>
 
 This add-on enables the processing of `alerts` by AMPEL.
-The central class of this repository, `ampel.alert.AlertProcessor`,
+The central class of this repository, `ampel.alert.AlertConsumer`,
 is capable of `loading`, `filtering`, `ingesting` these alerts.
 
 - The loading part involves system (or instrument) specific classes.
@@ -20,7 +20,7 @@ High-throughput systems, such as ZTF or LSST in astronomy, rely on such filters.
 </p>
 
 <p align="center">
-  The <i>AlertProcessor</i> operates on the first three tiers of AMPEL: T0, T1 and T2.
+  The <i>AlertConsumer</i> operates on the first three tiers of AMPEL: T0, T1 and T2.
 </p>
 
 
@@ -34,13 +34,13 @@ Actions break-down:
 
 - Load bytes (tar, network, ...)
 - Deserialize (avro, bson, json, ...)
-- First shape (instrument specific): morph into `AmpelAlert` or `PhotoAlert` Purpose: having a common format that the `AlertProcessor` and alert filters understand. A `PhotoAlert` typically contains two distinct flat sequences, one for photopoints and one for upperlimits. The associated object ID, such as the ZTF name, is converted into nummerical ampel IDs. This is necessary for all alerts (rejected one as well) since "autocomplete" is based on true Ampel IDs.
+- First shape (instrument specific): morph into `AmpelAlert` or `PhotoAlert` Purpose: having a common format that the `AlertConsumer` and alert filters understand. A `PhotoAlert` typically contains two distinct flat sequences, one for photopoints and one for upperlimits. The associated object ID, such as the ZTF name, is converted into nummerical ampel IDs. This is necessary for all alerts (rejected one as well) since "autocomplete" is based on true Ampel IDs.
 
 
 ## Filtering Alert 
 
 Filtering alerts is performed per channel by subclasses of `ampel.abstract.AbsAlertFilter`.
-An `AlertProcessor` instance can handle multiple filters.
+An `AlertConsumer` instance can handle multiple filters.
 Alert filters methods provided by user units are called by the class `FilterBlock`,
 that handles associated operations (what happens to rejected alerts ? what about auto-complete, etc...) 
 `FilterBlock` instances are themselves embedded in `FilterBlocksHandler`
@@ -54,7 +54,7 @@ Filters can return:
 
 If any channel accepts a given alert, DB updates need to occur.
 v0.7 brought many updates regarding how ingestion happens.
-Class: `ampel.alert.IngestionHandler`, `ampel.abstract.ingest.AbsIngester`
+Class: `ampel.alert.ChainedIngestionHandler`, `ampel.abstract.AbsDocIngester`
 
 More details later
 

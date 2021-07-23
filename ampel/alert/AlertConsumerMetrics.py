@@ -1,5 +1,5 @@
 """
-Common counters for AlertProcessor and worker classes
+Common counters for AlertConsumer and worker classes
 """
 
 from ampel.metrics.AmpelMetricsRegistry import AmpelMetricsRegistry

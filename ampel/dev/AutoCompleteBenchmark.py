@@ -12,7 +12,7 @@ from functools import wraps
 from pymongo import MongoClient
 from multiprocessing import Pool, Semaphore, shared_memory
 from typing import Any, Set, Dict, Sequence, Callable
-from ampel.type import ChannelId, StockId
+from ampel.types import ChannelId, StockId
 from ampel.core.AmpelContext import AmpelContext
 
 

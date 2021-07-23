@@ -4,15 +4,15 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 29.05.2020
-# Last Modified Date: 12.06.2020
+# Last Modified Date: 21.05.2021
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
-from typing import Sequence
-from ampel.core.AmpelContext import AmpelContext
+from typing import Sequence, Union
 from ampel.alert.FilterBlock import FilterBlock
-from ampel.alert.IngestionHandler import IngestionHandler
+from ampel.core.AmpelContext import AmpelContext
 from ampel.log.AmpelLogger import AmpelLogger
-from ampel.model.AlertProcessorDirective import AlertProcessorDirective
+from ampel.model.ingest.IngestDirective import IngestDirective
+from ampel.model.ingest.DualIngestDirective import DualIngestDirective
 
 
 class FilterBlocksHandler:
@@ -72,7 +72,7 @@ class FilterBlocksHandler:
 
 	def __init__(self,
 		context: AmpelContext, logger: AmpelLogger,
-		directives: Sequence[AlertProcessorDirective],
+		directives: Sequence[Union[IngestDirective, DualIngestDirective]],
 		process_name: str,
 		db_log_format: str = "standard"
 	) -> None:
@@ -86,15 +86,16 @@ class FilterBlocksHandler:
 		# Create FilterBlock instances (instantiates channel filter and loggers)
 		self.filter_blocks = [
 			FilterBlock(
+				i,
 				context,
 				channel = model.channel,
 				filter_model = model.filter,
-				stock_match = model.stock_match,
 				process_name = process_name,
 				logger = logger,
+				check_new = isinstance(model, DualIngestDirective),
 				embed = embed
 			)
-			for model in directives
+			for i, model in enumerate(directives)
 		]
 
 		# Robustness
@@ -136,9 +137,9 @@ class FilterBlocksHandler:
 		"""
 
 
-	def ready(self, logger: AmpelLogger, run_id: int, ing_hdlr: IngestionHandler) -> None:
+	def ready(self, logger: 'AmpelLogger', run_id: int) -> None:
 		for fb in self.filter_blocks:
-			fb.ready(logger, run_id, ing_hdlr)
+			fb.ready(logger, run_id)
 
 
 	def done(self) -> None:

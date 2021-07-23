@@ -9,29 +9,23 @@
 
 from typing import List, Optional, Union
 from io import BytesIO, StringIO
-from ampel.log.AmpelLogger import AmpelLogger
-from ampel.base.AmpelBaseModel import AmpelBaseModel
+from ampel.abstract.AbsAlertLoader import AbsAlertLoader
 
 
-class DirAlertLoader(AmpelBaseModel):
+class DirAlertLoader(AbsAlertLoader[Union[StringIO, BytesIO]]):
 	""" Load alerts from a (flat) directory. """
 
-	logger: AmpelLogger # actually optional
-	files: List[str] = []
+	folder: str
+	extension: str
+	binary_mode: bool = True
 	min_index: Optional[int] = None
 	max_index: Optional[int] = None
 	max_entries: Optional[int] = None
-	folder = "/Users/hu/Documents/ZTF/IPAC-ZTF/ztf/src/pl/avroalerts/testprod"
-	extension = "*.avro"
-	binary_mode: bool = True
 
 
 	def __init__(self, **kwargs) -> None:
-
-		if kwargs.get('logger') is None:
-			kwargs['logger'] = AmpelLogger.get_logger()
-
 		super().__init__(**kwargs)
+		self.files: List[str] = []
 		self.open_mode = "rb" if self.binary_mode else "r"
 
 
@@ -91,10 +85,6 @@ class DirAlertLoader(AmpelBaseModel):
 			self.files = all_files
 
 		self.logger.debug(f"File list contains {len(self.files)} elements")
-
-
-	def __iter__(self):
-		return self
 
 
 	def __next__(self) -> Union[StringIO, BytesIO]:

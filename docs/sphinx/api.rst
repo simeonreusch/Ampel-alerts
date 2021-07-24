@@ -13,23 +13,23 @@ Base classes
 Alert ingestion
 ---------------
 
-.. autoclass:: ampel.alert.AlertProcessor.AlertProcessor
+.. autoclass:: ampel.alert.AlertConsumer.AlertConsumer
   :members:
   :exclude-members: sig_exit, set_cancel_run
   :show-inheritance:
 
-.. autoclass:: ampel.model.AlertProcessorDirective.AlertProcessorDirective
+.. autoclass:: ampel.model.AlertConsumerDirective.AlertConsumerDirective
   :members:
   :show-inheritance:
 
-.. autoclass:: ampel.model.AlertProcessorDirective.FilterModel
+.. autoclass:: ampel.model.AlertConsumerDirective.FilterModel
   :members:
   :show-inheritance:
 
 .. autoclass:: ampel.alert.FilterBlocksHandler.FilterBlocksHandler
   :members:
 
-.. autoclass:: ampel.alert.IngestionHandler.IngestionHandler
+.. autoclass:: ampel.alert.ChainedIngestionHandler.ChainedIngestionHandler
   :members:
 
 Alert loading

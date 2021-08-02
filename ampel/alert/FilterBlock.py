@@ -4,16 +4,14 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 03.05.2018
-# Last Modified Date: 11.06.2020
+# Last Modified Date: 21.05.2021
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 from logging import LogRecord
-from typing import Any, Union, Optional, Tuple, Dict, Callable, cast
-from ampel.type import ChannelId
-from ampel.alert.AmpelAlert import AmpelAlert
-from ampel.alert.IngestionHandler import IngestionHandler
+from typing import Any, Union, Optional, Callable, Tuple, cast
+from ampel.types import ChannelId
 from ampel.core.AmpelContext import AmpelContext
-from ampel.model.AlertProcessorDirective import FilterModel
+from ampel.model.ingest.FilterModel import FilterModel
 from ampel.log.AmpelLogger import AmpelLogger, INFO
 from ampel.log.handlers.EnclosedChanRecordBufHandler import EnclosedChanRecordBufHandler
 from ampel.log.handlers.ChanRecordBufHandler import ChanRecordBufHandler
@@ -22,21 +20,16 @@ from ampel.log.LogFlag import LogFlag
 from ampel.protocol.LoggingHandlerProtocol import LoggingHandlerProtocol
 from ampel.abstract.AbsAlertFilter import AbsAlertFilter
 from ampel.abstract.AbsAlertRegister import AbsAlertRegister
-from ampel.model.AutoStockMatchModel import AutoStockMatchModel
-from ampel.alert.AlertProcessorMetrics import (
-	stat_accepted,
-	stat_rejected,
-	stat_autocomplete,
-	stat_time,
-)
+from ampel.alert.AmpelAlert import AmpelAlert
+from ampel.alert.AlertConsumerMetrics import stat_accepted, stat_rejected, stat_autocomplete, stat_time
+
 
 def no_filter(alert: Any) -> bool:
 	return True
 
-
 class FilterBlock:
 	"""
-	Helper class for AlertProcessor.
+	Helper class for AlertConsumer.
 	Among other things, it instantiates and references loggers and T0 filters.
 	Note: T0 filter units get a dedicated logger which is associated with a
 	RecordBufferingHandler instance because we route the produced logs either to the standard logger
@@ -44,25 +37,36 @@ class FilterBlock:
 	"""
 
 	__slots__ = '__dict__', 'logger', 'channel', 'context', \
-		'retro_complete', 'chan_str', \
-		'min_log_msg', 'filter_func', 'ac', 'overrule', \
+		'chan_str', 'min_log_msg', 'filter_func', 'ac', 'overrule', \
 		'bypass', 'update_rej', 'rej_log_handler', 'rej_log_handle', \
 		'file', 'log', 'forward', 'buffer', 'buf_hdlr', 'stock_ids'
 
 
 	def __init__(self,
+		index: int,
 		context: AmpelContext,
 		channel: ChannelId,
 		filter_model: Optional[FilterModel],
-		stock_match: Optional[AutoStockMatchModel],
 		process_name: str,
 		logger: AmpelLogger,
+		check_new: bool = False,
 		embed: bool = False
 	) -> None:
+		"""
+		:param index: index of the parent AlertConsumerDirective used for creating this FilterBlock
+		:param check_new: check whether a stock already exists in the stock collection
+		(first tuple member of method filter (directive index) will be negative then)
+		:param in_stock: whished behaviors when a stock with a given id (from the alert)
+		already exists in the stock collection.
+		:param process_name: associated T0 process name (as defined in the ampel conf)
+		:param embed: use compact logging (channel embedded in messages).
+		Produces fewer (and bigger) log documents.
+		"""
 
 		self._stock_col = context.db.get_collection('stock')
 		self.filter_model = filter_model
 		self.context = context
+		self.idx = index
 
 		# Channel name (ex: HU_SN or 1)
 		self.channel = channel
@@ -74,25 +78,23 @@ class FilterBlock:
 		self._stat_autocomplete = stat_autocomplete.labels(self.chan_str)
 		self._stat_time = stat_time.labels(f"filter.{self.chan_str}")
 
-		self.ac = False
-		self.retro_complete = False
+		self.check_new = check_new
+		self.rej = self.idx, False
+		self.stock_ids = set()
 
 		if filter_model:
 
 			# Minimal log entry in case filter does not log anything
-			self.min_log_msg: Optional[Dict[str, ChannelId]] = {'c': self.channel} if embed else None
-			self.overrule = False
-			self.bypass = False
-			self.update_rej = True
+			self.min_log_msg = {'c': self.channel} if embed else None
 
 			# Instantiate/get filter class associated with this channel
-			logger.info(f"Loading filter: {filter_model.unit_name}")
+			logger.info(f"Loading filter: {filter_model.unit}", extra={'c': self.channel})
 
 			self.buf_hdlr = EnclosedChanRecordBufHandler(logger.level, self.channel) if embed \
 				else ChanRecordBufHandler(logger.level, self.channel)
 
-			self.unit_instance = context.loader.new_base_unit(
-				unit_model = filter_model,
+			self.unit_instance = context.loader.new_logical_unit(
+				model = filter_model,
 				sub_type = AbsAlertFilter,
 				logger = AmpelLogger.get_logger(
 					name = "buf_" + self.chan_str,
@@ -102,165 +104,142 @@ class FilterBlock:
 				)
 			)
 
-			# Clear possibly existing log entries
-			# (logged by filter post_init method)
-			self.buf_hdlr.buffer = []
+			# Log entries potentially logged by filter post_init method
+			if self.buf_hdlr.buffer:
+				self.buf_hdlr.forward(logger)
+				self.buf_hdlr.buffer = []
+
 			self.forward = self.buf_hdlr.forward # type: ignore
 			self.buffer = self.buf_hdlr.buffer
 
-			self.filter_func = self.unit_instance.apply
+			self.filter_func = self.unit_instance.process
 
-			if stock_match:
-				if stock_match.filter == 'overrule':
-					self.overrule = True
-				elif stock_match.filter == 'bypass':
-					self.bypass = True
-
-				self.retro_complete = stock_match.retro_complete
-				self.update_rej = stock_match.update_rej
-
-			self.ac = self.bypass or self.overrule
+			if osm := filter_model.on_stock_match:
+				self.overrule = self.idx, osm in ['overrule', 'silent_overrule']
+				self.bypass = self.idx, osm == 'bypass'
+				self.update_rej = osm == 'overrule'
+			else:
+				self.overrule = self.idx, False
+				self.bypass = self.idx, False
+				self.update_rej = True
 
 			self.rej_log_handle: Optional[Callable[[Union[LightLogRecord, LogRecord]], None]] = None
 			self.rej_log_handler: Optional[LoggingHandlerProtocol] = None
 			self.file: Optional[Callable[[AmpelAlert, Optional[int]], None]] = None
 			self.register: Optional[AbsAlertRegister] = None
-
 		else:
-
 			self.filter_func = no_filter
+			self.bypass = self.idx, False
+			self.overrule = self.idx, False
 
 
-	def filter(self, alert: AmpelAlert) -> Optional[Tuple[ChannelId, Union[int, bool]]]:
+	def filter(self, alert: AmpelAlert) -> Tuple[int, Union[int, bool, None]]:
+
 		with self._stat_time.time():
-			return self._filter(alert)
 
+			if self.bypass[1] and alert.stock_id in self.stock_ids: # type: ignore[operator]
+				return self.bypass
 
-	def _filter(self, alert: AmpelAlert) -> Optional[Tuple[ChannelId, Union[int, bool]]]:
+			# Apply filter (returns None/False in case of rejection or True/int in case of match)
+			res = self.filter_func(alert)
 
-		stock_id = alert.stock_id
+			# Filter accepted alert
+			if res and res > 0:
 
-		if self.bypass and stock_id in self.stock_ids:
-			return self.channel, True
+				self._stat_accepted.inc()
 
-		# Apply filter (returns None/False in case of rejection or True/int in case of match)
-		res = self.filter_func(alert)
+				# Write log entries to main logger
+				# (note: log records already contain chan info)
+				if self.buffer:
+					self.forward(self.logger, stock=alert.stock_id, extra={'a': alert.id})
 
-		# Filter accepted alert
-		if res is not None and res > 0:
-
-			self._stat_accepted.inc()
-
-			# Write log entries to main logger
-			# (note: log records already contain chan info)
-			if self.buffer:
-				self.forward(self.logger, stock=stock_id, extra={'alert': alert.id})
-
-			# Log minimal entry if channel did not log anything
-			else:
-				if self.min_log_msg: # embed is True
-					if isinstance(res, bool):
-						self.log(
-							INFO,
-							self.min_log_msg,
-							extra={'a': alert.id, 'stock': stock_id}
-						)
-					else:
-						self.log(
-							INFO,
-							{'c': self.channel, 'g': res},
-							extra={'a': alert.id, 'stock': stock_id}
-						)
+				# Log minimal entry if channel did not log anything
 				else:
-					self.log(
-						INFO,
-						None,
-						extra={
-							'a': alert.id,
-							'stock': stock_id,
-							'channel': self.channel
-						}
-					)
+					extra = {'a': alert.id, 's': alert.stock_id}
+					if self.min_log_msg: # embed is True
+						self.log(INFO, self.min_log_msg if isinstance(res, bool) \
+							else {'c': self.channel, 'g': res}, extra=extra)
+					else:
+						extra['c'] = self.channel
+						self.log(INFO, None, extra=extra)
 
-			# self.ac contains all "kinds" of auto-complete
-			if self.ac:
-				if alert.is_new(): # Just update stock ids for new alerts
-					self.stock_ids.add(stock_id)
-				elif stock_id not in self.stock_ids:
-					self.stock_ids.add(stock_id)
-					# "accept" ac requires backward/retro processing of
-					# alert content (see further below in the ingestion part)
-					if self.retro_complete:
-						self.ih.retro_complete.append(self.channel)
+				# stock_id 'exists' if filter bypass/overrule(s) or check_new is requested
+				if self.stock_ids:
+					if alert.stock_id in self.stock_ids:
+						if self.check_new:
+							return -self.idx, res
+					else:
+						self.stock_ids.add(alert.stock_id)
 
-			return self.channel, res
+				return self.idx, res
 
-		# Filter rejected alert
-		else:
+			# Filter rejected alert
+			else:
 
-			self._stat_rejected.inc()
+				self._stat_rejected.inc()
 
-			# "live" autocomplete requested for this channel
-			if self.overrule and stock_id in self.stock_ids:
+				# 'overrule' or 'silent_overrule' requested for this filter
+				if self.overrule and alert.stock_id in self.stock_ids:
 
-				extra_ac = {'a': alert.id, 'ac': True, 'stock': stock_id, 'channel': self.channel}
+					extra_ac = {'a': alert.id, 'ac': True, 's': alert.stock_id, 'c': self.channel}
 
-				# Main logger feedback
-				self.log(INFO, None, extra=extra_ac)
+					# Main logger feedback
+					self.log(INFO, None, extra=extra_ac)
 
-				# Update count
-				self._stat_autocomplete.inc()
+					# Update count
+					self._stat_autocomplete.inc()
 
-				# Rejected alerts notifications can go to rejected log collection
-				# even though it was "auto-completed" because it
-				# was actually rejected by the filter/channel
-				if self.update_rej:
+					# Rejected alerts notifications can go to rejected log collection
+					# even though it was "auto-completed" because it
+					# was actually rejected by the filter/channel
+					if self.update_rej:
+
+						if self.buffer:
+							if self.rej_log_handle:
+								# Clears the buffer
+								self.forward(self.rej_log_handler, stock=alert.stock_id, extra=extra_ac)
+							else:
+								self.buffer.clear()
+
+						# Log minimal entry if channel did not log anything
+						else:
+							if self.rej_log_handle:
+								lrec = LightLogRecord(0, 0, None)
+								lrec.stock = alert.stock_id
+								lrec.extra = extra_ac
+								self.rej_log_handle(lrec)
+
+						if self.file:
+							self.file(alert, res)
+
+					# Use default t2 units (no group) as filter results
+					return self.overrule
+
+				else:
 
 					if self.buffer:
-						if self.rej_log_handle:
-							# Clears the buffer
-							self.forward(self.rej_log_handler, stock=stock_id, extra=extra_ac)
-						else:
-							self.buffer.clear()
 
-					# Log minimal entry if channel did not log anything
-					else:
-						if self.rej_log_handle:
-							lrec = LightLogRecord(0, 0, None)
-							lrec.stock = stock_id
-							lrec.extra = extra_ac
-							self.rej_log_handle(lrec)
+						# Save possibly existing error to 'main' logs
+						if self.buf_hdlr.has_error:
+							self.forward(
+								self.logger, stock=alert.stock_id, extra={'a': alert.id},
+								clear=not self.rej_log_handler
+							)
+
+						if self.rej_log_handler:
+							# Send rejected logs to dedicated separate logger/handler
+							self.forward(self.rej_log_handler, stock=alert.stock_id, extra={'a': alert.id})
 
 					if self.file:
 						self.file(alert, res)
 
-				# Use default t2 units as filter results
-				return self.channel, True
-
-			else:
-
-				if self.buffer:
-
-					# Save possibly existing error to 'main' logs
-					if self.buf_hdlr.has_error:
-						self.forward(
-							self.logger, stock=stock_id, extra={'alert': alert.id},
-							clear=not self.rej_log_handler
-						)
-
-					if self.rej_log_handler:
-						# Send rejected logs to dedicated separate logger/handler
-						self.forward(self.rej_log_handler, stock=stock_id, extra={'alert': alert.id})
-
-				if self.file:
-					self.file(alert, res)
-
-				return None
+					# return rejection result
+					return self.rej
 
 
-	def ready(self, logger: AmpelLogger, run_id: int, ingestion_handler: IngestionHandler) -> None:
+	def ready(self, logger: AmpelLogger, run_id: int) -> None:
 		"""
-		Dependending on the channel settings, this method might:
+		Dependending on channel settings, this method might:
 		- Builds set of transient ids for "auto complete"
 		- open an alert register for rejected alerts.
 		- instantiate a logging handler for rejected logs
@@ -269,17 +248,12 @@ class FilterBlock:
 		self.logger = logger
 		self.log = logger.log
 
-		if self.retro_complete:
-			self.ih = ingestion_handler
-
-		#if self.auto_accept or self.retro_complete:
-		if self.ac:
+		if self.bypass[1] or self.overrule[1] or self.check_new:
 
 			# Build set of transient ids for this channel
 			self.stock_ids = {
-				el['_id'] for el in self._stock_col.find(
-					{'channel': self.channel},
-					{'_id': 1}
+				el['stock'] for el in self._stock_col.find(
+					{'channel': self.channel}, {'stock': 1}
 				)
 			}
 
@@ -290,8 +264,8 @@ class FilterBlock:
 				# DBRejectedLogsHandler for example
 				self.rej_log_handler = cast(
 					LoggingHandlerProtocol,
-					self.context.loader.new_admin_unit(
-						unit_model = self.filter_model.reject['log'],
+					self.context.loader.new_context_unit(
+						model = self.filter_model.reject['log'],
 						context = self.context,
 						channel = self.channel,
 						logger = logger
@@ -309,8 +283,8 @@ class FilterBlock:
 
 			if 'register' in self.filter_model.reject:
 
-				self.register = self.context.loader.new_admin_unit(
-					unit_model = self.filter_model.reject['register'],
+				self.register = self.context.loader.new_context_unit(
+					model = self.filter_model.reject['register'],
 					context = self.context,
 					sub_type = AbsAlertRegister,
 					logger = logger,
@@ -322,8 +296,6 @@ class FilterBlock:
 
 
 	def done(self) -> None:
-
-		self.ih = None # type: ignore[assignment]
 
 		if self.filter_model and self.filter_model.reject:
 

@@ -1,45 +1,43 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# File              : Ampel-alerts/ampel/alert/AlertProcessor.py
+# File              : Ampel-alerts/ampel/alert/AlertConsumer.py
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 10.10.2017
-# Last Modified Date: 15.03.2021
+# Last Modified Date: 18.05.2021
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 import signal
-from io import IOBase
+from typing import List, Any, Tuple, Generic, Sequence, Union, Optional
 from pymongo.errors import PyMongoError
-from typing import Sequence, List, Dict, Union, Any, Iterable, Tuple, Optional, Generic
 
-from ampel.type import ChannelId
 from ampel.core.AmpelContext import AmpelContext
-from ampel.base.AuxUnitRegister import AuxUnitRegister
 from ampel.util.mappings import merge_dict
 from ampel.util.freeze import recursive_unfreeze
-from ampel.mongo.update.DBUpdatesBuffer import DBUpdatesBuffer
-from ampel.alert.FilterBlocksHandler import FilterBlocksHandler
-from ampel.alert.IngestionHandler import IngestionHandler
-
-from ampel.abstract.AbsProcessorUnit import AbsProcessorUnit
-from ampel.abstract.AbsAlertSupplier import AbsAlertSupplier, T
-
-from ampel.log import AmpelLogger, LogFlag, VERBOSE
+from ampel.model.UnitModel import UnitModel
 from ampel.core.EventHandler import EventHandler
+from ampel.dev.DevAmpelContext import DevAmpelContext
+from ampel.abstract.AbsAlertSupplier import AbsAlertSupplier, T
+from ampel.abstract.AbsEventUnit import AbsEventUnit
+from ampel.base.AuxUnitRegister import AuxUnitRegister
+from ampel.alert.FilterBlocksHandler import FilterBlocksHandler
+from ampel.ingest.ChainedIngestionHandler import ChainedIngestionHandler
+from ampel.mongo.update.DBUpdatesBuffer import DBUpdatesBuffer
+from ampel.log import AmpelLogger, LogFlag, VERBOSE
 from ampel.log.utils import report_exception
 from ampel.log.AmpelLoggingError import AmpelLoggingError
 from ampel.log.LightLogRecord import LightLogRecord
-
-from ampel.model.UnitModel import UnitModel
-from ampel.base.AmpelBaseModel import AmpelBaseModel
-from ampel.model.AlertProcessorDirective import AlertProcessorDirective
-from ampel.alert.AlertProcessorMetrics import stat_alerts, stat_accepted
+from ampel.alert.AlertConsumerMetrics import stat_alerts, stat_accepted
+from ampel.model.ingest.IngestDirective import IngestDirective
+from ampel.model.ingest.DualIngestDirective import DualIngestDirective
+from ampel.model.ingest.CompilerOptions import CompilerOptions
 
 CONNECTIVITY = 1
 INTERRUPTED = 2
 TOO_MANY_ERRORS = 3
 
-class AlertProcessor(Generic[T], AbsProcessorUnit):
+
+class AlertConsumer(Generic[T], AbsEventUnit):
 	"""
 	Class handling the processing of alerts (T0 level).
 	For each alert, following tasks are performed:
@@ -47,10 +45,6 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 	* Load the alert
 	* Filter alert based on the configured T0 filter
 	* Ingest alert based on the configured ingester
-
-	Potential update: maybe allow an alternative way of initialization for this class
-	through direct input of (possibly customized, that is the point) FilterBlocksHandler and
-	IngestionHandler instances rather than through (deserialized) directives.
 	"""
 
 	# General options
@@ -60,35 +54,38 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 	#: Maximum number of exceptions to catch before cancelling :func:`run`
 	error_max: int = 20
 
+	#: Mandatory T0 unit
+	shaper: UnitModel
+
 	#: Mandatory alert processor directives. This parameter will
 	#: determines how the underlying :class:`~ampel.alert.FilterBlocksHandler.FilterBlocksHandler`
-	#: and :class:`~ampel.alert.IngestionHandler.IngestionHandler` instances are set up.
-	directives: Sequence[AlertProcessorDirective]
+	#: and :class:`~ampel.alert.ChainedIngestionHandler.ChainedIngestionHandler` instances are set up.
+	directives: Sequence[Union[IngestDirective, DualIngestDirective]]
 
 	#: How to store log record in the database (see :class:`~ampel.alert.FilterBlocksHandler.FilterBlocksHandler`)
 	db_log_format: str = "standard"
 
-	#: Store alert rejection records in a single collection rather than per-channel
-	single_rej_col: bool = False
-
-	#: Unit to use to load alerts
-	loader: Optional[Union[UnitModel, AmpelBaseModel]]
-
 	#: Unit to use to supply alerts (str is just a shortcut for a configless UnitModel(unit=str))
-	supplier: Optional[Union[UnitModel, str, AbsAlertSupplier]]
+	supplier: UnitModel
+
+	compiler_opts: Optional[CompilerOptions]
+
+	database: str = "mongo"
 
 	#: Flag to use for log records with a level between INFO and WARN
 	shout: int = LogFlag.SHOUT
 
+	updates_buffer_size: int = 500
+
 
 	@classmethod
-	def from_process(cls, context: AmpelContext, process_name: str, override: Optional[Dict] = None):
+	def from_process(cls, context: AmpelContext, process_name: str, override: Optional[dict] = None):
 		"""
-		Convenience method instantiating an AlertProcessor using the config entry from a given T0 process.
+		Convenience method instantiating an AlertConsumer using the config entry from a given T0 process.
 		
 		Example::
 		    
-		  AlertProcessor.from_process(
+		  AlertConsumer.from_process(
 		      context, process_name="VAL_TEST2/T0/ztf_uw_public", override={'iter_max': 100}
 		  )
 		"""
@@ -112,80 +109,62 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 			associated with an unknown channel
 		"""
 
+		if kwargs.get("context") is None:
+			raise ValueError("An ampel context is required")
+
 		if isinstance(kwargs['directives'], dict):
-			kwargs['directives'] = (kwargs['directives'], )
+			kwargs['directives'] = [kwargs['directives']]
+
+		#: Allow str (shortcut for a configless UnitModel(unit=str)) for convenience
+		for el in ('shaper', 'supplier'):
+			if el in kwargs and isinstance(kwargs[el], str):
+				kwargs[el] = {"unit": kwargs[el]}
+
+		# Allow loading compiler opts via aux unit for convenience
+		if isinstance(copts := kwargs.get('compiler_opts'), str):
+			kwargs['compiler_opts'] = AuxUnitRegister.new_unit(
+				model=UnitModel(unit=copts)
+			)
+
+		logger = AmpelLogger.get_logger(
+			console=kwargs['context'].config.get(
+				f"logging.{self.log_profile}.console", dict
+			)
+		)
+
+		if isinstance(kwargs['context'], DevAmpelContext):
+
+			kwargs['directives'] = [
+				kwargs['context'].hash_ingest_directive(el, logger=logger)
+				for el in kwargs['directives']
+			]
+
+			if "debug" in self.log_profile:
+				from ampel.util.pretty import prettyjson
+				logger.info("Auto-hashed ingestive directive(s):")
+				for el in kwargs['directives']:
+					print(prettyjson(el))
 
 		super().__init__(**kwargs)
 
 		self._ampel_db = self.context.get_database()
-		logger = AmpelLogger.get_logger(
-			console=self.context.config.get(f"logging.{self.log_profile}.console", dict)
+		self.alert_supplier = AuxUnitRegister.new_unit(
+			model = self.supplier,
+			sub_type = AbsAlertSupplier
 		)
-		verbose = AmpelLogger.has_verbose_console(self.context, self.log_profile)
 
-		if self.supplier:
-			# Already instantiated object was supplied
-			if isinstance(self.supplier, AbsAlertSupplier):
-				self.alert_supplier: AbsAlertSupplier[T] = self.supplier
-			else:
-				if isinstance(self.supplier, str):
-					self.supplier = UnitModel(unit=self.supplier)
-				self.alert_supplier = AuxUnitRegister.new_unit(
-					unit_model = self.supplier, sub_type = AbsAlertSupplier
-				)
-		else:
-			self.alert_supplier = None # type: ignore[assignment]
-
-		if self.loader:
-
-			if self.supplier is None:
-				raise ValueError("Alert supplier must be set when specifying alert loader")
-
-			self.alert_supplier.set_alert_source(
-				self.loader if isinstance(self.loader, AmpelBaseModel) else \
-					AuxUnitRegister.new_unit(unit_model = self.loader) # type: ignore
-			)
-
-		if verbose:
-			logger.log(VERBOSE, "AlertProcessor setup")
+		if AmpelLogger.has_verbose_console(self.context, self.log_profile):
+			logger.log(VERBOSE, "AlertConsumer setup")
 
 		# Load filter blocks
 		self._fbh = FilterBlocksHandler(
 			self.context, logger, self.directives, self.process_name, self.db_log_format
 		)
 
-		if verbose:
-
-			gather_t2_units = lambda node: [el.unit for el in node.t2_compute.units] \
-				if node.t2_compute else []
-
-			for model in self.directives:
-
-				t2_units = []
-
-				if model.t0_add:
-
-					if model.t0_add.t1_combine:
-						for el in model.t0_add.t1_combine:
-							if el.t2_compute:
-								t2_units += gather_t2_units(el)
-
-					if model.t0_add.t2_compute:
-						t2_units += gather_t2_units(model.t0_add)
-
-				if model.t1_combine:
-					for el in model.t1_combine:
-						t2_units += gather_t2_units(el)
-
-				if model.t2_compute:
-					t2_units += gather_t2_units(model)
-
-				logger.log(VERBOSE, f"{model.channel} combined on match t2 units: {t2_units}")
-
 		signal.signal(signal.SIGTERM, self.sig_exit)
 		signal.signal(signal.SIGINT, self.sig_exit)
 
-		logger.info("AlertProcessor setup completed")
+		logger.info("AlertConsumer setup completed")
 
 
 	def sig_exit(self, signum: int, frame) -> None:
@@ -193,43 +172,10 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 		self._cancel_run = INTERRUPTED
 
 
-	def set_iter_max(self, iter_max: int) -> 'AlertProcessor':
-		self.iter_max = iter_max
-		return self
-
-
-	def set_supplier(self, alert_supplier: AbsAlertSupplier[T]) -> 'AlertProcessor':
+	def process_alerts(self) -> None:
 		"""
-		Set a custom :class:`AlertSupplier <ampel.abstract.AbsAlertSupplier.AbsAlertSupplier>`.
+		Convenience method to process all alerts from a given loader until it dries out
 		"""
-		self.alert_supplier = alert_supplier
-		return self
-
-
-	def set_loader(self, alert_loader: Iterable) -> 'AlertProcessor':
-		"""
-		Set the source of the current alert supplier. Alert loaders typically
-		provide file-like objects.
-
-		:raises ValueError: if :attr:`alert_supplier` is None
-		"""
-		if not self.alert_supplier:
-			raise ValueError("Please set alert supplier first")
-		self.alert_supplier.set_alert_source(alert_loader)
-
-		return self
-
-
-	def process_alerts(self, alert_loader: Iterable[IOBase]) -> None:
-		"""
-		Convenience method to process all alerts from a given loader until its dries out
-
-		:param alert_loader: iterable returning alert payloads
-		:raises ValueError: if self.alert_supplier is None
-		"""
-		if not self.alert_supplier:
-			raise ValueError("Please set alert supplier first")
-		self.alert_supplier.set_alert_source(alert_loader)
 		processed_alerts = self.iter_max
 		while processed_alerts == self.iter_max:
 			processed_alerts = self.run()
@@ -239,7 +185,7 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 
 	def run(self) -> int:
 		"""
-		Run alert processing using the internal alert_loader/alert_supplier
+		Process alerts using internal alert_loader/alert_supplier
 
 		:returns: Number of alerts processed
 		:raises: LogFlushingError, PyMongoError
@@ -253,11 +199,6 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 			"accepted": stat_accepted.labels("any"),
 		}
 
-		# An AlertSupplier deserializes file-like objects provided by the AlertLoader
-		# and returns an AmpelAlert/PhotoAlert
-		if not self.alert_supplier or not self.alert_supplier.ready():
-			raise ValueError("Alert supplier not set or not sourced")
-
 		run_id = self.context.new_run_id()
 
 		# Setup logging
@@ -267,6 +208,8 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 			self.context, self.log_profile, run_id,
 			base_flag = LogFlag.T0 | LogFlag.CORE | self.base_log_flag
 		)
+
+		self.alert_supplier.set_logger(logger)
 
 		if logger.verbose:
 			logger.log(VERBOSE, "Pre-run setup")
@@ -285,7 +228,8 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 		updates_buffer = DBUpdatesBuffer(
 			self._ampel_db, run_id, logger,
 			error_callback = self.set_cancel_run,
-			catch_signals = False # we do it ourself
+			catch_signals = False, # we do it ourself
+			max_size = self.updates_buffer_size
 		)
 
 		any_filter = any([fb.filter_model for fb in self._fbh.filter_blocks])
@@ -297,12 +241,18 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 			]
 
 		# Setup ingesters
-		ing_hdlr = IngestionHandler(
-			self.context, self.directives, updates_buffer, logger, run_id
+		ing_hdlr = ChainedIngestionHandler(
+			self.context, self.shaper, self.directives, updates_buffer,
+			run_id, tier = 0, logger = logger, database = self.database,
+			trace_id = {'alertconsumer': self._trace_id},
+			compiler_opts = self.compiler_opts or CompilerOptions()
 		)
 
 		# Loop variables
 		iter_max = self.iter_max
+		if self.iter_max != self.__class__.iter_max:
+			logger.info(f"Using custom iter_max: {self.iter_max}")
+
 		iter_count = 0
 		err = 0
 
@@ -312,12 +262,12 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 		fblocks = self._fbh.filter_blocks
 
 		if any_filter:
-			filter_results: List[Tuple[ChannelId, Union[bool, int]]] = []
+			filter_results: List[Tuple[int, Union[bool, int]]] = []
 		else:
-			filter_results = [(fb.channel, True) for fb in self._fbh.filter_blocks]
+			filter_results = [(i, True) for i, fb in enumerate(fblocks)]
 
 		# Builds set of stock ids for autocomplete, if needed
-		self._fbh.ready(logger, run_id, ing_hdlr)
+		self._fbh.ready(logger, run_id)
 
 		self._cancel_run = 0
 
@@ -347,7 +297,6 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 
 				# Associate upcoming log entries with the current transient id
 				stock_id = alert.stock_id
-				extra: Dict[str, Any] = {'alert': alert.id}
 
 				if any_filter:
 
@@ -357,21 +306,23 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 					for fblock in fblocks:
 						try:
 							# Apply filter (returns None/False in case of rejection or True/int in case of match)
-							if res := fblock.filter(alert):
-								filter_results.append(res)
+							res = fblock.filter(alert)
+							if res[1]:
+								filter_results.append(res) # type: ignore[arg-type]
 
 						# Unrecoverable (logging related) errors
 						except (PyMongoError, AmpelLoggingError) as e:
 							print("%s: abording run() procedure" % e.__class__.__name__)
-							self._report_ap_error(e, logger, run_id, extra=extra)
+							self._report_ap_error(e, logger, run_id, extra={'a': alert.id})
 							raise e
 
 						# Possibly tolerable errors (could be an error from a contributed filter)
 						except Exception as e:
 
-							fblock.forward(db_logging_handler, stock=stock_id, extra=extra)
+							fblock.forward(db_logging_handler, stock=stock_id, extra={'a': alert.id})
 							self._report_ap_error(
-								e, logger, run_id, extra={**extra, 'section': 'filter', 'channel': fblock.channel}
+								e, logger, run_id,
+								extra={'a': alert.id, 'section': 'filter', 'c': fblock.channel}
 							)
 
 							if self.raise_exc:
@@ -392,28 +343,28 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 					stats["accepted"].inc()
 
 					try:
-						ing_hdlr.ingest(alert, filter_results)
+						ing_hdlr.ingest(alert.dps, filter_results, stock_id, {'alert': alert.id})
 					except (PyMongoError, AmpelLoggingError) as e:
-
 						print("%s: abording run() procedure" % e.__class__.__name__)
-						self._report_ap_error(e, logger, run_id, extra=extra)
+						self._report_ap_error(e, logger, run_id, extra={'a': alert.id})
 						raise e
 
 					except Exception as e:
 
 						self._report_ap_error(
 							e, logger, run_id, filter_results,
-							extra={**extra, 'section': 'ingest', 'alert': alert.dict()}
+							extra={'a': alert.id, 'section': 'ingest'}
 						)
 
 						if self.raise_exc:
 							raise e
-						else:
-							if self.error_max:
-								err += 1
-							if err == self.error_max:
-								logger.error("Max number of error reached, breaking alert processing")
-								self.set_cancel_run(TOO_MANY_ERRORS)
+
+						if self.error_max:
+							err += 1
+
+						if err == self.error_max:
+							logger.error("Max number of error reached, breaking alert processing")
+							self.set_cancel_run(TOO_MANY_ERRORS)
 
 				else:
 
@@ -425,16 +376,10 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 					# by the StreamHandler in channel specific RecordBufferingHandler instances.
 					# So we address directly db_logging_handler, and for that, we create
 					# a LogDocument manually.
-					lr = LightLogRecord(
-						logger.name,
-						LogFlag.INFO | logger.base_flag
-					)
+					lr = LightLogRecord(logger.name, LogFlag.INFO | logger.base_flag)
 					lr.stock = stock_id
 					lr.channel = reduced_chan_names # type: ignore[assignment]
-					lr.extra = {
-						'alert': alert.id,
-						'allout': True,
-					}
+					lr.extra = {'a': alert.id, 'allout': True}
 					if db_logging_handler:
 						db_logging_handler.handle(lr)
 
@@ -477,21 +422,21 @@ class AlertProcessor(Generic[T], AbsProcessorUnit):
 
 	def _report_ap_error(self,
 		arg_e: Exception, logger: AmpelLogger, run_id: Union[int, List[int]],
-		filter_results: Optional[List[Tuple[Union[int, str], Union[bool, int]]]] = None,
-		extra: Optional[Dict[str, Any]] = None
+		filter_results: Optional[List[Tuple[int, Union[bool, int]]]] = None,
+		extra: Optional[dict[str, Any]] = None
 	) -> None:
 		"""
 		:param extra: optional extra key/value fields to add to 'trouble' doc
 		"""
 
-		info = {}
+		info: Any = {'run': run_id}
 
 		if extra:
 			for k in extra.keys():
 				info[k] = extra[k]
 
 		if filter_results:
-			info['channel'] = [el[0] for el in filter_results]
+			info['channel'] = [self.directives[el[0]].channel for el in filter_results]
 
 		# Try to insert doc into trouble collection (raises no exception)
 		# Possible exception will be logged out to console in any case

@@ -4,20 +4,17 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 28.05.2020
-# Last Modified Date: 28.05.2020
+# Last Modified Date: 29.07.2021
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
-from io import IOBase
-from typing import List, TypeVar, Dict, Any, Iterable
-from ampel.alert.AmpelAlert import AmpelAlert
-from ampel.abstract.AbsAlertSupplier import AbsAlertSupplier
+from typing import List, Iterator, Generic
+from ampel.abstract.AbsAlertSupplier import AbsAlertSupplier, T
 from ampel.model.UnitModel import UnitModel
+from ampel.log.AmpelLogger import AmpelLogger
 from ampel.base.AuxUnitRegister import AuxUnitRegister
 
-T = TypeVar("T", bound=AmpelAlert)
 
-
-class FilteringAlertSupplier(AbsAlertSupplier[T]):
+class FilteringAlertSupplier(Generic[T], AbsAlertSupplier[T]):
 	"""
 	See AbsAlertSupplier docstring.
 	example:
@@ -42,28 +39,17 @@ class FilteringAlertSupplier(AbsAlertSupplier[T]):
 			model = self.supplier, sub_type = AbsAlertSupplier
 		)
 
-
-	def __next__(self) -> T:
+	def __iter__(self) -> Iterator[T]:
 		"""
 		:returns: a dict with a structure that AlertConsumer understands
 		:raises StopIteration: when alert_loader dries out.
 		:raises AttributeError: if alert_loader was not set properly before this method is called
 		"""
 
-		nxt = self.underlying_alert_supplier.__next__
-		while ret := nxt():
-			if ret.id in self.match_ids:
-				return ret
-		raise StopIteration
+		for el in self.underlying_alert_supplier:
+			if el.id in self.match_ids:
+				yield el
 
-
-	def set_alert_source(self, alert_loader: Iterable[IOBase]) -> None:
-		self.underlying_alert_supplier.set_alert_source(alert_loader)
-
-
-	def ready(self) -> bool:
-		return hasattr(self.underlying_alert_supplier, "alert_loader")
-
-
-	def get_stats(self, reset: bool = True) -> Dict[str, Any]:
-		return {}
+	def set_logger(self, logger: AmpelLogger) -> None:
+		self.logger = logger
+		self.underlying_alert_supplier.set_logger(logger)

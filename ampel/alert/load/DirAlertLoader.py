@@ -4,7 +4,7 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 14.12.2017
-# Last Modified Date: 15.03.2021
+# Last Modified Date: 27.07.2021
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 from typing import List, Optional, Union
@@ -60,7 +60,13 @@ class DirAlertLoader(AbsAlertLoader[Union[StringIO, BytesIO]]):
 		self.logger.debug("Building internal file list")
 
 		import glob, os
-		all_files = sorted(glob.glob(self.folder + "/" + self.extension), key=os.path.getmtime)
+		all_files = sorted(
+			glob.glob(
+				os.path.join(self.folder, self.extension)
+			),
+			key=os.path.getmtime
+		)
+		self.logger.debug(f"Building internal file list {len(all_files)}")
 
 		if self.min_index is not None:
 			self.logger.debug("Filtering files using min_index criterium")

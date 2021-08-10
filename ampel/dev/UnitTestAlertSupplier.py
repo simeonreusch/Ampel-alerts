@@ -39,9 +39,12 @@ class UnitTestAlertSupplier(AbsAlertSupplier[T]):
 	def set_alert_source(self, alert_loader: Iterable[IOBase]) -> None:
 		pass
 
-	# Mandatory implementation
 	def __next__(self):
 		return next(self.it)
+
+	# Mandatory implementation
+	def __iter__(self):
+		return self.it
 
 
 	def ready(self) -> bool:

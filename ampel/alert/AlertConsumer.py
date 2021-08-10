@@ -233,8 +233,7 @@ class AlertConsumer(Generic[T], AbsEventUnit):
 
 		# Add new doc in the 'events' collection
 		event_hdlr = EventHandler(
-			self._ampel_db, process_name=self.process_name,
-			run_id=run_id, tier=0
+			self._ampel_db, process_name=self.process_name, run_id=run_id, tier=0
 		)
 
 		# Collects and executes pymongo.operations in collection Ampel_data
@@ -320,7 +319,7 @@ class AlertConsumer(Generic[T], AbsEventUnit):
 						# Unrecoverable (logging related) errors
 						except (PyMongoError, AmpelLoggingError) as e:
 							print("%s: abording run() procedure" % e.__class__.__name__)
-							self._report_ap_error(e, logger, run_id, extra={'a': alert.id})
+							self._report_ap_error(e, event_hdlr, logger, run_id, extra={'a': alert.id})
 							raise e
 
 						# Possibly tolerable errors (could be an error from a contributed filter)
@@ -328,7 +327,7 @@ class AlertConsumer(Generic[T], AbsEventUnit):
 
 							fblock.forward(db_logging_handler, stock=stock_id, extra={'a': alert.id})
 							self._report_ap_error(
-								e, logger, run_id,
+								e, event_hdlr, logger, run_id,
 								extra={'a': alert.id, 'section': 'filter', 'c': fblock.channel}
 							)
 
@@ -353,13 +352,13 @@ class AlertConsumer(Generic[T], AbsEventUnit):
 						ing_hdlr.ingest(alert.dps, filter_results, stock_id, {'alert': alert.id})
 					except (PyMongoError, AmpelLoggingError) as e:
 						print("%s: abording run() procedure" % e.__class__.__name__)
-						self._report_ap_error(e, logger, run_id, extra={'a': alert.id})
+						self._report_ap_error(e, event_hdlr, logger, run_id, extra={'a': alert.id})
 						raise e
 
 					except Exception as e:
 
 						self._report_ap_error(
-							e, logger, run_id, filter_results,
+							e, event_hdlr, logger, run_id, filter_results,
 							extra={'a': alert.id, 'section': 'ingest'}
 						)
 
@@ -417,6 +416,7 @@ class AlertConsumer(Generic[T], AbsEventUnit):
 		except Exception as e:
 			# Try to insert doc into trouble collection (raises no exception)
 			# Possible exception will be logged out to console in any case
+			event_hdlr.add_extra(logger, success=False)
 			report_exception(self._ampel_db, logger, exc=e)
 
 		# Also executed after SIGINT and SIGTERM
@@ -451,7 +451,7 @@ class AlertConsumer(Generic[T], AbsEventUnit):
 
 
 	def _report_ap_error(self,
-		arg_e: Exception, logger: AmpelLogger, run_id: Union[int, List[int]],
+		arg_e: Exception, event_hdlr, logger: AmpelLogger, run_id: Union[int, List[int]],
 		filter_results: Optional[List[Tuple[int, Union[bool, int]]]] = None,
 		extra: Optional[dict[str, Any]] = None
 	) -> None:
@@ -459,7 +459,8 @@ class AlertConsumer(Generic[T], AbsEventUnit):
 		:param extra: optional extra key/value fields to add to 'trouble' doc
 		"""
 
-		info: Any = {'run': run_id}
+		event_hdlr.add_extra(logger, success=False)
+		info: Any = {'process': self.process_name, 'run': run_id}
 
 		if extra:
 			for k in extra.keys():

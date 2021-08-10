@@ -4,10 +4,10 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 10.10.2017
-# Last Modified Date: 18.05.2021
+# Last Modified Date: 10.08.2021
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
-import signal
+from signal import signal, SIGINT, SIGTERM, default_int_handler
 from typing import List, Any, Tuple, Generic, Sequence, Union, Optional
 from pymongo.errors import PyMongoError
 
@@ -27,14 +27,11 @@ from ampel.log import AmpelLogger, LogFlag, VERBOSE
 from ampel.log.utils import report_exception
 from ampel.log.AmpelLoggingError import AmpelLoggingError
 from ampel.log.LightLogRecord import LightLogRecord
+from ampel.alert.AlertConsumerError import AlertConsumerError
 from ampel.alert.AlertConsumerMetrics import stat_alerts, stat_accepted
 from ampel.model.ingest.IngestDirective import IngestDirective
 from ampel.model.ingest.DualIngestDirective import DualIngestDirective
 from ampel.model.ingest.CompilerOptions import CompilerOptions
-
-CONNECTIVITY = 1
-INTERRUPTED = 2
-TOO_MANY_ERRORS = 3
 
 
 class AlertConsumer(Generic[T], AbsEventUnit):
@@ -161,15 +158,33 @@ class AlertConsumer(Generic[T], AbsEventUnit):
 			self.context, logger, self.directives, self.process_name, self.db_log_format
 		)
 
-		signal.signal(signal.SIGTERM, self.sig_exit)
-		signal.signal(signal.SIGINT, self.sig_exit)
-
+		#signal(SIGTERM, self.register_sigterm)
+		signal(SIGTERM, default_int_handler)
 		logger.info("AlertConsumer setup completed")
 
 
-	def sig_exit(self, signum: int, frame) -> None:
-		""" Executed when SIGTERM/SIGINT is caught. Stops alert processing in run() """
-		self._cancel_run = INTERRUPTED
+	def register_signal(self, signum: int, frame) -> None:
+		""" Executed when SIGINT/SIGTERM is emitted during alert processing """
+		if self._cancel_run == 0:
+			self.print_feedback(signum, "(after processing of current alert)")
+			self._cancel_run: int = signum
+
+
+	def chatty_interrupt(self, signum: int, frame) -> None:
+		""" Executed when SIGINT/SIGTERM is emitted during alert supplier execution """
+		self.print_feedback(signum, "(outside of alert processing)")
+		self._cancel_run = signum
+		default_int_handler(signum, frame)
+
+
+	def set_cancel_run(self, reason: AlertConsumerError = AlertConsumerError.CONNECTIVITY) -> None:
+		"""
+		Cancels current processing of alerts (when DB becomes unresponsive for example).
+		Called in main loop or by DBUpdatesBuffer in case of un-recoverable errors.
+		"""
+		if self._cancel_run == 0:
+			self.print_feedback(reason, "after processing of current alert")
+			self._cancel_run = reason
 
 
 	def process_alerts(self) -> None:
@@ -179,8 +194,6 @@ class AlertConsumer(Generic[T], AbsEventUnit):
 		processed_alerts = self.iter_max
 		while processed_alerts == self.iter_max:
 			processed_alerts = self.run()
-
-		#self.logger.info("Alert loader dried out")
 
 
 	def run(self) -> int:
@@ -196,7 +209,7 @@ class AlertConsumer(Generic[T], AbsEventUnit):
 
 		stats = {
 			"alerts": stat_alerts,
-			"accepted": stat_accepted.labels("any"),
+			"accepted": stat_accepted.labels("any")
 		}
 
 		run_id = self.context.new_run_id()
@@ -253,6 +266,7 @@ class AlertConsumer(Generic[T], AbsEventUnit):
 		if self.iter_max != self.__class__.iter_max:
 			logger.info(f"Using custom iter_max: {self.iter_max}")
 
+		self._cancel_run = 0
 		iter_count = 0
 		err = 0
 
@@ -269,31 +283,24 @@ class AlertConsumer(Generic[T], AbsEventUnit):
 		# Builds set of stock ids for autocomplete, if needed
 		self._fbh.ready(logger, run_id)
 
-		self._cancel_run = 0
-
 		# Process alerts
 		################
 
 		# The extra is just a feedback for the console stream handler
 		logger.log(self.shout, "Processing alerts", extra={'r': run_id})
 
-		with updates_buffer.run_in_thread():
+		try:
+
+			updates_buffer.start()
+			chatty_interrupt = self.chatty_interrupt
+			register_signal = self.register_signal
 
 			# Iterate over alerts
 			for alert in self.alert_supplier:
 
-				if self._cancel_run:
-
-					print("")
-					if self._cancel_run == INTERRUPTED:
-						logger.info("Interrupting run() procedure")
-						print("Interrupting run() procedure")
-					else: # updates_buffer requested to stop processing
-						print("Abording run() procedure")
-
-					logger.flush()
-					self._fbh.done()
-					return iter_count
+				# Allow execution to complete for this alert (loop exited after ingestion of current alert)
+				signal(SIGINT, register_signal)
+				signal(SIGTERM, register_signal)
 
 				# Associate upcoming log entries with the current transient id
 				stock_id = alert.stock_id
@@ -332,7 +339,7 @@ class AlertConsumer(Generic[T], AbsEventUnit):
 									err += 1
 								if err == self.error_max:
 									logger.error("Max number of error reached, breaking alert processing")
-									self.set_cancel_run(TOO_MANY_ERRORS)
+									self.set_cancel_run(AlertConsumerError.TOO_MANY_ERRORS)
 				else:
 					# if bypassing filters, track passing rates at top level
 					for counter in stats["filter_accepted"]:
@@ -364,7 +371,7 @@ class AlertConsumer(Generic[T], AbsEventUnit):
 
 						if err == self.error_max:
 							logger.error("Max number of error reached, breaking alert processing")
-							self.set_cancel_run(TOO_MANY_ERRORS)
+							self.set_cancel_run(AlertConsumerError.TOO_MANY_ERRORS)
 
 				else:
 
@@ -386,38 +393,61 @@ class AlertConsumer(Generic[T], AbsEventUnit):
 				iter_count += 1
 				stats["alerts"].inc()
 
-				if iter_count == iter_max:
-					logger.info("Reached max number of iterations")
-					break
-
 				updates_buffer.check_push()
 				if db_logging_handler:
 					db_logging_handler.check_flush()
 
-		try:
-			logger.log(self.shout, "Processing completed")
+				if iter_count == iter_max:
+					logger.info("Reached max number of iterations")
+					break
 
-			# Flush loggers
-			logger.flush()
-			self._fbh.done()
+				# Exit if so requested (SIGINT, error registered by DBUpdatesBuffer, ...)
+				if self._cancel_run > 0:
+					break
 
-			event_hdlr.update(logger)
+				# Restore system default sig handling so that KeyBoardInterrupt
+				# can be raised during supplier execution
+				signal(SIGINT, chatty_interrupt)
+				signal(SIGTERM, chatty_interrupt)
+
+		# Executed if SIGINT was sent during supplier execution
+		except KeyboardInterrupt:
+			pass
 
 		except Exception as e:
-
 			# Try to insert doc into trouble collection (raises no exception)
 			# Possible exception will be logged out to console in any case
 			report_exception(self._ampel_db, logger, exc=e)
 
+		# Also executed after SIGINT and SIGTERM
+		finally:
+
+			updates_buffer.stop()
+
+			if self._cancel_run > 0:
+				print("")
+				logger.info("Processing interrupted")
+			else:
+				logger.log(self.shout, "Processing completed")
+
+			try:
+
+				# Flush loggers
+				logger.flush()
+
+				# Flush registers and rejected log handlers
+				self._fbh.done()
+
+				event_hdlr.update(logger)
+
+			except Exception as e:
+
+				# Try to insert doc into trouble collection (raises no exception)
+				# Possible exception will be logged out to console in any case
+				report_exception(self._ampel_db, logger, exc=e)
+
 		# Return number of processed alerts
 		return iter_count
-
-
-	def set_cancel_run(self, reason: int = CONNECTIVITY) -> None:
-		"""
-		Cancels current processing of alerts (when DB becomes unresponsive for example).
-		"""
-		self._cancel_run = CONNECTIVITY
 
 
 	def _report_ap_error(self,
@@ -441,3 +471,16 @@ class AlertConsumer(Generic[T], AbsEventUnit):
 		# Try to insert doc into trouble collection (raises no exception)
 		# Possible exception will be logged out to console in any case
 		report_exception(self._ampel_db, logger, exc=arg_e, info=info)
+
+
+	@staticmethod
+	def print_feedback(arg: Any, suffix: str = "") -> None:
+		print("") # ^C in console
+		try:
+			arg = AlertConsumerError(arg)
+		except Exception:
+			pass
+		s = f"[{arg.name if isinstance(arg, AlertConsumerError) else arg}] Interrupting run {suffix}"
+		print("+" * len(s))
+		print(s)
+		print("+" * len(s))

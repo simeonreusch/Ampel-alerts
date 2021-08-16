@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ampel-alerts"
-version = "0.7.1-alpha.0"
+version = "0.7.2"
 description = "Alert support for the Ampel system"
 authors = [
     "Valery Brinnel"
@@ -31,25 +31,21 @@ include = [
     'conf/*/*/*.yml',
 ]
 
-[[tool.poetry.source]]
-name = "testpypi"
-url = "https://test.pypi.org/simple"
-
 [tool.poetry.dependencies]
-ampel-interface = {version = "^0.7.1-alpha.7", allow-prereleases = true}
-ampel-core = {version = "^0.7.1-alpha.1", allow-prereleases = true}
-ampel-photometry = {version = "^0.7.1-alpha.0", allow-prereleases = true}
+ampel-interface = {version = "^0.7.1"}
+ampel-core = {version = "^0.7.2"}
+ampel-photometry = {version = "^0.7.1"}
 python = "^3.8"
-Sphinx = {version = "^3.5.1", optional = true}
+Sphinx = {version = ">=3.5.1,<5.0.0", optional = true}
 sphinx-autodoc-typehints = {version = "^1.11.1", optional = true}
 tomlkit = {version = "^0.7.0"}
 
 [tool.poetry.dev-dependencies]
-pytest = "^6.2.2"
-pytest-cov = "^2.11.1"
-pytest-mock = "^3.5.1"
-mongomock = "^3.22.1"
-mypy = "^0.800"
+pytest = "^6.2.4"
+pytest-cov = "^2.12.1"
+pytest-mock = "^3.6.1"
+mongomock = "^3.23.0"
+mypy = "^0.910"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

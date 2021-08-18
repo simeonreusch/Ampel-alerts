@@ -10,4 +10,3 @@ __pycache__
 .vscode
 build
 dist
-setup.py

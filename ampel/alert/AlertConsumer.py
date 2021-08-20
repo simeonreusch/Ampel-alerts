@@ -28,7 +28,7 @@ from ampel.log.utils import report_exception
 from ampel.log.AmpelLoggingError import AmpelLoggingError
 from ampel.log.LightLogRecord import LightLogRecord
 from ampel.alert.AlertConsumerError import AlertConsumerError
-from ampel.alert.AlertConsumerMetrics import stat_alerts, stat_accepted
+from ampel.alert.AlertConsumerMetrics import stat_alerts, stat_accepted, stat_time
 from ampel.model.ingest.IngestDirective import IngestDirective
 from ampel.model.ingest.DualIngestDirective import DualIngestDirective
 from ampel.model.ingest.CompilerOptions import CompilerOptions
@@ -349,6 +349,7 @@ class AlertConsumer(Generic[T], AbsEventUnit):
 					stats["accepted"].inc()
 
 					try:
+						with stat_time.labels("ingest").time():
 						ing_hdlr.ingest(alert.dps, filter_results, stock_id, {'alert': alert.id})
 					except (PyMongoError, AmpelLoggingError) as e:
 						print("%s: abording run() procedure" % e.__class__.__name__)

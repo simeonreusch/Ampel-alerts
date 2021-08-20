@@ -9,7 +9,7 @@
 
 from logging import LogRecord
 from typing import Any, Union, Optional, Callable, Tuple, cast
-from ampel.types import ChannelId
+from ampel.types import ChannelId, StockId
 from ampel.core.AmpelContext import AmpelContext
 from ampel.model.ingest.FilterModel import FilterModel
 from ampel.log.AmpelLogger import AmpelLogger, INFO
@@ -80,7 +80,7 @@ class FilterBlock:
 
 		self.check_new = check_new
 		self.rej = self.idx, False
-		self.stock_ids = set()
+		self.stock_ids: set[StockId] = set()
 
 		if filter_model:
 
@@ -90,7 +90,8 @@ class FilterBlock:
 			# Instantiate/get filter class associated with this channel
 			logger.info(f"Loading filter: {filter_model.unit}", extra={'c': self.channel})
 
-			self.buf_hdlr = EnclosedChanRecordBufHandler(logger.level, self.channel) if embed \
+			self.buf_hdlr: Union[EnclosedChanRecordBufHandler,ChanRecordBufHandler] = \
+				EnclosedChanRecordBufHandler(logger.level, self.channel) if embed \
 				else ChanRecordBufHandler(logger.level, self.channel)
 
 			self.unit_instance = context.loader.new_logical_unit(
@@ -195,7 +196,7 @@ class FilterBlock:
 					if self.update_rej:
 
 						if self.buffer:
-							if self.rej_log_handle:
+							if self.rej_log_handler:
 								# Clears the buffer
 								self.forward(self.rej_log_handler, stock=alert.stock_id, extra=extra_ac)
 							else:

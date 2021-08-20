@@ -325,7 +325,8 @@ class AlertConsumer(Generic[T], AbsEventUnit):
 						# Possibly tolerable errors (could be an error from a contributed filter)
 						except Exception as e:
 
-							fblock.forward(db_logging_handler, stock=stock_id, extra={'a': alert.id})
+							if db_logging_handler:
+								fblock.forward(db_logging_handler, stock=stock_id, extra={'a': alert.id})
 							self._report_ap_error(
 								e, event_hdlr, logger, run_id,
 								extra={'a': alert.id, 'section': 'filter', 'c': fblock.channel}
@@ -350,7 +351,7 @@ class AlertConsumer(Generic[T], AbsEventUnit):
 
 					try:
 						with stat_time.labels("ingest").time():
-						ing_hdlr.ingest(alert.dps, filter_results, stock_id, {'alert': alert.id})
+							ing_hdlr.ingest(alert.dps, filter_results, stock_id, {'alert': alert.id})
 					except (PyMongoError, AmpelLoggingError) as e:
 						print("%s: abording run() procedure" % e.__class__.__name__)
 						self._report_ap_error(e, event_hdlr, logger, run_id, extra={'a': alert.id})

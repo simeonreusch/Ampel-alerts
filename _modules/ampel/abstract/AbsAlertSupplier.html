@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ampel.abstract.AbsAlertSupplier &#8212; ampel-alerts 0.7.2 documentation</title>
+    <title>ampel.abstract.AbsAlertSupplier &#8212; ampel-alerts 0.8.0-alpha.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../../../_static/sphinxdoc.css" />
     <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
@@ -21,7 +21,7 @@
         <li class="right" style="margin-right: 10px">
           <a href="../../../genindex.html" title="General Index"
              accesskey="I">index</a></li>
-        <li class="nav-item nav-item-0"><a href="../../../index.html">ampel-alerts 0.7.2 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">ampel-alerts 0.8.0-alpha.0 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">ampel.abstract.AbsAlertSupplier</a></li> 
       </ul>
@@ -39,25 +39,17 @@
 <span class="c1"># License           : BSD-3-Clause</span>
 <span class="c1"># Author            : vb &lt;vbrinnel@physik.hu-berlin.de&gt;</span>
 <span class="c1"># Date              : 23.04.2018</span>
-<span class="c1"># Last Modified Date: 09.05.2020</span>
+<span class="c1"># Last Modified Date: 29.07.2021</span>
 <span class="c1"># Last Modified By  : vb &lt;vbrinnel@physik.hu-berlin.de&gt;</span>
 
-<span class="kn">import</span> <span class="nn">json</span>
-<span class="kn">from</span> <span class="nn">io</span> <span class="kn">import</span> <span class="n">IOBase</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Generic</span><span class="p">,</span> <span class="n">TypeVar</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Iterator</span>
-<span class="kn">from</span> <span class="nn">ampel.base</span> <span class="kn">import</span> <span class="n">abstractmethod</span>
-<span class="kn">from</span> <span class="nn">ampel.alert.AmpelAlert</span> <span class="kn">import</span> <span class="n">AmpelAlert</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Generic</span><span class="p">,</span> <span class="n">TypeVar</span><span class="p">,</span> <span class="n">Iterator</span>
+<span class="kn">from</span> <span class="nn">ampel.log.AmpelLogger</span> <span class="kn">import</span> <span class="n">AmpelLogger</span>
 <span class="kn">from</span> <span class="nn">ampel.base.AmpelABC</span> <span class="kn">import</span> <span class="n">AmpelABC</span>
+<span class="kn">from</span> <span class="nn">ampel.base.decorator</span> <span class="kn">import</span> <span class="n">abstractmethod</span>
 <span class="kn">from</span> <span class="nn">ampel.base.AmpelBaseModel</span> <span class="kn">import</span> <span class="n">AmpelBaseModel</span>
+<span class="kn">from</span> <span class="nn">ampel.alert.AmpelAlert</span> <span class="kn">import</span> <span class="n">AmpelAlert</span>
 
 <span class="n">T</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s2">&quot;T&quot;</span><span class="p">,</span> <span class="n">bound</span><span class="o">=</span><span class="n">AmpelAlert</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">identity</span><span class="p">(</span><span class="n">arg</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
-	<span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">	Covers the &quot;no deserialization needed&quot; which might occur</span>
-<span class="sd">	if the underlying alert loader directly returns dicts</span>
-<span class="sd">	&quot;&quot;&quot;</span>
-	<span class="k">return</span> <span class="n">arg</span>
 
 
 <div class="viewcode-block" id="AbsAlertSupplier"><a class="viewcode-back" href="../../../api.html#ampel.abstract.AbsAlertSupplier.AbsAlertSupplier">[docs]</a><span class="k">class</span> <span class="nc">AbsAlertSupplier</span><span class="p">(</span><span class="n">Generic</span><span class="p">[</span><span class="n">T</span><span class="p">],</span> <span class="n">AmpelABC</span><span class="p">,</span> <span class="n">AmpelBaseModel</span><span class="p">,</span> <span class="n">abstract</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
@@ -65,70 +57,17 @@
 <span class="sd">	Iterable class that, for each alert payload provided by the underlying alert_loader,</span>
 <span class="sd">	returns an :class:`~ampel.alert.AmpelAlert.AmpelAlert` (or subclass such as</span>
 <span class="sd">	:class:`~ampel.alert.PhotoAlert.PhotoAlert`) instance.</span>
-
-<span class="sd">	:param deserialize: if the alert_loader returns bytes/file_like objects,</span>
-<span class="sd">	  deserialization is required to turn them into dicts.</span>
-<span class="sd">	  Currently supported built-in deserialization: &#39;avro&#39; or &#39;json&#39;.</span>
-<span class="sd">	  If you need other deserialization:</span>
-
-<span class="sd">	  - Either implement the deserialization in your own alert_loader (that will return dicts)</span>
-<span class="sd">	  - Provide a callable as parameter for `deserialize`</span>
 <span class="sd">	&quot;&quot;&quot;</span>
 
-	<span class="n">deserialize</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;avro&quot;</span><span class="p">,</span> <span class="s2">&quot;json&quot;</span><span class="p">],</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Dict</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># type: ignore</span>
-
 	<span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+		<span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="p">:</span> <span class="n">AmpelLogger</span> <span class="o">=</span> <span class="n">AmpelLogger</span><span class="o">.</span><span class="n">get_logger</span><span class="p">()</span>
 
-		<span class="n">AmpelBaseModel</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="c1"># type: ignore[call-arg]</span>
-
-		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">deserialize</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-			<span class="bp">self</span><span class="o">.</span><span class="n">deserialize</span> <span class="o">=</span> <span class="n">identity</span> <span class="c1"># type: ignore[assignment]</span>
-
-		<span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">deserialize</span> <span class="o">==</span> <span class="s2">&quot;json&quot;</span><span class="p">:</span>
-			<span class="bp">self</span><span class="o">.</span><span class="n">deserialize</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span> <span class="c1"># type: ignore[assignment]</span>
-
-		<span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">deserialize</span> <span class="o">==</span> <span class="s2">&quot;avro&quot;</span><span class="p">:</span>
-
-			<span class="kn">from</span> <span class="nn">fastavro</span> <span class="kn">import</span> <span class="n">reader</span>
-			<span class="k">def</span> <span class="nf">avro_next</span><span class="p">(</span><span class="n">arg</span><span class="p">:</span> <span class="n">IOBase</span><span class="p">):</span> <span class="c1"># noqa: E306</span>
-				<span class="k">return</span> <span class="n">reader</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
-
-			<span class="bp">self</span><span class="o">.</span><span class="n">deserialize</span> <span class="o">=</span> <span class="n">avro_next</span> <span class="c1"># type: ignore[assignment]</span>
-
-		<span class="k">elif</span> <span class="n">callable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">deserialize</span><span class="p">):</span>
-			<span class="k">pass</span>
-		<span class="k">else</span><span class="p">:</span>
-			<span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
-				<span class="sa">f</span><span class="s2">&quot;Deserialization &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">deserialize</span><span class="si">}</span><span class="s2">&#39; not implemented&quot;</span>
-			<span class="p">)</span>
-
-
-<div class="viewcode-block" id="AbsAlertSupplier.set_alert_source"><a class="viewcode-back" href="../../../api.html#ampel.abstract.AbsAlertSupplier.AbsAlertSupplier.set_alert_source">[docs]</a>	<span class="k">def</span> <span class="nf">set_alert_source</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alert_loader</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">IOBase</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-		<span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">		:param alert_loader: iterable that returns alerts content</span>
-<span class="sd">		  as as file-like objects / bytes</span>
-<span class="sd">		&quot;&quot;&quot;</span>
-		<span class="bp">self</span><span class="o">.</span><span class="n">alert_loader</span> <span class="o">=</span> <span class="n">alert_loader</span></div>
-
-
-	<span class="k">def</span> <span class="nf">ready</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-		<span class="k">return</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;alert_loader&quot;</span><span class="p">)</span>
-
-
-	<span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">T</span><span class="p">]:</span> <span class="c1"># type: ignore</span>
-		<span class="k">return</span> <span class="bp">self</span>
-
+	<span class="k">def</span> <span class="nf">set_logger</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">logger</span><span class="p">:</span> <span class="n">AmpelLogger</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">logger</span>
 
 	<span class="nd">@abstractmethod</span>
-	<span class="k">def</span> <span class="fm">__next__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">T</span><span class="p">:</span>
-		<span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">		:returns: an AmpelAlert instance</span>
-<span class="sd">		:raises StopIteration: when alert_loader dries out.</span>
-<span class="sd">		:raises AttributeError: if alert_loader was not set properly before this method is called</span>
-<span class="sd">		&quot;&quot;&quot;</span>
-
-	<span class="nd">@abstractmethod</span>
-	<span class="k">def</span> <span class="nf">get_stats</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reset</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+	<span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">T</span><span class="p">]:</span>
 		<span class="o">...</span></div>
 </pre></div>
 
@@ -145,7 +84,7 @@
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="../../../search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <input type="submit" value="Go" />
     </form>
     </div>
@@ -161,14 +100,14 @@
         <li class="right" style="margin-right: 10px">
           <a href="../../../genindex.html" title="General Index"
              >index</a></li>
-        <li class="nav-item nav-item-0"><a href="../../../index.html">ampel-alerts 0.7.2 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">ampel-alerts 0.8.0-alpha.0 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">ampel.abstract.AbsAlertSupplier</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2018-2021, Ampel Project.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.0.2.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.1.2.
     </div>
   </body>
 </html>

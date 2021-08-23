@@ -612,6 +612,23 @@ unit:
       - AbsTiedStateT2Unit
       - AbsTiedT2Unit
       - LogicalUnit
+  UnitTestAlertSupplier:
+    fqn: ampel.dev.UnitTestAlertSupplier
+    base:
+    - UnitTestAlertSupplier
+    - AbsAlertSupplier
+    distrib: ampel-alerts
+    file: /Users/jakob/Documents/ZTF/Ampel-v0.8/Ampel-alerts/conf/ampel-alerts/ampel.yml
+    version: 0.8.0a0
+  BasicMultiFilter:
+    fqn: ampel.alert.filter.BasicMultiFilter
+    base:
+    - BasicMultiFilter
+    - AbsAlertFilter
+    - LogicalUnit
+    distrib: ampel-alerts
+    file: /Users/jakob/Documents/ZTF/Ampel-v0.8/Ampel-alerts/conf/ampel-alerts/ampel.yml
+    version: 0.8.0a0
 process:
   t0: {}
   t1: {}

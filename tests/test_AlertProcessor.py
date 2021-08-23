@@ -7,8 +7,15 @@
 # Last Modified Date: 05.08.2021
 # Last Modified By  : vb
 
+import pytest
 import os, signal, time, threading
 from contextlib import contextmanager
+
+from ampel.dev.DevAmpelContext import DevAmpelContext
+from ampel.model.ingest.IngestBody import IngestBody
+from ampel.model.ingest.IngestDirective import IngestDirective
+from ampel.model.ingest.T1Combine import T1Combine
+from ampel.model.ingest.T2Compute import T2Compute
 
 from ampel.alert.AlertConsumer import AlertConsumer
 from ampel.alert.AlertConsumerError import AlertConsumerError
@@ -36,18 +43,40 @@ def collect_diff(store):
             delta[key] = sample.value - (before.get(key) or 0)
     store.update(delta)
 
+@pytest.fixture
+def single_source_directive(
+    dev_context: DevAmpelContext, dummy_units
+) -> IngestDirective:
 
-def test_no_filter(dev_context, legacy_directive):
+    return IngestDirective(
+        channel="TEST_CHANNEL",
+        ingest=IngestBody(
+            stock_t2=[T2Compute(unit="DummyStockT2Unit")],
+            point_t2=[T2Compute(unit="DummyPointT2Unit")],
+            combine=[
+                T1Combine(
+                    unit="T1SimpleCombiner",
+                    state_t2=[T2Compute(unit="DummyStateT2Unit")],
+                )
+            ],
+        ),
+    )
+
+
+def test_no_filter(dev_context, single_source_directive):
     stats = {}
     with collect_diff(stats):
         ap = AlertConsumer(
             context=dev_context,
             process_name="ap",
-            shaper = "NoShaper",
-            directives=[legacy_directive],
-            supplier=UnitTestAlertSupplier(
-                alerts=[AmpelAlert(id="alert", stock_id="stockystock", dps=[])]
-            ),
+            shaper="NoShaper",
+            directives=[single_source_directive],
+            supplier={
+                "unit": "UnitTestAlertSupplier",
+                "config": {
+                    "alerts": [AmpelAlert(id="alert", stock_id="stockystock", dps=[{"id": 0}])]
+                },
+            },
         )
         assert ap.run() == 1
 
@@ -82,11 +111,11 @@ def test_no_filter(dev_context, legacy_directive):
     )
 
 
-def test_with_filter(dev_context, legacy_directive):
+def test_with_filter(dev_context, single_source_directive):
     stats = {}
     with collect_diff(stats):
-        legacy_directive.filter = FilterModel(
-            unit=BasicMultiFilter,
+        single_source_directive.filter = FilterModel(
+            unit="BasicMultiFilter",
             config={
                 "filters": [
                     {
@@ -102,11 +131,14 @@ def test_with_filter(dev_context, legacy_directive):
         ap = AlertConsumer(
             context=dev_context,
             process_name="ap",
-            shaper = "NoShaper",
-            directives=[legacy_directive],
-            supplier=UnitTestAlertSupplier(
-                alerts=[AmpelAlert(id="alert", stock_id="stockystock", dps=[])]
-            ),
+            shaper="NoShaper",
+            directives=[single_source_directive],
+            supplier={
+                "unit": "UnitTestAlertSupplier",
+                "config": {
+                    "alerts": [AmpelAlert(id="alert", stock_id="stockystock", dps=[{"id": 0}])]
+                },
+            },
         )
         assert ap.run() == 1
 
@@ -121,7 +153,15 @@ def test_with_filter(dev_context, legacy_directive):
         ]
         == 1
     )
-    assert stats[("ampel_alertprocessor_time_seconds_sum", (("section", "ingest"),),)] > 0
+    assert (
+        stats[
+            (
+                "ampel_alertprocessor_time_seconds_sum",
+                (("section", "ingest"),),
+            )
+        ]
+        > 0
+    )
     assert (
         stats[
             (
@@ -133,7 +173,7 @@ def test_with_filter(dev_context, legacy_directive):
     )
 
 
-def test_suspend_in_supplier(dev_context, legacy_directive=None):
+def test_suspend_in_supplier(dev_context, single_source_directive):
 
     # simulate a producer that blocks while waiting fo upstream input
     class BlockingAlertSupplier(UnitTestAlertSupplier):
@@ -145,16 +185,16 @@ def test_suspend_in_supplier(dev_context, legacy_directive=None):
 
     dev_context.register_unit(BlockingAlertSupplier)
     ap = AlertConsumer(
-        context = dev_context,
-        process_name = "ap",
-        shaper = "NoShaper",
-        directives = [legacy_directive or {"channel": "CHAN1", "filter": None}],
-        supplier = {
+        context=dev_context,
+        process_name="ap",
+        shaper="NoShaper",
+        directives=[single_source_directive],
+        supplier={
             "unit": "BlockingAlertSupplier",
             "config": {
                 "alerts": [AmpelAlert(id="alert", stock_id="stockystock", dps=[])]
-            }
-        }
+            },
+        },
     )
 
     def alarm():
@@ -169,18 +209,24 @@ def test_suspend_in_supplier(dev_context, legacy_directive=None):
     t.join()
 
 
-def test_suspend_in_critical_section(dev_context, legacy_directive, monkeypatch):
+def test_suspend_in_critical_section(dev_context, single_source_directive, monkeypatch):
     monkeypatch.setattr(
         BasicMultiFilter, "process", lambda *args: os.kill(os.getpid(), signal.SIGINT)
     )
-    legacy_directive.filter = FilterModel(unit=BasicMultiFilter, config={"filters": []})
+    single_source_directive.filter = FilterModel(
+        unit="BasicMultiFilter", config={"filters": []}
+    )
     ap = AlertConsumer(
         context=dev_context,
         process_name="ap",
-        directives=[legacy_directive],
-        supplier=UnitTestAlertSupplier(
-            alerts=[AmpelAlert(id="alert", stock_id="stockystock", dps=[])]
-        ),
+        shaper="NoShaper",
+        directives=[single_source_directive],
+        supplier={
+            "unit": "UnitTestAlertSupplier",
+            "config": {
+                "alerts": [AmpelAlert(id="alert", stock_id="stockystock", dps=[])]
+            },
+        },
     )
     assert ap.run() == 1, "AP successfully processes alert"
     assert ap._cancel_run == AlertConsumerError.SIGINT

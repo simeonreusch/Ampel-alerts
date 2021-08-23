@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ampel-alerts"
-version = "0.7.2"
+version = "0.8.0-alpha.0"
 description = "Alert support for the Ampel system"
 authors = [
     "Valery Brinnel"
@@ -32,13 +32,13 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-ampel-interface = {version = "^0.7.1"}
-ampel-core = {version = "^0.7.2"}
-ampel-photometry = {version = "^0.7.1"}
-python = "^3.8"
+python = ">=3.9,<3.10"
 Sphinx = {version = ">=3.5.1,<5.0.0", optional = true}
 sphinx-autodoc-typehints = {version = "^1.11.1", optional = true}
 tomlkit = {version = "^0.7.0"}
+ampel-interface = {version = "^0.8.0-alpha.0"}
+ampel-core = {version = "^0.8.0-alpha.1"}
+ampel-photometry = {version = "^0.8.0-alpha.0"}
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.4"

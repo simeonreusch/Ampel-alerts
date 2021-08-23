@@ -16,7 +16,7 @@ from ampel.model.ingest.T2Compute import T2Compute
 from ampel.model.ingest.FilterModel import FilterModel
 from ampel.config.builder.FirstPassConfig import FirstPassConfig
 from ampel.abstract.AbsChannelTemplate import AbsChannelTemplate
-from ampel.util.template import filter_units, resolve_shortcut
+from ampel.util.template import filter_units, resolve_shortcut, check_tied_units
 
 
 class T2UnitModel(T2Compute):
@@ -143,7 +143,7 @@ class AbsEasyChannelTemplate(AbsChannelTemplate, abstract=True):
 
 		stock_t2s = filter_units(t2_compute, "AbsStockT2Unit", config)
 		point_t2s = filter_units(t2_compute, "AbsPointT2Unit", config)
-		#check_tied_units(t2_compute, config)
+		check_tied_units(t2_compute, config)
 
 		ingest: Dict[str, Any] = {}
 

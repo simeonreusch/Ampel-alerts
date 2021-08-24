@@ -19,10 +19,6 @@ from ampel.abstract.AbsChannelTemplate import AbsChannelTemplate
 from ampel.util.template import filter_units, resolve_shortcut, check_tied_units
 
 
-class T2UnitModel(T2Compute):
-	config: Optional[Union[int, str, Dict[str, Any]]] # type: ignore
-
-
 class AbsEasyChannelTemplate(AbsChannelTemplate, abstract=True):
 	"""
 	Abstract class whose purpose is to maintain compatibility with channel
@@ -36,7 +32,7 @@ class AbsEasyChannelTemplate(AbsChannelTemplate, abstract=True):
 
 	#: T2 units to trigger when transient is updated. Dependencies of tied
 	#: units will be added automatically.
-	t2_compute: List[T2UnitModel] = []
+	t2_compute: List[T2Compute] = []
 
 	#: T3 processes bound to this channel. These may be use templates, such as
 	#: :class:`~ampel.model.template.PeriodicSummaryT3.PeriodicSummaryT3`.
@@ -109,7 +105,7 @@ class AbsEasyChannelTemplate(AbsChannelTemplate, abstract=True):
 	def craft_t0_processor_config(cls,
 		channel: ChannelId,
 		config: Union[FirstPassConfig, Dict[str, Any]],
-		t2_compute: List[T2UnitModel],
+		t2_compute: List[T2Compute],
 		supplier: Union[str, Dict[str, Any]],
 		shaper: Union[str, Dict[str, Any]],
 		combiner: Union[str, Dict[str, Any]],

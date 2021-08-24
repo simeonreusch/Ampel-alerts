@@ -2,7 +2,7 @@ from typing import Any, Dict, List, TYPE_CHECKING
 import pytest, yaml
 import contextlib
 
-from ampel.template.AbsEasyChannelTemplate import AbsEasyChannelTemplate, T2UnitModel
+from ampel.template.AbsEasyChannelTemplate import AbsEasyChannelTemplate
 
 if TYPE_CHECKING:
     from ampel.log.AmpelLogger import AmpelLogger
@@ -110,15 +110,11 @@ def first_pass_config(testing_config):
         ),
     ],
 )
-def test_state_t2_instantiation(t2_compute, target, expected, exception, first_pass_config, monkeypatch):
+def test_state_t2_instantiation(t2_compute, target, expected, exception, first_pass_config):
     """
     Template creates state T2s and checks for missing dependencies
     """
     # _craft_t0_process should raise ValueError if dependencies are missing
-    monkeypatch.setattr(
-        "ampel.test.dummy.DummyTiedStateT2Unit._unit",
-        expected['unit'],
-    )
     with (
         pytest.raises(exception)
         if exception

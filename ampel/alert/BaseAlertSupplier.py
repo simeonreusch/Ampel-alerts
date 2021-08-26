@@ -52,7 +52,7 @@ class BaseAlertSupplier(Generic[T], AbsAlertSupplier[T], abstract=True):
 
 		super().__init__(**kwargs)
 
-		self.alert_loader: AbsAlertLoader[Iterable[IOBase]] = AuxUnitRegister.new_unit( # type: ignore
+		self.alert_loader: AbsAlertLoader[IOBase] = AuxUnitRegister.new_unit( # type: ignore
 			model = self.loader
 		)
 

@@ -418,7 +418,7 @@ class AlertConsumer(Generic[T], AbsEventUnit):
 		except Exception as e:
 			# Try to insert doc into trouble collection (raises no exception)
 			# Possible exception will be logged out to console in any case
-			event_hdlr.add_extra(logger, success=False)
+			event_hdlr.add_extra(overwrite=True, success=False)
 			report_exception(self._ampel_db, logger, exc=e)
 
 		# Also executed after SIGINT and SIGTERM
@@ -461,7 +461,7 @@ class AlertConsumer(Generic[T], AbsEventUnit):
 		:param extra: optional extra key/value fields to add to 'trouble' doc
 		"""
 
-		event_hdlr.add_extra(logger, success=False)
+		event_hdlr.add_extra(overwrite=True, success=False)
 		info: Any = {'process': self.process_name, 'run': run_id}
 
 		if extra:

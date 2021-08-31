@@ -453,7 +453,7 @@
 		<span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
 			<span class="c1"># Try to insert doc into trouble collection (raises no exception)</span>
 			<span class="c1"># Possible exception will be logged out to console in any case</span>
-			<span class="n">event_hdlr</span><span class="o">.</span><span class="n">add_extra</span><span class="p">(</span><span class="n">logger</span><span class="p">,</span> <span class="n">success</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+			<span class="n">event_hdlr</span><span class="o">.</span><span class="n">add_extra</span><span class="p">(</span><span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">success</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 			<span class="n">report_exception</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ampel_db</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">exc</span><span class="o">=</span><span class="n">e</span><span class="p">)</span>
 
 		<span class="c1"># Also executed after SIGINT and SIGTERM</span>
@@ -496,7 +496,7 @@
 <span class="sd">		:param extra: optional extra key/value fields to add to &#39;trouble&#39; doc</span>
 <span class="sd">		&quot;&quot;&quot;</span>
 
-		<span class="n">event_hdlr</span><span class="o">.</span><span class="n">add_extra</span><span class="p">(</span><span class="n">logger</span><span class="p">,</span> <span class="n">success</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+		<span class="n">event_hdlr</span><span class="o">.</span><span class="n">add_extra</span><span class="p">(</span><span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">success</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 		<span class="n">info</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;process&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_name</span><span class="p">,</span> <span class="s1">&#39;run&#39;</span><span class="p">:</span> <span class="n">run_id</span><span class="p">}</span>
 
 		<span class="k">if</span> <span class="n">extra</span><span class="p">:</span>

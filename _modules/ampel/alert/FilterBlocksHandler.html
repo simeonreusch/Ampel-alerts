@@ -1,0 +1,224 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ampel.alert.FilterBlocksHandler &#8212; ampel-alerts 0.8.0-alpha.2 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinxdoc.css" />
+    <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">ampel-alerts 0.8.0-alpha.2 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">ampel.alert.FilterBlocksHandler</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for ampel.alert.FilterBlocksHandler</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="c1"># File              : Ampel-alerts/ampel/alert/FilterBlocksHandler.py</span>
+<span class="c1"># License           : BSD-3-Clause</span>
+<span class="c1"># Author            : vb &lt;vbrinnel@physik.hu-berlin.de&gt;</span>
+<span class="c1"># Date              : 29.05.2020</span>
+<span class="c1"># Last Modified Date: 21.05.2021</span>
+<span class="c1"># Last Modified By  : vb &lt;vbrinnel@physik.hu-berlin.de&gt;</span>
+
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span> <span class="nn">ampel.alert.FilterBlock</span> <span class="kn">import</span> <span class="n">FilterBlock</span>
+<span class="kn">from</span> <span class="nn">ampel.core.AmpelContext</span> <span class="kn">import</span> <span class="n">AmpelContext</span>
+<span class="kn">from</span> <span class="nn">ampel.log.AmpelLogger</span> <span class="kn">import</span> <span class="n">AmpelLogger</span>
+<span class="kn">from</span> <span class="nn">ampel.model.ingest.IngestDirective</span> <span class="kn">import</span> <span class="n">IngestDirective</span>
+<span class="kn">from</span> <span class="nn">ampel.model.ingest.DualIngestDirective</span> <span class="kn">import</span> <span class="n">DualIngestDirective</span>
+
+
+<div class="viewcode-block" id="FilterBlocksHandler"><a class="viewcode-back" href="../../../api.html#ampel.alert.FilterBlocksHandler.FilterBlocksHandler">[docs]</a><span class="k">class</span> <span class="nc">FilterBlocksHandler</span><span class="p">:</span>
+	<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">	:param db_log_format:</span>
+<span class="sd">	  &#39;compact&#39; (saves RAM by reducing the number of indexed document) or &#39;standard&#39;. \</span>
+<span class="sd">	  Compact log entries can be later converted into &#39;standard&#39; format using the aggregation pipeline.</span>
+<span class="sd">	  Avoid using &#39;compact&#39; if you run the alert processor with a single channel.</span>
+<span class="sd">	  </span>
+<span class="sd">	  Examples: (Abbreviations: s: stock, a: alert, f: flag, r: run, c: channel, m: msg)</span>
+<span class="sd">	  </span>
+<span class="sd">	  - &#39;compact&#39;: embed channel information withing log record &#39;msg&#39; field::</span>
+<span class="sd">	    </span>
+<span class="sd">	      {</span>
+<span class="sd">	      	&quot;_id&quot; : ObjectId(&quot;5be4aa6254048041edbac352&quot;),</span>
+<span class="sd">	      	&quot;s&quot; : NumberLong(1810101032122523),</span>
+<span class="sd">	      	&quot;a&quot; : NumberLong(404105201415015004),</span>
+<span class="sd">	      	&quot;f&quot; : 572784643,</span>
+<span class="sd">	      	&quot;r&quot; : 509,</span>
+<span class="sd">	      	&quot;m&quot; : [</span>
+<span class="sd">	      		{</span>
+<span class="sd">	      			&quot;c&quot; : &quot;NO_FILTER&quot;,</span>
+<span class="sd">	      			&quot;m&quot;: &quot;Alert accepted&quot;</span>
+<span class="sd">	      		},</span>
+<span class="sd">	      		{</span>
+<span class="sd">	      			&quot;c&quot; : &quot;HU_RANDOM&quot;,</span>
+<span class="sd">	      			&quot;m&quot;: &quot;Alert accepted&quot;</span>
+<span class="sd">	      		}</span>
+<span class="sd">	      	]</span>
+<span class="sd">	      }</span>
+
+<span class="sd">	  - &#39;standard&#39;: channel info are encoded in log parameter &#39;extra&#39;.</span>
+<span class="sd">	    For a given alert, one log entry is created per channel since log concatenation</span>
+<span class="sd">	    cannot happen (the &#39;extra&#39; dicts from the two log entries differ)::</span>
+<span class="sd">	      </span>
+<span class="sd">	      [</span>
+<span class="sd">	          {</span>
+<span class="sd">	              &quot;_id&quot; : ObjectId(&quot;5be4aa6254048041edbac353&quot;),</span>
+<span class="sd">	              &quot;s&quot; : NumberLong(1810101032122523),</span>
+<span class="sd">	              &quot;a&quot; : NumberLong(404105201415015004),</span>
+<span class="sd">	              &quot;f&quot; : 572784643,</span>
+<span class="sd">	              &quot;r&quot; : 509,</span>
+<span class="sd">	              &quot;c&quot; : &quot;NO_FILTER&quot;,</span>
+<span class="sd">	              &quot;m&quot; : &quot;Alert accepted&quot;</span>
+<span class="sd">	          },</span>
+<span class="sd">	          {</span>
+<span class="sd">	              &quot;_id&quot; : ObjectId(&quot;5be4aa6254048041edbac352&quot;),</span>
+<span class="sd">	              &quot;s&quot; : NumberLong(1810101032122523),</span>
+<span class="sd">	              &quot;a&quot; : NumberLong(404105201415015004),</span>
+<span class="sd">	              &quot;f&quot; : 572784643,</span>
+<span class="sd">	              &quot;r&quot; : 509,</span>
+<span class="sd">	              &quot;c&quot; : &quot;HU_RANDOM&quot;,</span>
+<span class="sd">	              &quot;m&quot; : &quot;Alert accepted&quot;</span>
+<span class="sd">	          }</span>
+<span class="sd">		  ]</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+
+	<span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+		<span class="n">context</span><span class="p">:</span> <span class="n">AmpelContext</span><span class="p">,</span> <span class="n">logger</span><span class="p">:</span> <span class="n">AmpelLogger</span><span class="p">,</span>
+		<span class="n">directives</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">IngestDirective</span><span class="p">,</span> <span class="n">DualIngestDirective</span><span class="p">]],</span>
+		<span class="n">process_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+		<span class="n">db_log_format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;standard&quot;</span>
+	<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">		:raises: ValueError if no process can be loaded or if a process is</span>
+<span class="sd">		associated with an unknown channel</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+
+		<span class="n">embed</span> <span class="o">=</span> <span class="n">db_log_format</span> <span class="o">==</span> <span class="s2">&quot;compact&quot;</span>
+
+		<span class="c1"># Create FilterBlock instances (instantiates channel filter and loggers)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">filter_blocks</span> <span class="o">=</span> <span class="p">[</span>
+			<span class="n">FilterBlock</span><span class="p">(</span>
+				<span class="n">i</span><span class="p">,</span>
+				<span class="n">context</span><span class="p">,</span>
+				<span class="n">channel</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">channel</span><span class="p">,</span>
+				<span class="n">filter_model</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">filter</span><span class="p">,</span>
+				<span class="n">process_name</span> <span class="o">=</span> <span class="n">process_name</span><span class="p">,</span>
+				<span class="n">logger</span> <span class="o">=</span> <span class="n">logger</span><span class="p">,</span>
+				<span class="n">check_new</span> <span class="o">=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">DualIngestDirective</span><span class="p">),</span>
+				<span class="n">embed</span> <span class="o">=</span> <span class="n">embed</span>
+			<span class="p">)</span>
+			<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">model</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">directives</span><span class="p">)</span>
+		<span class="p">]</span>
+
+		<span class="c1"># Robustness</span>
+		<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filter_blocks</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No directive loaded, please check your config&quot;</span><span class="p">)</span>
+
+		<span class="c1"># Note: channel names can be integers</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">chan_names</span> <span class="o">=</span> <span class="p">[</span>
+			<span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">fb</span><span class="o">.</span><span class="n">channel</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">fb</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_blocks</span>
+			<span class="k">if</span> <span class="n">fb</span><span class="o">.</span><span class="n">channel</span> <span class="ow">in</span> <span class="n">context</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">_config</span><span class="p">[</span><span class="s1">&#39;channel&#39;</span><span class="p">]</span>
+		<span class="p">]</span>
+
+		<span class="c1"># Check that channels defined in directives exist in ampel config</span>
+		<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">chan_names</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filter_blocks</span><span class="p">):</span>
+			<span class="k">for</span> <span class="n">fb</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_blocks</span><span class="p">:</span>
+				<span class="k">if</span> <span class="n">fb</span><span class="o">.</span><span class="n">channel</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">context</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">_config</span><span class="p">[</span><span class="s1">&#39;channel&#39;</span><span class="p">]:</span>
+					<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Channel </span><span class="si">{</span><span class="n">fb</span><span class="o">.</span><span class="n">channel</span><span class="si">}</span><span class="s2"> unknown in ampel config&quot;</span><span class="p">)</span>
+
+		<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filter_blocks</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">db_log_format</span> <span class="o">==</span> <span class="s2">&quot;compact&quot;</span><span class="p">:</span>
+			<span class="n">logger</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+				<span class="s2">&quot;You should not use db_log_format=&#39;compact&#39; with only one channel&quot;</span>
+			<span class="p">)</span>
+
+		<span class="c1"># Deactivated for now partly because of lack of time</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">		&#39;&#39;&#39;</span>
+<span class="sd">		:param single_rej_col: Currently inactive</span>
+<span class="sd">		- False: rejected logs are saved in channel specific collections (collection name equals channel name)</span>
+<span class="sd">		- True: rejected logs are saved in a single collection called &#39;logs&#39;</span>
+<span class="sd">		&#39;&#39;&#39;</span>
+
+<span class="sd">		ampel_db = context.get_database()</span>
+<span class="sd">		if single_rej_col:</span>
+<span class="sd">			ampel_db.enable_rejected_collections([&#39;rejected&#39;])</span>
+<span class="sd">		else:</span>
+<span class="sd">			ampel_db.enable_rejected_collections(</span>
+<span class="sd">				[f&quot;{fb.channel}&quot; for fb in self.filter_blocks]</span>
+<span class="sd">			)</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+
+
+	<span class="k">def</span> <span class="nf">ready</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">logger</span><span class="p">:</span> <span class="s1">&#39;AmpelLogger&#39;</span><span class="p">,</span> <span class="n">run_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+		<span class="k">for</span> <span class="n">fb</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_blocks</span><span class="p">:</span>
+			<span class="n">fb</span><span class="o">.</span><span class="n">ready</span><span class="p">(</span><span class="n">logger</span><span class="p">,</span> <span class="n">run_id</span><span class="p">)</span>
+
+
+	<span class="k">def</span> <span class="nf">done</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+		<span class="k">for</span> <span class="n">fb</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_blocks</span><span class="p">:</span>
+			<span class="n">fb</span><span class="o">.</span><span class="n">done</span><span class="p">()</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/ampel.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">ampel-alerts 0.8.0-alpha.2 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">ampel.alert.FilterBlocksHandler</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018-2021, Ampel Project.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.1.2.
+    </div>
+  </body>
+</html>

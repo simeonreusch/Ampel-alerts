@@ -8,6 +8,13 @@ updates:
       - dependency-name: "*"
         update-types: ["version-update:semver-patch"]
     target-branch: "master"
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "hourly"
+    allow:
+      - dependency-name: "ampel-*"
+    target-branch: "master"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

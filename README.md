@@ -69,7 +69,7 @@ Among other things, individual datapoints can be tagged during this step.
 For ZTF, upper limits do not feature a unique ID, so we have to build our own.
 Each datapoint is shaped into a `ampel.content.DataPoint` structure.
 
-Implementation example: `ampel.ztf.ingest.ZiT0PhotoPointShaper`
+Implementation example: `ampel.ztf.ingest.ZiDataPointShaper`
 
 ### Compilers
 Optimize the number of created documents

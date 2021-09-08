@@ -17,7 +17,8 @@
       "matchPackageNames": ["^ampel-.*"],
       "schedule": null,
       "automerge": true,
-      "groupName": "ampel packages"
+      "groupName": "ampel packages",
+      "rebaseStrategy": "bump"
     }
   ]
 }

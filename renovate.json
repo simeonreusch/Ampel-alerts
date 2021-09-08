@@ -9,12 +9,12 @@
       "automerge": true
     },
     {
-      "matchDepTypes": ["devDependencies"],
+      "matchDepTypes": ["dev-dependencies"],
       "automerge": true,
       "groupName": "dev dependencies"
     },
     {
-      "matchPackageNames": ["^ampel-*"],
+      "matchPackageNames": ["^ampel-.*"],
       "schedule": null,
       "automerge": true,
       "groupName": "ampel packages"

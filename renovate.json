@@ -3,6 +3,9 @@
     "config:base"
   ],
   "schedule": "monthly",
+  "lockFileMaintenance": {
+    "enabled": true
+  },
   "packageRules": [
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],

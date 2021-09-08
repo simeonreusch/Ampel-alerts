@@ -18,7 +18,7 @@
       "schedule": null,
       "automerge": true,
       "groupName": "ampel packages",
-      "rebaseStrategy": "bump"
+      "rangeStrategy": "bump"
     }
   ]
 }

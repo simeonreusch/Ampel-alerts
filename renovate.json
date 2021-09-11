@@ -17,7 +17,7 @@
       "groupName": "dev dependencies"
     },
     {
-      "matchPackageNames": ["^ampel-.*"],
+      "matchPackagePatterns": ["^ampel-.*"],
       "schedule": null,
       "automerge": true,
       "groupName": "ampel packages",

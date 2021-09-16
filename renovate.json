@@ -1,27 +1,4 @@
 {
-  "extends": [
-    "config:base"
-  ],
-  "schedule": "monthly",
-  "lockFileMaintenance": {
-    "enabled": true
-  },
-  "packageRules": [
-    {
-      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
-      "automerge": true
-    },
-    {
-      "matchDepTypes": ["dev-dependencies"],
-      "automerge": true,
-      "groupName": "dev dependencies"
-    },
-    {
-      "matchPackagePatterns": ["^ampel-.*"],
-      "schedule": null,
-      "automerge": true,
-      "groupName": "ampel packages",
-      "rangeStrategy": "bump"
-    }
-  ]
+  "extends": ["github>AmpelProject/renovate-config"],
+  "enabledManagers": ["github-actions", "poetry"]
 }

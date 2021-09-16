@@ -27,14 +27,14 @@ python-versions = "*"
 
 [[package]]
 name = "ampel-core"
-version = "0.8.0a9"
+version = "0.8.0a10"
 description = "Asynchronous and Modular Platform with Execution Layers"
 category = "main"
 optional = false
 python-versions = ">=3.9,<3.10"
 
 [package.dependencies]
-ampel-interface = "0.8.0-alpha.6"
+ampel-interface = ">=0.8.0-alpha.9,<0.9.0"
 prometheus-client = ">=0.10,<0.12"
 psutil = ">=5.8.0,<6.0.0"
 pydantic = ">=1.8.1,<2.0.0"
@@ -53,7 +53,7 @@ docs = ["Sphinx (>=3.5.1,<5.0.0)", "sphinx-press-theme (>=0.5.1,<0.9.0)", "sphin
 
 [[package]]
 name = "ampel-interface"
-version = "0.8.0a6"
+version = "0.8.0a9"
 description = "Base classes for the Ampel analysis platform"
 category = "main"
 optional = false
@@ -69,15 +69,15 @@ docs = ["Sphinx (>=3.5.1,<4.0.0)", "sphinx-autodoc-typehints (>=1.11.1,<2.0.0)",
 
 [[package]]
 name = "ampel-photometry"
-version = "0.8.0a0"
+version = "0.8.0a1"
 description = "Photometry add-on for the Ampel system"
 category = "main"
 optional = false
 python-versions = ">=3.9,<3.10"
 
 [package.dependencies]
-ampel-core = ">=0.8.0-alpha.1,<0.9.0"
-ampel-interface = ">=0.8.0-alpha.0,<0.9.0"
+ampel-core = ">=0.8.0-alpha.10,<0.9.0"
+ampel-interface = ">=0.8.0-alpha.9,<0.9.0"
 
 [package.extras]
 docs = ["Sphinx (>=3.5.1,<5.0.0)", "sphinx-autodoc-typehints (>=1.11.1,<2.0.0)", "tomlkit (>=0.7.0,<0.8.0)"]
@@ -745,7 +745,7 @@ server = []
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.9,<3.10"
-content-hash = "155d504e5818bcd7d8ce8762cbd715bad311adc8bdc92706fa4b3884225686d3"
+content-hash = "c68f48822675999710a060c95a681861d3714a66206f9dc0eea0241381734f29"
 
 [metadata.files]
 aiohttp = [
@@ -792,16 +792,16 @@ alabaster = [
     {file = "alabaster-0.7.12.tar.gz", hash = "sha256:a661d72d58e6ea8a57f7a86e37d86716863ee5e92788398526d58b26a4e4dc02"},
 ]
 ampel-core = [
-    {file = "ampel-core-0.8.0a9.tar.gz", hash = "sha256:9bbdd92cfadfc48a91a49c37c8c33a6de0e0219a4920777bf4153d0c1ace1c64"},
-    {file = "ampel_core-0.8.0a9-py3-none-any.whl", hash = "sha256:00e9b3acd926e9037e7312261c31cfdc187d32f3bc1d3cda6581b8e5c50049c4"},
+    {file = "ampel-core-0.8.0a10.tar.gz", hash = "sha256:d7ea23ad29ab7d0c1f7f77c246097ccf9b2e4eb837d13c0ffcba62494864a7d8"},
+    {file = "ampel_core-0.8.0a10-py3-none-any.whl", hash = "sha256:d5dce6ddfabf00c57155c09c1a966cef5ae9daa6a947beb2a3e564f1837ea5cd"},
 ]
 ampel-interface = [
-    {file = "ampel-interface-0.8.0a6.tar.gz", hash = "sha256:68e56cc3888724a2c20cb43b5f946f27ea25fee9741770c1736020874819ef90"},
-    {file = "ampel_interface-0.8.0a6-py3-none-any.whl", hash = "sha256:e46497f8c54fcf587f241ee5acafa792e161e0be5a019786bbadab74a36faeec"},
+    {file = "ampel-interface-0.8.0a9.tar.gz", hash = "sha256:79a652b64c80a71afdbc29d1ad6e37e60f0ba4c6529d02f42ced9262554bec11"},
+    {file = "ampel_interface-0.8.0a9-py3-none-any.whl", hash = "sha256:db566feece3510189ab2bd8cd43b38524e7453091aae985d2e96d4c5a1eaa56a"},
 ]
 ampel-photometry = [
-    {file = "ampel-photometry-0.8.0a0.tar.gz", hash = "sha256:68d7a3ec4b7d276872fc07d9cd751bb5b99c4753e3e5f740db4c268155695d79"},
-    {file = "ampel_photometry-0.8.0a0-py3-none-any.whl", hash = "sha256:71910ad837b521a70ebd9703ae035a6b81f3f1bf513a97907793e1a62dafe059"},
+    {file = "ampel-photometry-0.8.0a1.tar.gz", hash = "sha256:1f0962294381c863272c54dda9d4b197043e9bc330c29efb2393ec86fdb249f6"},
+    {file = "ampel_photometry-0.8.0a1-py3-none-any.whl", hash = "sha256:8a89a2a4ced28f10b06f50f365c9e37370e73981157e526691e8716043d9df95"},
 ]
 argcomplete = [
     {file = "argcomplete-1.12.3-py2.py3-none-any.whl", hash = "sha256:291f0beca7fd49ce285d2f10e4c1c77e9460cf823eef2de54df0c0fec88b0d81"},

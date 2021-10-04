@@ -35,7 +35,7 @@ ampel-core = {version = "^0.8.0-alpha.11"}
 ampel-photometry = {version = "^0.8.0-alpha.1"}
 
 [tool.poetry.dev-dependencies]
-pytest = "^6.2.4"
+pytest = "^6.2.5"
 pytest-cov = "^2.12.1"
 pytest-mock = "^3.6.1"
 mongomock = "^3.23.0"

@@ -50,7 +50,7 @@
 <dd><p>Filters an alert.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>]</p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.10)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>]</p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p><ul class="simple">
@@ -80,7 +80,7 @@ returns an <a class="reference external" href="https://ampelproject.github.io/Am
 <dl class="py class">
 <dt class="sig sig-object py" id="ampel.alert.AlertConsumer.AlertConsumer">
 <em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">ampel.alert.AlertConsumer.</span></span><span class="sig-name descname"><span class="pre">AlertConsumer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ampel/alert/AlertConsumer.html#AlertConsumer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ampel.alert.AlertConsumer.AlertConsumer" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Generic" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">ampel.abstract.AbsAlertSupplier.T</span></code>], <a class="reference external" href="https://ampelproject.github.io/Ampel-core/api.html#ampel.abstract.AbsEventUnit.AbsEventUnit" title="(in ampel-core v0.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ampel.abstract.AbsEventUnit.AbsEventUnit</span></code></a></p>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Generic" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">ampel.abstract.AbsAlertSupplier.T</span></code>], <a class="reference external" href="https://ampelproject.github.io/Ampel-core/api.html#ampel.abstract.AbsEventUnit.AbsEventUnit" title="(in ampel-core v0.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ampel.abstract.AbsEventUnit.AbsEventUnit</span></code></a></p>
 <p>Class handling the processing of alerts (T0 level).
 For each alert, following tasks are performed:</p>
 <ul class="simple">
@@ -90,13 +90,13 @@ For each alert, following tasks are performed:</p>
 </ul>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="ampel.alert.AlertConsumer.AlertConsumer.iter_max">
-<span class="sig-name descname"><span class="pre">iter_max</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></em><em class="property"> <span class="pre">=</span> <span class="pre">50000</span></em><a class="headerlink" href="#ampel.alert.AlertConsumer.AlertConsumer.iter_max" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">iter_max</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a></em><em class="property"> <span class="pre">=</span> <span class="pre">50000</span></em><a class="headerlink" href="#ampel.alert.AlertConsumer.AlertConsumer.iter_max" title="Permalink to this definition">¶</a></dt>
 <dd><p>Maximum number of alerts to consume in <a class="reference internal" href="#ampel.alert.AlertConsumer.AlertConsumer.run" title="ampel.alert.AlertConsumer.AlertConsumer.run"><code class="xref py py-func docutils literal notranslate"><span class="pre">run()</span></code></a></p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="ampel.alert.AlertConsumer.AlertConsumer.error_max">
-<span class="sig-name descname"><span class="pre">error_max</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></em><em class="property"> <span class="pre">=</span> <span class="pre">20</span></em><a class="headerlink" href="#ampel.alert.AlertConsumer.AlertConsumer.error_max" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">error_max</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a></em><em class="property"> <span class="pre">=</span> <span class="pre">20</span></em><a class="headerlink" href="#ampel.alert.AlertConsumer.AlertConsumer.error_max" title="Permalink to this definition">¶</a></dt>
 <dd><p>Maximum number of exceptions to catch before cancelling <a class="reference internal" href="#ampel.alert.AlertConsumer.AlertConsumer.run" title="ampel.alert.AlertConsumer.AlertConsumer.run"><code class="xref py py-func docutils literal notranslate"><span class="pre">run()</span></code></a></p>
 </dd></dl>
 
@@ -116,7 +116,7 @@ and <code class="xref py py-class docutils literal notranslate"><span class="pre
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="ampel.alert.AlertConsumer.AlertConsumer.db_log_format">
-<span class="sig-name descname"><span class="pre">db_log_format</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a></em><em class="property"> <span class="pre">=</span> <span class="pre">'standard'</span></em><a class="headerlink" href="#ampel.alert.AlertConsumer.AlertConsumer.db_log_format" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">db_log_format</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></em><em class="property"> <span class="pre">=</span> <span class="pre">'standard'</span></em><a class="headerlink" href="#ampel.alert.AlertConsumer.AlertConsumer.db_log_format" title="Permalink to this definition">¶</a></dt>
 <dd><p>How to store log record in the database (see <a class="reference internal" href="#ampel.alert.FilterBlocksHandler.FilterBlocksHandler" title="ampel.alert.FilterBlocksHandler.FilterBlocksHandler"><code class="xref py py-class docutils literal notranslate"><span class="pre">FilterBlocksHandler</span></code></a>)</p>
 </dd></dl>
 
@@ -128,7 +128,7 @@ and <code class="xref py py-class docutils literal notranslate"><span class="pre
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="ampel.alert.AlertConsumer.AlertConsumer.shout">
-<span class="sig-name descname"><span class="pre">shout</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></em><em class="property"> <span class="pre">=</span> <span class="pre">2048</span></em><a class="headerlink" href="#ampel.alert.AlertConsumer.AlertConsumer.shout" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">shout</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a></em><em class="property"> <span class="pre">=</span> <span class="pre">2048</span></em><a class="headerlink" href="#ampel.alert.AlertConsumer.AlertConsumer.shout" title="Permalink to this definition">¶</a></dt>
 <dd><p>Flag to use for log records with a level between INFO and WARN</p>
 </dd></dl>
 
@@ -150,7 +150,7 @@ and <code class="xref py py-class docutils literal notranslate"><span class="pre
 <dd><p>Executed when SIGINT/SIGTERM is emitted during alert processing</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -161,7 +161,7 @@ and <code class="xref py py-class docutils literal notranslate"><span class="pre
 <dd><p>Executed when SIGINT/SIGTERM is emitted during alert supplier execution</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -172,7 +172,7 @@ and <code class="xref py py-class docutils literal notranslate"><span class="pre
 <dd><p>Convenience method to process all alerts from a given loader until it dries out</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -183,7 +183,7 @@ and <code class="xref py py-class docutils literal notranslate"><span class="pre
 <dd><p>Process alerts using internal alert_loader/alert_supplier</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>Number of alerts processed</p>
@@ -201,7 +201,7 @@ and <code class="xref py py-class docutils literal notranslate"><span class="pre
 <em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">ampel.alert.FilterBlocksHandler.</span></span><span class="sig-name descname"><span class="pre">FilterBlocksHandler</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">logger</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">directives</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">process_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">db_log_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'standard'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ampel/alert/FilterBlocksHandler.html#FilterBlocksHandler"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ampel.alert.FilterBlocksHandler.FilterBlocksHandler" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>db_log_format</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>) – <p>‘compact’ (saves RAM by reducing the number of indexed document) or ‘standard’.         Compact log entries can be later converted into ‘standard’ format using the aggregation pipeline.
+<dd class="field-odd"><p><strong>db_log_format</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>) – <p>‘compact’ (saves RAM by reducing the number of indexed document) or ‘standard’.         Compact log entries can be later converted into ‘standard’ format using the aggregation pipeline.
 Avoid using ‘compact’ if you run the alert processor with a single channel.</p>
 <p>Examples: (Abbreviations: s: stock, a: alert, f: flag, r: run, c: channel, m: msg)</p>
 <ul>
@@ -275,7 +275,7 @@ alert per file.</p>
 <dd><p>Load alerts from one of more files.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="ampel.alert.load.FileAlertLoader.FileAlertLoader.files">
-<span class="sig-name descname"><span class="pre">files</span></span><em class="property"><span class="pre">:</span> <span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ampel.alert.load.FileAlertLoader.FileAlertLoader.files" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">files</span></span><em class="property"><span class="pre">:</span> <span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ampel.alert.load.FileAlertLoader.FileAlertLoader.files" title="Permalink to this definition">¶</a></dt>
 <dd><p>paths to files to load</p>
 </dd></dl>
 
@@ -306,7 +306,7 @@ Note: isinstance(&lt;this class instance&gt;, LoggingHandlerProtocol) will retur
 <dd><p>Will raise Exception if DB issue occurs</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -335,11 +335,11 @@ with various levels of detail.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>alert</strong> (<a class="reference external" href="https://ampelproject.github.io/Ampel-interface/api.html#ampel.alert.AmpelAlert.AmpelAlert" title="(in ampel-interface v0.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">AmpelAlert</span></code></a>) – the alert a filter was applied to</p></li>
-<li><p><strong>filter_res</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>]) – result of the filter; <code class="docutils literal notranslate"><span class="pre">None</span></code> if the alert was rejected</p></li>
+<li><p><strong>filter_res</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>]) – result of the filter; <code class="docutils literal notranslate"><span class="pre">None</span></code> if the alert was rejected</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -396,25 +396,25 @@ and will by that not have to go through the file if the condition is not fulfill
 </ol>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="ampel.alert.reject.BaseAlertRegister.BaseAlertRegister.channel">
-<span class="sig-name descname"><span class="pre">channel</span></span><em class="property"><span class="pre">:</span> <span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ampel.alert.reject.BaseAlertRegister.BaseAlertRegister.channel" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">channel</span></span><em class="property"><span class="pre">:</span> <span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ampel.alert.reject.BaseAlertRegister.BaseAlertRegister.channel" title="Permalink to this definition">¶</a></dt>
 <dd><p>channel to record results for</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="ampel.alert.reject.BaseAlertRegister.BaseAlertRegister.run_id">
-<span class="sig-name descname"><span class="pre">run_id</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></em><a class="headerlink" href="#ampel.alert.reject.BaseAlertRegister.BaseAlertRegister.run_id" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">run_id</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a></em><a class="headerlink" href="#ampel.alert.reject.BaseAlertRegister.BaseAlertRegister.run_id" title="Permalink to this definition">¶</a></dt>
 <dd><p>current run number</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="ampel.alert.reject.BaseAlertRegister.BaseAlertRegister.path_channel_folder">
-<span class="sig-name descname"><span class="pre">path_channel_folder</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><span class="pre">bool</span></a></em><em class="property"> <span class="pre">=</span> <span class="pre">True</span></em><a class="headerlink" href="#ampel.alert.reject.BaseAlertRegister.BaseAlertRegister.path_channel_folder" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">path_channel_folder</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><span class="pre">bool</span></a></em><em class="property"> <span class="pre">=</span> <span class="pre">True</span></em><a class="headerlink" href="#ampel.alert.reject.BaseAlertRegister.BaseAlertRegister.path_channel_folder" title="Permalink to this definition">¶</a></dt>
 <dd><p>save files in &lt;path_channel_folder&gt;/&lt;channel&gt;/&lt;file&gt;</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="ampel.alert.reject.BaseAlertRegister.BaseAlertRegister.file_cap">
-<span class="sig-name descname"><span class="pre">file_cap</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="pre">runs</span><span class="p"><span class="pre">,</span> </span><span class="pre">blocks</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ampel.alert.reject.BaseAlertRegister.BaseAlertRegister.file_cap" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">file_cap</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="pre">runs</span><span class="p"><span class="pre">,</span> </span><span class="pre">blocks</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#ampel.alert.reject.BaseAlertRegister.BaseAlertRegister.file_cap" title="Permalink to this definition">¶</a></dt>
 <dd><p>additionaly to the parent’s class (AmpelRegister) ability to rename the current register when
 the number of blocks reaches a given threshold, this class can also rename the current file when
 the number of registered run ids in the header reaches a limit.
@@ -433,7 +433,7 @@ you move files to another folder, the next rename will create ampel_register.bin
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="ampel.alert.reject.BaseAlertRegister.BaseAlertRegister.file_prefix">
-<span class="sig-name descname"><span class="pre">file_prefix</span></span><em class="property"><span class="pre">:</span> <span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="pre">$run_id</span><span class="p"><span class="pre">,</span> </span><span class="pre">$channel</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">'$channel'</span></em><a class="headerlink" href="#ampel.alert.reject.BaseAlertRegister.BaseAlertRegister.file_prefix" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">file_prefix</span></span><em class="property"><span class="pre">:</span> <span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="pre">$run_id</span><span class="p"><span class="pre">,</span> </span><span class="pre">$channel</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">'$channel'</span></em><a class="headerlink" href="#ampel.alert.reject.BaseAlertRegister.BaseAlertRegister.file_prefix" title="Permalink to this definition">¶</a></dt>
 <dd><p>save file as &lt;run_id|channel|string&gt;.bin.gz</p>
 </dd></dl>
 
@@ -443,7 +443,7 @@ you move files to another folder, the next rename will create ampel_register.bin
 <dd><p>override if needed</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -454,7 +454,7 @@ you move files to another folder, the next rename will create ampel_register.bin
 <dd><p>hook called by parent class</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -465,7 +465,7 @@ you move files to another folder, the next rename will create ampel_register.bin
 <dd><p>Automatically adds aggregated “header bounds” into the header before super close() call</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -476,7 +476,7 @@ you move files to another folder, the next rename will create ampel_register.bin
 <dd><dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>f</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.BinaryIO" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">BinaryIO</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]) – file path (str) or file handle (which will not be closed)</p></li>
+<li><p><strong>f</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.10)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.BinaryIO" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">BinaryIO</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]) – file path (str) or file handle (which will not be closed)</p></li>
 <li><p><strong>kwargs</strong> – see method <cite>ampel.util.register.find</cite> docstring.</p></li>
 </ul>
 </dd>
@@ -488,7 +488,7 @@ you move files to another folder, the next rename will create ampel_register.bin
 </div>
 <dl class="field-list simple">
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Tuple</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>, …]]]</p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.10)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Tuple</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>, …]]]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -499,14 +499,14 @@ you move files to another folder, the next rename will create ampel_register.bin
 <dd><dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>f</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.BinaryIO" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">BinaryIO</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]) – file path (str) or file handle (which will not be closed)</p></li>
-<li><p><strong>stock_offset</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – position of the stock values within each block. For example, if the
+<li><p><strong>f</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.10)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.BinaryIO" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">BinaryIO</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]) – file path (str) or file handle (which will not be closed)</p></li>
+<li><p><strong>stock_offset</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – position of the stock values within each block. For example, if the
 blocks are made of ‘&lt;QQB’ and stock is the second Q, then stock_offset
 should be set to 8.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Tuple</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>, …]]]</p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.10)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Tuple</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>, …]]]</p>
 </dd>
 <dt class="field-odd">Returns</dt>
 <dd class="field-odd"><p>list of rejection info of the alerts matching the provided stock id</p>

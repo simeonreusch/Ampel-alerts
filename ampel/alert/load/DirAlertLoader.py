@@ -66,7 +66,6 @@ class DirAlertLoader(AbsAlertLoader[Union[StringIO, BytesIO]]):
 			),
 			key=os.path.getmtime
 		)
-		self.logger.debug(f"Building internal file list {len(all_files)}")
 
 		if self.min_index is not None:
 			self.logger.debug("Filtering files using min_index criterium")

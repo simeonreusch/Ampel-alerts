@@ -9,7 +9,7 @@
 
 import json
 from io import IOBase
-from typing import Iterable, Dict, Callable, Any, Literal, Generic, Union, Iterator
+from typing import Dict, Callable, Any, Literal, Generic, Union, Iterator
 from ampel.abstract.AbsAlertSupplier import AbsAlertSupplier, T
 from ampel.log.AmpelLogger import AmpelLogger
 from ampel.base.decorator import abstractmethod

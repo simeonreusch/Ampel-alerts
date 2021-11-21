@@ -4,7 +4,7 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 10.10.2017
-# Last Modified Date: 05.10.2021
+# Last Modified Date: 21.11.2021
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 from signal import signal, SIGINT, SIGTERM, default_int_handler
@@ -351,7 +351,10 @@ class AlertConsumer(Generic[T], AbsEventUnit):
 
 					try:
 						with stat_time.labels("ingest").time():
-							ing_hdlr.ingest(alert.dps, filter_results, stock_id, alert.tag, {'alert': alert.id})
+							ing_hdlr.ingest(
+								alert.dps, filter_results, stock_id, alert.tag,
+								{'alert': alert.id}, alert.data.get('stock')
+							)
 					except (PyMongoError, AmpelLoggingError) as e:
 						print("%s: abording run() procedure" % e.__class__.__name__)
 						self._report_ap_error(e, event_hdlr, logger, run_id, extra={'a': alert.id})

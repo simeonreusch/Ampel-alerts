@@ -19,7 +19,7 @@ package_data = {
 
 setup(
     name = 'ampel-alerts',
-    version = '0.8.0',
+    version = '0.8.1.alpha-1',
     description = 'Asynchronous and Modular Platform with Execution Layers',
     author = 'Valery Brinnel',
     maintainer = 'Jakob van Santen',

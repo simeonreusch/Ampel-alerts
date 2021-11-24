@@ -4,12 +4,12 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 29.07.2021
-# Last Modified Date: 29.07.2021
+# Last Modified Date: 24.11.2021
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 import json
 from io import IOBase
-from typing import Dict, Callable, Any, Literal, Generic, Union, Iterator
+from typing import Any, Dict, Callable, Literal, Generic, Optional, Iterator
 from ampel.abstract.AbsAlertSupplier import AbsAlertSupplier, T
 from ampel.log.AmpelLogger import AmpelLogger
 from ampel.base.decorator import abstractmethod
@@ -41,7 +41,7 @@ class BaseAlertSupplier(Generic[T], AbsAlertSupplier[T], abstract=True):
 	loader: UnitModel
 
 	# Underlying serialization
-	deserialize: Union[None, Literal["avro", "json", "csv"], Callable[[Any], Dict]] = None # type: ignore
+	deserialize: Optional[Literal["avro", "json", "csv"]]
 
 
 	def __init__(self, **kwargs) -> None:
@@ -52,19 +52,19 @@ class BaseAlertSupplier(Generic[T], AbsAlertSupplier[T], abstract=True):
 
 		super().__init__(**kwargs)
 
-		self.alert_loader: AbsAlertLoader[IOBase] = AuxUnitRegister.new_unit( # type: ignore
-			model = self.loader
+		self.alert_loader: AbsAlertLoader[IOBase] = AuxUnitRegister.new_unit(
+			model = self.loader, sub_type = AbsAlertLoader
 		)
 
 		if self.deserialize is None:
-			self.deserialize = identity
+			self._deserialize: Callable[[Any], Dict] = identity
 
 		elif self.deserialize == "json":
-			self.deserialize = json.load
+			self._deserialize = json.load
 
 		elif self.deserialize == "csv":
 			from csv import DictReader
-			self.deserialize = DictReader # type: ignore
+			self._deserialize = DictReader # type: ignore
 
 		elif self.deserialize == "avro":
 
@@ -72,10 +72,7 @@ class BaseAlertSupplier(Generic[T], AbsAlertSupplier[T], abstract=True):
 			def avro_next(arg: IOBase): # noqa: E306
 				return reader(arg).next()
 
-			self.deserialize = avro_next
-
-		elif callable(self.deserialize):
-			pass
+			self._deserialize = avro_next
 		else:
 			raise NotImplementedError(
 				f"Deserialization '{self.deserialize}' not implemented"

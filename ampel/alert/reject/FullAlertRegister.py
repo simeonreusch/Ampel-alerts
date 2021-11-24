@@ -10,7 +10,7 @@
 from time import time
 from struct import pack
 from typing import Optional, Tuple, Literal, Union, BinaryIO, List, ClassVar
-from ampel.alert.AmpelAlert import AmpelAlert
+from ampel.protocol.AmpelAlertProtocol import AmpelAlertProtocol
 from ampel.alert.reject.BaseAlertRegister import BaseAlertRegister
 
 
@@ -23,8 +23,8 @@ class FullAlertRegister(BaseAlertRegister):
 	struct: Literal['<QQIB'] = '<QQIB' # type: ignore[assignment]
 
 
-	def file(self, alert: AmpelAlert, filter_res: Optional[int] = None) -> None:
-		self._write(pack('<QQIB', alert.id, alert.stock_id, int(time()), filter_res or 0))
+	def file(self, alert: AmpelAlertProtocol, filter_res: Optional[int] = None) -> None:
+		self._write(pack('<QQIB', alert.id, alert.stock, int(time()), filter_res or 0))
 
 
 	@classmethod

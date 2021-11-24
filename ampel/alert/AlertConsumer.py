@@ -8,7 +8,7 @@
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 from signal import signal, SIGINT, SIGTERM, default_int_handler
-from typing import List, Any, Tuple, Generic, Sequence, Union, Optional
+from typing import List, Any, Tuple, Sequence, Union, Optional
 from pymongo.errors import PyMongoError
 
 from ampel.core.AmpelContext import AmpelContext
@@ -17,7 +17,7 @@ from ampel.util.freeze import recursive_unfreeze
 from ampel.model.UnitModel import UnitModel
 from ampel.core.EventHandler import EventHandler
 from ampel.dev.DevAmpelContext import DevAmpelContext
-from ampel.abstract.AbsAlertSupplier import AbsAlertSupplier, T
+from ampel.abstract.AbsAlertSupplier import AbsAlertSupplier
 from ampel.abstract.AbsEventUnit import AbsEventUnit
 from ampel.base.AuxUnitRegister import AuxUnitRegister
 from ampel.alert.FilterBlocksHandler import FilterBlocksHandler
@@ -34,7 +34,7 @@ from ampel.model.ingest.DualIngestDirective import DualIngestDirective
 from ampel.model.ingest.CompilerOptions import CompilerOptions
 
 
-class AlertConsumer(Generic[T], AbsEventUnit):
+class AlertConsumer(AbsEventUnit):
 	"""
 	Class handling the processing of alerts (T0 level).
 	For each alert, following tasks are performed:
@@ -302,7 +302,7 @@ class AlertConsumer(Generic[T], AbsEventUnit):
 				signal(SIGTERM, register_signal)
 
 				# Associate upcoming log entries with the current transient id
-				stock_id = alert.stock_id
+				stock_id = alert.stock
 
 				if any_filter:
 
@@ -352,8 +352,8 @@ class AlertConsumer(Generic[T], AbsEventUnit):
 					try:
 						with stat_time.labels("ingest").time():
 							ing_hdlr.ingest(
-								alert.dps, filter_results, stock_id, alert.tag,
-								{'alert': alert.id}, alert.data.get('stock')
+								alert.datapoints, filter_results, stock_id, alert.tag,
+								{'alert': alert.id}, alert.extra.get('stock') if alert.extra else None
 							)
 					except (PyMongoError, AmpelLoggingError) as e:
 						print("%s: abording run() procedure" % e.__class__.__name__)

@@ -4,12 +4,12 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 12.05.2020
-# Last Modified Date: 25.05.2020
+# Last Modified Date: 24.11.2021
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 from struct import pack
 from typing import Optional, ClassVar, Tuple, Union, Sequence
-from ampel.alert.AmpelAlert import AmpelAlert
+from ampel.protocol.AmpelAlertProtocol import AmpelAlertProtocol
 from ampel.alert.reject.MinimalAlertRegister import MinimalAlertRegister
 
 
@@ -26,7 +26,7 @@ class MinimalActiveAlertRegister(MinimalAlertRegister):
 
 
 	# Override
-	def file(self, alert: AmpelAlert, filter_res: Optional[int] = None) -> None:
+	def file(self, alert: AmpelAlertProtocol, filter_res: Optional[int] = None) -> None:
 		alid = alert.id
 		if alid > self.alert_max:
 			self.alert_max = alid

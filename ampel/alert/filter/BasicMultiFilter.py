@@ -4,22 +4,22 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 14.01.2017
-# Last Modified Date: 30.07.2020
+# Last Modified Date: 24.11.2021
 # Last Modified By  : Jakob van Santen <jakob.van.santen@desy.de>
 
 import operator
 from ampel.abstract.AbsAlertFilter import AbsAlertFilter
-from ampel.alert.PhotoAlert import PhotoAlert
+from ampel.protocol.AmpelAlertProtocol import AmpelAlertProtocol
 
 from ampel.model.StrictModel import StrictModel
-from typing import Literal, Sequence, Union, Callable, Dict, Optional
+from typing import Literal, Sequence, Union, Callable, Dict
 from pydantic import Field, validator
 
 class PhotoAlertQuery(StrictModel):
 	"""
 	A filter condition suitable for use with AmpelAlert.get_values()
 	"""
-	_ops: Dict[str,Callable] = {
+	_ops: Dict[str, Callable] = {
 		'>': operator.gt,
 		'<': operator.lt,
 		'>=': operator.ge,
@@ -29,15 +29,16 @@ class PhotoAlertQuery(StrictModel):
 		'AND': operator.and_,
 		'OR': operator.or_
 	}
-	attribute : str = Field(..., description="Name of a light curve field")
+	attribute: str = Field(..., description="Name of a light curve field")
 	operator: str = Field(..., description="Comparison operator")
 	value: float = Field(..., description="Value to compare to")
 
 	@validator('operator')
 	def valid_operator(cls, v):
-		if not v in cls._ops:
+		if v not in cls._ops:
 			raise ValueError(f"Unknown operator '{v}'")
 		return v
+
 
 class BasicFilterCondition(StrictModel):
 	criteria: Union[Sequence[PhotoAlertQuery], PhotoAlertQuery]
@@ -56,13 +57,12 @@ class BasicFilterCondition(StrictModel):
 			v = [v]
 		return [q.dict() for q in v]
 
-class BasicMultiFilter(AbsAlertFilter[PhotoAlert]):
 
-	version = 1.0
+class BasicMultiFilter(AbsAlertFilter):
 
 	filters: Sequence[BasicFilterCondition]
 
-	def process(self, alert: PhotoAlert) -> bool:
+	def process(self, alert: AmpelAlertProtocol) -> bool:
 		"""
 		Filter alerts via AmpelAlert.get_values(). Criteria in each condition
 		are ANDed together, and conditions can be combined with AND or OR. For

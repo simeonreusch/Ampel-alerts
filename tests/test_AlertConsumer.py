@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# File              : Ampel-alerts/tests/test_AlertProcessor.py
+# File              : Ampel-alerts/tests/test_AlertConsumer.py
 # License           : BSD-3-Clause
 # Author            : jvs
 # Date              : Unspecified
-# Last Modified Date: 05.08.2021
+# Last Modified Date: 24.11.2021
 # Last Modified By  : vb
 
 import pytest
@@ -74,7 +74,7 @@ def test_no_filter(dev_context, single_source_directive):
             supplier={
                 "unit": "UnitTestAlertSupplier",
                 "config": {
-                    "alerts": [AmpelAlert(id="alert", stock_id="stockystock", dps=[{"id": 0}])]
+                    "alerts": [AmpelAlert(id="alert", stock="stockystock", datapoints=[{"id": 0}])]
                 },
             },
         )
@@ -136,7 +136,7 @@ def test_with_filter(dev_context, single_source_directive):
             supplier={
                 "unit": "UnitTestAlertSupplier",
                 "config": {
-                    "alerts": [AmpelAlert(id="alert", stock_id="stockystock", dps=[{"id": 0}])]
+                    "alerts": [AmpelAlert(id="alert", stock="stockystock", datapoints=[{"id": 0}])]
                 },
             },
         )
@@ -192,7 +192,7 @@ def test_suspend_in_supplier(dev_context, single_source_directive):
         supplier={
             "unit": "BlockingAlertSupplier",
             "config": {
-                "alerts": [AmpelAlert(id="alert", stock_id="stockystock", dps=[])]
+                "alerts": [AmpelAlert(id="alert", stock="stockystock", datapoints=[])]
             },
         },
     )
@@ -224,7 +224,7 @@ def test_suspend_in_critical_section(dev_context, single_source_directive, monke
         supplier={
             "unit": "UnitTestAlertSupplier",
             "config": {
-                "alerts": [AmpelAlert(id="alert", stock_id="stockystock", dps=[])]
+                "alerts": [AmpelAlert(id="alert", stock="stockystock", datapoints=[])]
             },
         },
     )

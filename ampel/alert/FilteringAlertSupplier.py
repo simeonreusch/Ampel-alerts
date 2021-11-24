@@ -4,17 +4,18 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 28.05.2020
-# Last Modified Date: 29.07.2021
+# Last Modified Date: 24.11.2021
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
-from typing import List, Iterator, Generic
-from ampel.abstract.AbsAlertSupplier import AbsAlertSupplier, T
+from typing import List, Iterator
+from ampel.abstract.AbsAlertSupplier import AbsAlertSupplier
 from ampel.model.UnitModel import UnitModel
 from ampel.log.AmpelLogger import AmpelLogger
 from ampel.base.AuxUnitRegister import AuxUnitRegister
+from ampel.protocol.AmpelAlertProtocol import AmpelAlertProtocol
 
 
-class FilteringAlertSupplier(Generic[T], AbsAlertSupplier[T]):
+class FilteringAlertSupplier(AbsAlertSupplier):
 	"""
 	See AbsAlertSupplier docstring.
 	example:
@@ -35,17 +36,16 @@ class FilteringAlertSupplier(Generic[T], AbsAlertSupplier[T]):
 
 	def __init__(self, **kwargs) -> None:
 		super().__init__(**kwargs)
-		self.underlying_alert_supplier: AbsAlertSupplier[T] = AuxUnitRegister.new_unit(
+		self.underlying_alert_supplier: AbsAlertSupplier = AuxUnitRegister.new_unit(
 			model = self.supplier, sub_type = AbsAlertSupplier
 		)
 
-	def __iter__(self) -> Iterator[T]:
+	def __iter__(self) -> Iterator[AmpelAlertProtocol]:
 		"""
 		:returns: a dict with a structure that AlertConsumer understands
 		:raises StopIteration: when alert_loader dries out.
 		:raises AttributeError: if alert_loader was not set properly before this method is called
 		"""
-
 		for el in self.underlying_alert_supplier:
 			if el.id in self.match_ids:
 				yield el

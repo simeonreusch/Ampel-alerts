@@ -7,7 +7,6 @@ from ampel.template.AbsEasyChannelTemplate import AbsEasyChannelTemplate
 if TYPE_CHECKING:
     from ampel.log.AmpelLogger import AmpelLogger
     from ampel.config.builder.FirstPassConfig import FirstPassConfig
-    from ampel.model.UnitModel import UnitModel
 
 class LegacyChannelTemplate(AbsEasyChannelTemplate):
 

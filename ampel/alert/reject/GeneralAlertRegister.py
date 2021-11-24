@@ -9,7 +9,7 @@
 
 from struct import pack
 from typing import Optional, Tuple, Literal, Union, BinaryIO, List, ClassVar
-from ampel.alert.AmpelAlert import AmpelAlert
+from ampel.protocol.AmpelAlertProtocol import AmpelAlertProtocol
 from ampel.alert.reject.BaseAlertRegister import BaseAlertRegister
 
 
@@ -20,8 +20,8 @@ class GeneralAlertRegister(BaseAlertRegister):
 	struct: Literal['<QQB'] = '<QQB'
 
 
-	def file(self, alert: AmpelAlert, filter_res: Optional[int] = None) -> None:
-		self._write(pack('<QQB', alert.id, alert.stock_id, filter_res or 0))
+	def file(self, alert: AmpelAlertProtocol, filter_res: Optional[int] = None) -> None:
+		self._write(pack('<QQB', alert.id, alert.stock, filter_res or 0))
 
 
 	@classmethod

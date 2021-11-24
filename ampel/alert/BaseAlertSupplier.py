@@ -9,8 +9,9 @@
 
 import json
 from io import IOBase
-from typing import Any, Dict, Callable, Literal, Generic, Optional, Iterator
-from ampel.abstract.AbsAlertSupplier import AbsAlertSupplier, T
+from typing import Any, Dict, Callable, Literal, Optional, Iterator
+from ampel.protocol.AmpelAlertProtocol import AmpelAlertProtocol
+from ampel.abstract.AbsAlertSupplier import AbsAlertSupplier
 from ampel.log.AmpelLogger import AmpelLogger
 from ampel.base.decorator import abstractmethod
 from ampel.base.AuxUnitRegister import AuxUnitRegister
@@ -26,7 +27,7 @@ def identity(arg: Dict) -> Dict:
 	return arg
 
 
-class BaseAlertSupplier(Generic[T], AbsAlertSupplier[T], abstract=True):
+class BaseAlertSupplier(AbsAlertSupplier, abstract=True):
 	"""
 	:param deserialize: if the alert_loader returns bytes/file_like objects,
 	  deserialization is required to turn them into dicts.
@@ -78,11 +79,11 @@ class BaseAlertSupplier(Generic[T], AbsAlertSupplier[T], abstract=True):
 				f"Deserialization '{self.deserialize}' not implemented"
 			)
 
-	def __iter__(self) -> Iterator[T]:
-		return self # type: ignore[return-value]
+	def __iter__(self) -> Iterator[AmpelAlertProtocol]:
+		return self
 
 	@abstractmethod
-	def __next__(self) -> T:
+	def __next__(self) -> AmpelAlertProtocol:
 		...
 
 	def set_logger(self, logger: AmpelLogger) -> None:

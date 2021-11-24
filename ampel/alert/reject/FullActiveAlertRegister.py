@@ -4,13 +4,13 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 14.05.2020
-# Last Modified Date: 26.05.2020
+# Last Modified Date: 24.11.2021
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 from time import time
 from struct import pack
 from typing import Optional, ClassVar, Tuple, Sequence
-from ampel.alert.AmpelAlert import AmpelAlert
+from ampel.protocol.AmpelAlertProtocol import AmpelAlertProtocol
 from ampel.alert.reject.FullAlertRegister import FullAlertRegister
 
 
@@ -27,7 +27,7 @@ class FullActiveAlertRegister(FullAlertRegister):
 	stock_max: int
 
 
-	def file(self, alert: AmpelAlert, filter_res: Optional[int] = None) -> None:
+	def file(self, alert: AmpelAlertProtocol, filter_res: Optional[int] = None) -> None:
 
 		alid = alert.id
 		if alid > self.alert_max:
@@ -35,7 +35,7 @@ class FullActiveAlertRegister(FullAlertRegister):
 		if alid < self.alert_min:
 			self.alert_min = alid
 
-		sid = alert.stock_id
+		sid = alert.stock
 		if sid > self.stock_max: # type: ignore[operator]
 			self.stock_max = sid # type: ignore[assignment]
 		if sid < self.stock_min: # type: ignore[operator]

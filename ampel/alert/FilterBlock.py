@@ -4,7 +4,7 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 03.05.2018
-# Last Modified Date: 21.05.2021
+# Last Modified Date: 24.11.2021
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 from logging import LogRecord
@@ -20,8 +20,8 @@ from ampel.log.LogFlag import LogFlag
 from ampel.protocol.LoggingHandlerProtocol import LoggingHandlerProtocol
 from ampel.abstract.AbsAlertFilter import AbsAlertFilter
 from ampel.abstract.AbsAlertRegister import AbsAlertRegister
-from ampel.alert.AmpelAlert import AmpelAlert
 from ampel.alert.AlertConsumerMetrics import stat_accepted, stat_rejected, stat_autocomplete, stat_time
+from ampel.protocol.AmpelAlertProtocol import AmpelAlertProtocol
 
 
 def no_filter(alert: Any) -> bool:
@@ -90,7 +90,7 @@ class FilterBlock:
 			# Instantiate/get filter class associated with this channel
 			logger.info(f"Loading filter: {filter_model.unit}", extra={'c': self.channel})
 
-			self.buf_hdlr: Union[EnclosedChanRecordBufHandler,ChanRecordBufHandler] = \
+			self.buf_hdlr: Union[EnclosedChanRecordBufHandler, ChanRecordBufHandler] = \
 				EnclosedChanRecordBufHandler(logger.level, self.channel) if embed \
 				else ChanRecordBufHandler(logger.level, self.channel)
 
@@ -126,7 +126,7 @@ class FilterBlock:
 
 			self.rej_log_handle: Optional[Callable[[Union[LightLogRecord, LogRecord]], None]] = None
 			self.rej_log_handler: Optional[LoggingHandlerProtocol] = None
-			self.file: Optional[Callable[[AmpelAlert, Optional[int]], None]] = None
+			self.file: Optional[Callable[[AmpelAlertProtocol, Optional[int]], None]] = None
 			self.register: Optional[AbsAlertRegister] = None
 		else:
 			self.filter_func = no_filter
@@ -134,11 +134,11 @@ class FilterBlock:
 			self.overrule = self.idx, False
 
 
-	def filter(self, alert: AmpelAlert) -> Tuple[int, Union[int, bool, None]]:
+	def filter(self, alert: AmpelAlertProtocol) -> Tuple[int, Union[int, bool, None]]:
 
 		with self._stat_time.time():
 
-			if self.bypass[1] and alert.stock_id in self.stock_ids: # type: ignore[operator]
+			if self.bypass[1] and alert.stock in self.stock_ids: # type: ignore[operator]
 				return self.bypass
 
 			# Apply filter (returns None/False in case of rejection or True/int in case of match)
@@ -152,11 +152,11 @@ class FilterBlock:
 				# Write log entries to main logger
 				# (note: log records already contain chan info)
 				if self.buffer:
-					self.forward(self.logger, stock=alert.stock_id, extra={'a': alert.id})
+					self.forward(self.logger, stock=alert.stock, extra={'a': alert.id})
 
 				# Log minimal entry if channel did not log anything
 				else:
-					extra = {'a': alert.id, 's': alert.stock_id}
+					extra = {'a': alert.id, 's': alert.stock}
 					if self.min_log_msg: # embed is True
 						self.log(INFO, self.min_log_msg if isinstance(res, bool) \
 							else {'c': self.channel, 'g': res}, extra=extra)
@@ -166,11 +166,11 @@ class FilterBlock:
 
 				# stock_id 'exists' if filter bypass/overrule(s) or check_new is requested
 				if self.stock_ids:
-					if alert.stock_id in self.stock_ids:
+					if alert.stock in self.stock_ids:
 						if self.check_new:
 							return -self.idx, res
 					else:
-						self.stock_ids.add(alert.stock_id)
+						self.stock_ids.add(alert.stock)
 
 				return self.idx, res
 
@@ -180,9 +180,9 @@ class FilterBlock:
 				self._stat_rejected.inc()
 
 				# 'overrule' or 'silent_overrule' requested for this filter
-				if self.overrule and alert.stock_id in self.stock_ids:
+				if self.overrule and alert.stock in self.stock_ids:
 
-					extra_ac = {'a': alert.id, 'ac': True, 's': alert.stock_id, 'c': self.channel}
+					extra_ac = {'a': alert.id, 'ac': True, 's': alert.stock, 'c': self.channel}
 
 					# Main logger feedback
 					self.log(INFO, None, extra=extra_ac)
@@ -198,7 +198,7 @@ class FilterBlock:
 						if self.buffer:
 							if self.rej_log_handler:
 								# Clears the buffer
-								self.forward(self.rej_log_handler, stock=alert.stock_id, extra=extra_ac)
+								self.forward(self.rej_log_handler, stock=alert.stock, extra=extra_ac)
 							else:
 								self.buffer.clear()
 
@@ -206,7 +206,7 @@ class FilterBlock:
 						else:
 							if self.rej_log_handle:
 								lrec = LightLogRecord(0, 0, None)
-								lrec.stock = alert.stock_id
+								lrec.stock = alert.stock
 								lrec.extra = extra_ac
 								self.rej_log_handle(lrec)
 
@@ -223,13 +223,13 @@ class FilterBlock:
 						# Save possibly existing error to 'main' logs
 						if self.buf_hdlr.has_error:
 							self.forward(
-								self.logger, stock=alert.stock_id, extra={'a': alert.id},
+								self.logger, stock=alert.stock, extra={'a': alert.id},
 								clear=not self.rej_log_handler
 							)
 
 						if self.rej_log_handler:
 							# Send rejected logs to dedicated separate logger/handler
-							self.forward(self.rej_log_handler, stock=alert.stock_id, extra={'a': alert.id})
+							self.forward(self.rej_log_handler, stock=alert.stock, extra={'a': alert.id})
 
 					if self.file:
 						self.file(alert, res)

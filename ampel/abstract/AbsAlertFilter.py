@@ -4,21 +4,21 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 14.12.2017
-# Last Modified Date: 03.06.2020
+# Last Modified Date: 24.11.2021
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
-from typing import Optional, Union, Generic
-from ampel.types import T
+from typing import Optional, Union
 from ampel.base.AmpelABC import AmpelABC
 from ampel.base.decorator import abstractmethod
 from ampel.base.LogicalUnit import LogicalUnit
+from ampel.protocol.AmpelAlertProtocol import AmpelAlertProtocol
 
 
-class AbsAlertFilter(Generic[T], AmpelABC, LogicalUnit, abstract=True):
+class AbsAlertFilter(AmpelABC, LogicalUnit, abstract=True):
 	""" Base class for T0 alert filters """
 
 	@abstractmethod
-	def process(self, alert: T) -> Optional[Union[bool, int]]:
+	def process(self, alert: AmpelAlertProtocol) -> Optional[Union[bool, int]]:
 		"""
 		Filters an alert.
 		

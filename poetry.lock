@@ -65,7 +65,7 @@ docs = ["Sphinx (>=3.5.1,<5.0.0)", "sphinx-press-theme (>=0.5.1,<0.9.0)", "sphin
 
 [[package]]
 name = "ampel-interface"
-version = "0.8.1a8"
+version = "0.8.1a9"
 description = "Base classes for the Ampel analysis platform"
 category = "main"
 optional = false
@@ -773,7 +773,7 @@ server = []
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.9,<3.10"
-content-hash = "b8c216b19681145419a0ac4af00ce0d7166371c437ba16cf5436a27a3285844c"
+content-hash = "37f9b7f6f9b10d9b7505abdb73e2b0aedff0dc6b293b4922d7ee708ed3653eda"
 
 [metadata.files]
 aiohttp = [
@@ -863,8 +863,8 @@ ampel-core = [
     {file = "ampel_core-0.8.1a8-py3-none-any.whl", hash = "sha256:7006617f1dec87643dd220fafcd7c5bb6cbf25eb523e9e8ebea0cb981a5cc7c5"},
 ]
 ampel-interface = [
-    {file = "ampel-interface-0.8.1a8.tar.gz", hash = "sha256:0fd12a405bf9d67e992fdb760ca691a342558acab6cfcbb6e9adad9a2c503850"},
-    {file = "ampel_interface-0.8.1a8-py3-none-any.whl", hash = "sha256:8b2022fbfb43e2cad5416b3c53b9aa3b9af6230db5259d65fe2a10ec371719ae"},
+    {file = "ampel-interface-0.8.1a9.tar.gz", hash = "sha256:83f8dc67aba74c9145d6ec5fae5a0f40384718bfd410fe4747ca93f945eb63a6"},
+    {file = "ampel_interface-0.8.1a9-py3-none-any.whl", hash = "sha256:6f2a34c07850d6b3916bcc4f1123388fda456ad6fd455d97b6646f2a931a7761"},
 ]
 ampel-photometry = [
     {file = "ampel-photometry-0.8.1a2.tar.gz", hash = "sha256:733c4193509d75d0558cac3b445457dbaf044e2d4e9d7d3025d77a62ad5b0cca"},

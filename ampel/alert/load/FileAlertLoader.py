@@ -8,19 +8,17 @@
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 from io import BytesIO
-from typing import List, Optional
-from ampel.log.AmpelLogger import AmpelLogger
-from ampel.base.AmpelBaseModel import AmpelBaseModel
+from typing import List
+from ampel.abstract.AbsAlertLoader import AbsAlertLoader
 
 
-class FileAlertLoader(AmpelBaseModel):
+class FileAlertLoader(AbsAlertLoader[BytesIO]):
 	"""
 	Load alerts from one of more files.
 	"""
 
 	#: paths to files to load
 	files: List[str]
-	logger: Optional[AmpelLogger]
 
 	def __init__(self, **kwargs) -> None:
 	

@@ -208,7 +208,7 @@ unit:
     fqn: ampel.t3.stage.T3AdaptativeStager
     base:
     - T3AdaptativeStager
-    - T3BaseStager
+    - T3ThreadedStager
     - AbsT3Stager
     - ContextUnit
     distrib: ampel-core
@@ -241,20 +241,20 @@ unit:
     distrib: ampel-core
     file: /Users/jakob/Documents/ZTF/Ampel-v0.8/ampel-core/conf/ampel-core/ampel.yaml
     version: 0.8.0a0
-  T3CollaborativeStager:
-    fqn: ampel.t3.stage.T3CollaborativeStager
+  T3SequentialStager:
+    fqn: ampel.t3.stage.T3SequentialStager
     base:
-    - T3CollaborativeStager
-    - T3BaseStager
+    - T3SequentialStager
+    - T3ThreadedStager
     - AbsT3Stager
     - ContextUnit
     distrib: ampel-core
     file: /Users/jakob/Documents/ZTF/Ampel-v0.8/ampel-core/conf/ampel-core/ampel.yaml
     version: 0.8.0a0
-  T3DefaultSupplier:
-    fqn: ampel.t3.supply.T3DefaultSupplier
+  T3DefaultBufferSupplier:
+    fqn: ampel.t3.supply.T3DefaultBufferSupplier
     base:
-    - T3DefaultSupplier
+    - T3DefaultBufferSupplier
     - AbsT3Supplier
     - ContextUnit
     distrib: ampel-core
@@ -264,7 +264,7 @@ unit:
     fqn: ampel.t3.stage.T3DistributiveStager
     base:
     - T3DistributiveStager
-    - T3BaseStager
+    - T3ThreadedStager
     - AbsT3Stager
     - ContextUnit
     distrib: ampel-core
@@ -311,7 +311,7 @@ unit:
     fqn: ampel.t3.stage.T3ProjectingStager
     base:
     - T3ProjectingStager
-    - T3BaseStager
+    - T3ThreadedStager
     - AbsT3Stager
     - ContextUnit
     distrib: ampel-core
@@ -327,10 +327,10 @@ unit:
     file: /Users/jakob/Documents/ZTF/Ampel-v0.8/ampel-core/conf/ampel-core/ampel.yaml
     version: 0.8.0a0
   T3SessionAlertsNumber:
-    fqn: ampel.t3.session.T3SessionAlertsNumber
+    fqn: ampel.t3.include.session.T3SessionAlertsNumber
     base:
     - T3SessionAlertsNumber
-    - AbsSessionInfo
+    - AbsT3Supplier
     - ContextUnit
     distrib: ampel-core
     file: /Users/jakob/Documents/ZTF/Ampel-v0.8/ampel-core/conf/ampel-core/ampel.yaml
@@ -357,7 +357,7 @@ unit:
     fqn: ampel.t3.stage.T3SimpleStager
     base:
     - T3SimpleStager
-    - T3BaseStager
+    - T3ThreadedStager
     - AbsT3Stager
     - ContextUnit
     distrib: ampel-core
@@ -449,7 +449,7 @@ unit:
     fqn: ampel.demo.DemoT3Unit
     base:
     - DemoT3Unit
-    - AbsT3Unit
+    - AbsT3StageUnit
     - LogicalUnit
     distrib: ampel-core
     file: /Users/jakob/Documents/ZTF/Ampel-v0.8/ampel-core/conf/ampel-core/ampel.yaml

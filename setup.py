@@ -4,7 +4,7 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : Unspecified
-# Last Modified Date: 16.03.2021
+# Last Modified Date: 15.12.2021
 # Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
 
 from setuptools import setup, find_namespace_packages
@@ -19,7 +19,7 @@ package_data = {
 
 setup(
     name = 'ampel-alerts',
-    version = '0.8.1.alpha-2',
+    version = '0.8.2.alpha-3',
     description = 'Asynchronous and Modular Platform with Execution Layers',
     author = 'Valery Brinnel',
     maintainer = 'Jakob van Santen',

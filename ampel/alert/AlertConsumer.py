@@ -233,7 +233,8 @@ class AlertConsumer(AbsEventUnit):
 
 		# Add new doc in the 'events' collection
 		event_hdlr = EventHandler(
-			self._ampel_db, process_name=self.process_name, run_id=run_id, tier=0
+			self.process_name, self.context.db, tier=0,
+			run_id=run_id, raise_exc=self.raise_exc
 		)
 
 		# Collects and executes pymongo.operations in collection Ampel_data

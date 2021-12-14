@@ -268,7 +268,8 @@
 
 		<span class="c1"># Add new doc in the &#39;events&#39; collection</span>
 		<span class="n">event_hdlr</span> <span class="o">=</span> <span class="n">EventHandler</span><span class="p">(</span>
-			<span class="bp">self</span><span class="o">.</span><span class="n">_ampel_db</span><span class="p">,</span> <span class="n">process_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">process_name</span><span class="p">,</span> <span class="n">run_id</span><span class="o">=</span><span class="n">run_id</span><span class="p">,</span> <span class="n">tier</span><span class="o">=</span><span class="mi">0</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">process_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">tier</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+			<span class="n">run_id</span><span class="o">=</span><span class="n">run_id</span><span class="p">,</span> <span class="n">raise_exc</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">raise_exc</span>
 		<span class="p">)</span>
 
 		<span class="c1"># Collects and executes pymongo.operations in collection Ampel_data</span>

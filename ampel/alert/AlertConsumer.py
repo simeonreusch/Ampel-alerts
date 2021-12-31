@@ -8,7 +8,8 @@
 # Last Modified By:    valery brinnel <firstname.lastname@gmail.com>
 
 from signal import signal, SIGINT, SIGTERM, default_int_handler
-from typing import List, Any, Tuple, Sequence, Union, Optional
+from typing import Any, Union, Optional
+from collections.abc import Sequence
 from pymongo.errors import PyMongoError
 
 from ampel.core.AmpelContext import AmpelContext
@@ -271,12 +272,12 @@ class AlertConsumer(AbsEventUnit):
 		err = 0
 
 		assert self._fbh.chan_names is not None
-		reduced_chan_names: Union[str, List[str]] = self._fbh.chan_names[0] \
+		reduced_chan_names: Union[str, list[str]] = self._fbh.chan_names[0] \
 			if len(self._fbh.chan_names) == 1 else self._fbh.chan_names
 		fblocks = self._fbh.filter_blocks
 
 		if any_filter:
-			filter_results: List[Tuple[int, Union[bool, int]]] = []
+			filter_results: list[tuple[int, Union[bool, int]]] = []
 		else:
 			filter_results = [(i, True) for i, fb in enumerate(fblocks)]
 
@@ -457,8 +458,8 @@ class AlertConsumer(AbsEventUnit):
 
 
 	def _report_ap_error(self,
-		arg_e: Exception, event_hdlr, logger: AmpelLogger, run_id: Union[int, List[int]],
-		filter_results: Optional[List[Tuple[int, Union[bool, int]]]] = None,
+		arg_e: Exception, event_hdlr, logger: AmpelLogger, run_id: Union[int, list[int]],
+		filter_results: Optional[list[tuple[int, Union[bool, int]]]] = None,
 		extra: Optional[dict[str, Any]] = None
 	) -> None:
 		"""

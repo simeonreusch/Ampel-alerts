@@ -7,7 +7,7 @@
 # Last Modified Date:  27.07.2021
 # Last Modified By:    valery brinnel <firstname.lastname@gmail.com>
 
-from typing import List, Optional, Union
+from typing import Optional, Union
 from io import BytesIO, StringIO
 from ampel.abstract.AbsAlertLoader import AbsAlertLoader
 
@@ -25,7 +25,7 @@ class DirAlertLoader(AbsAlertLoader[Union[StringIO, BytesIO]]):
 
 	def __init__(self, **kwargs) -> None:
 		super().__init__(**kwargs)
-		self.files: List[str] = []
+		self.files: list[str] = []
 		self.open_mode = "rb" if self.binary_mode else "r"
 
 

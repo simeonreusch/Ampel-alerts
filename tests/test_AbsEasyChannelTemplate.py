@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 import pytest, yaml
 import contextlib
 
@@ -13,9 +13,9 @@ class LegacyChannelTemplate(AbsEasyChannelTemplate):
     # Mandatory implementation
     def get_processes(
         self, logger: "AmpelLogger", first_pass_config: "FirstPassConfig"
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
 
-        ret: List[Dict[str, Any]] = []
+        ret: list[dict[str, Any]] = []
 
         ret.insert(
             0,

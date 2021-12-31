@@ -8,7 +8,8 @@
 # Last Modified By:    valery brinnel <firstname.lastname@gmail.com>
 
 from struct import pack
-from typing import Optional, ClassVar, Tuple, Union, Sequence
+from typing import Optional, ClassVar, Union
+from collections.abc import Sequence
 from ampel.protocol.AmpelAlertProtocol import AmpelAlertProtocol
 from ampel.alert.reject.MinimalAlertRegister import MinimalAlertRegister
 
@@ -16,7 +17,7 @@ from ampel.alert.reject.MinimalAlertRegister import MinimalAlertRegister
 class MinimalActiveAlertRegister(MinimalAlertRegister):
 	""" Logs: alert_id, filter_res. No time stamp. """
 
-	__slots__: ClassVar[Tuple[str, ...]] = '_write', 'alert_max', 'alert_min' # type: ignore[misc]
+	__slots__: ClassVar[tuple[str, ...]] = '_write', 'alert_max', 'alert_min' # type: ignore[misc]
 	_slot_defaults = {'alert_max': 0, 'alert_min': 2**64}
 
 	new_header_size: Union[int, str] = "+300"

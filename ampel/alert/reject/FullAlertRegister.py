@@ -9,7 +9,7 @@
 
 from time import time
 from struct import pack
-from typing import Optional, Tuple, Literal, Union, BinaryIO, List, ClassVar
+from typing import Optional, Literal, Union, BinaryIO, ClassVar
 from ampel.protocol.AmpelAlertProtocol import AmpelAlertProtocol
 from ampel.alert.reject.BaseAlertRegister import BaseAlertRegister
 
@@ -19,7 +19,7 @@ class FullAlertRegister(BaseAlertRegister):
 	Record: alert_id, stock_id, timestamp, filter_res
 	"""
 
-	__slots__: ClassVar[Tuple[str, ...]] = '_write', # type: ignore
+	__slots__: ClassVar[tuple[str, ...]] = '_write', # type: ignore
 	struct: Literal['<QQIB'] = '<QQIB' # type: ignore[assignment]
 
 
@@ -29,6 +29,6 @@ class FullAlertRegister(BaseAlertRegister):
 
 	@classmethod
 	def find_stock(cls, # type: ignore[override]
-		f: Union[BinaryIO, str], stock_id: Union[int, List[int]], **kwargs
-	) -> Optional[List[Tuple[int, ...]]]:
+		f: Union[BinaryIO, str], stock_id: Union[int, list[int]], **kwargs
+	) -> Optional[list[tuple[int, ...]]]:
 		return super().find_stock(f, stock_id=stock_id, offset_in_block=8, **kwargs)

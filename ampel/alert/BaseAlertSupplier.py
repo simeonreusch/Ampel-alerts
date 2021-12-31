@@ -9,7 +9,8 @@
 
 import json
 from io import IOBase
-from typing import Any, Dict, Callable, Literal, Optional, Iterator
+from typing import Any, Literal, Optional
+from collections.abc import Callable, Iterator
 from ampel.protocol.AmpelAlertProtocol import AmpelAlertProtocol
 from ampel.abstract.AbsAlertSupplier import AbsAlertSupplier
 from ampel.log.AmpelLogger import AmpelLogger
@@ -19,7 +20,7 @@ from ampel.abstract.AbsAlertLoader import AbsAlertLoader
 from ampel.model.UnitModel import UnitModel
 
 
-def identity(arg: Dict) -> Dict:
+def identity(arg: dict) -> dict:
 	"""
 	Covers the "no deserialization needed" case which might occur
 	if the underlying alert loader directly returns dicts
@@ -58,7 +59,7 @@ class BaseAlertSupplier(AbsAlertSupplier, abstract=True):
 		)
 
 		if self.deserialize is None:
-			self._deserialize: Callable[[Any], Dict] = identity
+			self._deserialize: Callable[[Any], dict] = identity
 
 		elif self.deserialize == "json":
 			self._deserialize = json.load

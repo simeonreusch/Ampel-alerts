@@ -7,7 +7,8 @@
 # Last Modified Date:  21.05.2021
 # Last Modified By:    valery brinnel <firstname.lastname@gmail.com>
 
-from typing import Sequence, Union
+from typing import Union
+from collections.abc import Sequence
 from ampel.alert.FilterBlock import FilterBlock
 from ampel.core.AmpelContext import AmpelContext
 from ampel.log.AmpelLogger import AmpelLogger

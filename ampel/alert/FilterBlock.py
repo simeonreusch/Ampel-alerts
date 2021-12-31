@@ -8,7 +8,8 @@
 # Last Modified By:    valery brinnel <firstname.lastname@gmail.com>
 
 from logging import LogRecord
-from typing import Any, Union, Optional, Callable, Tuple, cast
+from typing import Any, Union, Optional, cast
+from collections.abc import Callable
 from ampel.types import ChannelId, StockId
 from ampel.core.AmpelContext import AmpelContext
 from ampel.model.ingest.FilterModel import FilterModel
@@ -134,7 +135,7 @@ class FilterBlock:
 			self.overrule = self.idx, False
 
 
-	def filter(self, alert: AmpelAlertProtocol) -> Tuple[int, Union[int, bool, None]]:
+	def filter(self, alert: AmpelAlertProtocol) -> tuple[int, Union[int, bool, None]]:
 
 		with self._stat_time.time():
 

@@ -8,7 +8,8 @@
 # Last Modified By:    valery brinnel <firstname.lastname@gmail.com>
 
 from ampel.types import T
-from typing import Generic, Iterator
+from typing import Generic
+from collections.abc import Iterator
 from ampel.log.AmpelLogger import AmpelLogger
 from ampel.base.AmpelABC import AmpelABC
 from ampel.base.decorator import abstractmethod

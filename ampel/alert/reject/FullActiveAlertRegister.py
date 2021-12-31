@@ -9,7 +9,8 @@
 
 from time import time
 from struct import pack
-from typing import Optional, ClassVar, Tuple, Sequence
+from typing import Optional, ClassVar
+from collections.abc import Sequence
 from ampel.protocol.AmpelAlertProtocol import AmpelAlertProtocol
 from ampel.alert.reject.FullAlertRegister import FullAlertRegister
 
@@ -17,7 +18,7 @@ from ampel.alert.reject.FullAlertRegister import FullAlertRegister
 class FullActiveAlertRegister(FullAlertRegister):
 	""" Logs: alert_id, stock_id, timestamp, filter_res """
 
-	__slots__: ClassVar[Tuple[str, ...]] = '_write', 'alert_max', 'alert_min', 'stock_max', 'stock_min' # type: ignore
+	__slots__: ClassVar[tuple[str, ...]] = '_write', 'alert_max', 'alert_min', 'stock_max', 'stock_min' # type: ignore
 	_slot_defaults = {'alert_max': 0, 'alert_min': 2**64, 'stock_max': 0, 'stock_min': 2**64}
 
 	header_hints: ClassVar[Sequence[str]] = ('alert', 'stock') # type: ignore

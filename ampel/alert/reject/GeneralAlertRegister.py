@@ -8,7 +8,7 @@
 # Last Modified By:    valery brinnel <firstname.lastname@gmail.com>
 
 from struct import pack
-from typing import Optional, Tuple, Literal, Union, BinaryIO, List, ClassVar
+from typing import Optional, Literal, Union, BinaryIO, ClassVar
 from ampel.protocol.AmpelAlertProtocol import AmpelAlertProtocol
 from ampel.alert.reject.BaseAlertRegister import BaseAlertRegister
 
@@ -16,7 +16,7 @@ from ampel.alert.reject.BaseAlertRegister import BaseAlertRegister
 class GeneralAlertRegister(BaseAlertRegister):
 	""" Logs: alert_id, stock_id, filter_res """
 
-	__slots__: ClassVar[Tuple[str, ...]] = '_write', # type: ignore
+	__slots__: ClassVar[tuple[str, ...]] = '_write', # type: ignore
 	struct: Literal['<QQB'] = '<QQB'
 
 
@@ -26,6 +26,6 @@ class GeneralAlertRegister(BaseAlertRegister):
 
 	@classmethod
 	def find_stock(cls, # type: ignore[override]
-		f: Union[BinaryIO, str], stock_id: Union[int, List[int]], **kwargs
-	) -> Optional[List[Tuple[int, ...]]]:
+		f: Union[BinaryIO, str], stock_id: Union[int, list[int]], **kwargs
+	) -> Optional[list[tuple[int, ...]]]:
 		return super().find_stock(f, stock_id=stock_id, stock_offset=8, **kwargs)

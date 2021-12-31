@@ -9,7 +9,7 @@
 
 import ujson
 from pydantic import validator
-from typing import List, Dict, Any, Union, Optional
+from typing import Any, Union, Optional
 from ampel.types import ChannelId
 from ampel.log.AmpelLogger import AmpelLogger
 from ampel.model.ingest.T2Compute import T2Compute
@@ -32,11 +32,11 @@ class AbsEasyChannelTemplate(AbsChannelTemplate, abstract=True):
 
 	#: T2 units to trigger when transient is updated. Dependencies of tied
 	#: units will be added automatically.
-	t2_compute: List[T2Compute] = []
+	t2_compute: list[T2Compute] = []
 
 	#: T3 processes bound to this channel. These may be use templates, such as
 	#: :class:`~ampel.model.template.PeriodicSummaryT3.PeriodicSummaryT3`.
-	t3_supervise: List[Dict[str, Any]] = []
+	t3_supervise: list[dict[str, Any]] = []
 
 	retro_complete: bool = False
 
@@ -49,7 +49,7 @@ class AbsEasyChannelTemplate(AbsChannelTemplate, abstract=True):
 
 
 	# Mandatory implementation
-	def get_channel(self, logger: AmpelLogger) -> Dict[str, Any]:
+	def get_channel(self, logger: AmpelLogger) -> dict[str, Any]:
 		d = self.dict(by_alias=True)
 		for k in ("t0_filter", "t0_muxer", "t2_compute", "t3_supervise", "auto_complete"):
 			if k in d:
@@ -58,14 +58,14 @@ class AbsEasyChannelTemplate(AbsChannelTemplate, abstract=True):
 
 
 	def craft_t0_process(self,
-		config: Union[FirstPassConfig, Dict[str, Any]],
-		controller: Union[str, Dict[str, Any]],
-		supplier: Union[str, Dict[str, Any]],
-		shaper: Union[str, Dict[str, Any]],
-		combiner: Union[str, Dict[str, Any]],
-		muxer: Optional[Union[str, Dict[str, Any]]] = None,
-		compiler_opts: Optional[Dict[str, Any]] = None
-	) -> Dict[str, Any]:
+		config: Union[FirstPassConfig, dict[str, Any]],
+		controller: Union[str, dict[str, Any]],
+		supplier: Union[str, dict[str, Any]],
+		shaper: Union[str, dict[str, Any]],
+		combiner: Union[str, dict[str, Any]],
+		muxer: Optional[Union[str, dict[str, Any]]] = None,
+		compiler_opts: Optional[dict[str, Any]] = None
+	) -> dict[str, Any]:
 		"""
 		This method needs a reference to a FirstPassConfig dict because
 		config information might be needed during the template transforming process.
@@ -80,7 +80,7 @@ class AbsEasyChannelTemplate(AbsChannelTemplate, abstract=True):
 		:param state_t2: units to schedule on t1_combine
 		"""
 
-		ret: Dict[str, Any] = {
+		ret: dict[str, Any] = {
 			"tier": 0,
 			"schedule": ["super"],
 			"active": self.active,
@@ -104,15 +104,15 @@ class AbsEasyChannelTemplate(AbsChannelTemplate, abstract=True):
 	@classmethod
 	def craft_t0_processor_config(cls,
 		channel: ChannelId,
-		config: Union[FirstPassConfig, Dict[str, Any]],
-		t2_compute: List[T2Compute],
-		supplier: Union[str, Dict[str, Any]],
-		shaper: Union[str, Dict[str, Any]],
-		combiner: Union[str, Dict[str, Any]],
-		filter_dict: Optional[Dict[str, Any]] = None,
-		muxer: Optional[Union[str, Dict[str, Any]]] = None,
-		compiler_opts: Optional[Dict[str, Any]] = None
-	) -> Dict[str, Any]:
+		config: Union[FirstPassConfig, dict[str, Any]],
+		t2_compute: list[T2Compute],
+		supplier: Union[str, dict[str, Any]],
+		shaper: Union[str, dict[str, Any]],
+		combiner: Union[str, dict[str, Any]],
+		filter_dict: Optional[dict[str, Any]] = None,
+		muxer: Optional[Union[str, dict[str, Any]]] = None,
+		compiler_opts: Optional[dict[str, Any]] = None
+	) -> dict[str, Any]:
 		"""
 		This method needs a reference to a FirstPassConfig dict because
 		config information might be needed during the template transforming process.
@@ -141,7 +141,7 @@ class AbsEasyChannelTemplate(AbsChannelTemplate, abstract=True):
 		point_t2s = filter_units(t2_compute, "AbsPointT2Unit", config)
 		check_tied_units(t2_compute, config)
 
-		ingest: Dict[str, Any] = {}
+		ingest: dict[str, Any] = {}
 
 		# See IngestDirective docstring
 		if stock_t2s:

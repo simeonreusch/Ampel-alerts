@@ -11,7 +11,8 @@ from time import time
 from functools import wraps
 from pymongo import MongoClient
 from multiprocessing import Pool, Semaphore, shared_memory
-from typing import Any, Set, Dict, Sequence, Callable
+from typing import Any
+from collections.abc import Sequence, Callable
 from ampel.types import ChannelId, StockId
 from ampel.core.AmpelContext import AmpelContext
 
@@ -198,7 +199,7 @@ class AutoCompleteBenchmark:
 
 		pool = Pool(4)
 
-		ret: Dict[ChannelId, Set[StockId]] = {k: set() for k in channel}
+		ret: dict[ChannelId, set[StockId]] = {k: set() for k in channel}
 
 		results = [
 			pool.apply_async(
@@ -317,7 +318,7 @@ class AutoCompleteBenchmark:
 		page_size: int = 1000000,
 		verbose: bool = True,
 		debug: bool = False
-	) -> Dict[ChannelId, Set[StockId]]:
+	) -> dict[ChannelId, set[StockId]]:
 		"""
 		Builds sets of transient ids if the channel was configured
 		to make use of the 'accept' or 'reject' auto_complete feature.
@@ -348,9 +349,9 @@ class AutoCompleteBenchmark:
 		self.keys = list(channels)
 		results = []
 
-		self.ret: Dict[ChannelId, Set[StockId]] = {}
-		self.task_done: Dict[ChannelId, Callable] = {}
-		self.stops: Dict[ChannelId, Any] = {}
+		self.ret: dict[ChannelId, set[StockId]] = {}
+		self.task_done: dict[ChannelId, Callable] = {}
+		self.stops: dict[ChannelId, Any] = {}
 
 		for kk in channels:
 			self.stops[kk] = shared_memory.SharedMemory(create=True, size=1)

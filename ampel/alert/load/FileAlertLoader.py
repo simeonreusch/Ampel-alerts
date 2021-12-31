@@ -18,7 +18,7 @@ class FileAlertLoader(AbsAlertLoader[BytesIO]):
 	"""
 
 	#: paths to files to load
-	files: List[str]
+	files: list[str]
 
 	def __init__(self, **kwargs) -> None:
 	

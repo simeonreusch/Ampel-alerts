@@ -7,7 +7,8 @@
 # Last Modified Date:  31.08.2020
 # Last Modified By:    valery brinnel <firstname.lastname@gmail.com>
 
-from typing import BinaryIO, Optional, Literal, Dict, Any, List, Union, Generator, Tuple, ClassVar, Sequence
+from typing import BinaryIO, Optional, Literal, Any, Union, ClassVar
+from collections.abc import Sequence, Generator
 from ampel.types import ChannelId
 from ampel.abstract.AbsAlertRegister import AbsAlertRegister
 from ampel.util.register import find, reg_iter
@@ -51,7 +52,7 @@ class BaseAlertRegister(AbsAlertRegister, abstract=True):
 	     - beware: re-run should not use this scheme, as concurent updates to a register are not supported!
 	"""
 
-	__slots__: ClassVar[Tuple[str, ...]] = '_write', # type: ignore
+	__slots__: ClassVar[tuple[str, ...]] = '_write', # type: ignore
 	_write: Any
 
 	#: channel to record results for
@@ -77,7 +78,7 @@ class BaseAlertRegister(AbsAlertRegister, abstract=True):
 	#:
 	#:   The current file suffix number is encoded in the header. If the current suffix number is 10 and
 	#:   you move files to another folder, the next rename will create ampel_register.bin.gz.11 nonetheless.
-	file_cap: Optional[Dict[Literal['runs', 'blocks'], int]] # type: ignore[assignment]
+	file_cap: Optional[dict[Literal['runs', 'blocks'], int]] # type: ignore[assignment]
 
 	header_bounds: ClassVar[Optional[Sequence[str]]] = None
 
@@ -119,7 +120,7 @@ class BaseAlertRegister(AbsAlertRegister, abstract=True):
 						object.__setattr__(self, f'{el}_{m}', hdr[el][m])
 
 
-	def check_rename(self, header: Dict[str, Any]) -> bool:
+	def check_rename(self, header: dict[str, Any]) -> bool:
 
 		if not self.file_cap:
 			return False
@@ -169,14 +170,14 @@ class BaseAlertRegister(AbsAlertRegister, abstract=True):
 	@classmethod
 	def iter(cls,
 		f: Union[BinaryIO, str], multiplier: int = 100000, verbose: bool = True
-	) -> Generator[Tuple[int, ...], None, None]:
+	) -> Generator[tuple[int, ...], None, None]:
 		return reg_iter(f, multiplier, verbose)
 
 
 	@classmethod
 	def find_alert(cls,
-		f: Union[BinaryIO, str], alert_id: Union[int, List[int]], alert_id_bytes_len: int = 8, **kwargs
-	) -> Optional[List[Tuple[int, ...]]]:
+		f: Union[BinaryIO, str], alert_id: Union[int, list[int]], alert_id_bytes_len: int = 8, **kwargs
+	) -> Optional[list[tuple[int, ...]]]:
 		"""
 		:param f: file path (str) or file handle (which will not be closed)
 		:param kwargs: see method `ampel.util.register.find` docstring.
@@ -194,9 +195,9 @@ class BaseAlertRegister(AbsAlertRegister, abstract=True):
 
 	@classmethod
 	def find_stock(cls,
-		f: Union[BinaryIO, str], stock_id: Union[int, List[int]],
+		f: Union[BinaryIO, str], stock_id: Union[int, list[int]],
 		stock_offset: int, stock_bytes_len: int = 8, **kwargs
-	) -> Optional[List[Tuple[int, ...]]]:
+	) -> Optional[list[tuple[int, ...]]]:
 		"""
 		:param f: file path (str) or file handle (which will not be closed)
 		:param stock_offset:

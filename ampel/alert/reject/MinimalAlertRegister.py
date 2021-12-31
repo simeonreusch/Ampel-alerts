@@ -8,7 +8,7 @@
 # Last Modified By:    valery brinnel <firstname.lastname@gmail.com>
 
 from struct import pack
-from typing import Optional, ClassVar, Tuple, Literal
+from typing import Optional, ClassVar, Literal
 from ampel.protocol.AmpelAlertProtocol import AmpelAlertProtocol
 from ampel.alert.reject.BaseAlertRegister import BaseAlertRegister
 
@@ -18,10 +18,10 @@ class MinimalAlertRegister(BaseAlertRegister):
 	Logs: alert_id, filter_res. No time stamp.
 
 	Notes:
-	- method "iter" yields Tuple[<alert id>, <filter return code>]
+	- method "iter" yields tuple[<alert id>, <filter return code>]
 	"""
 
-	__slots__: ClassVar[Tuple[str, ...]] = '_write', # type: ignore
+	__slots__: ClassVar[tuple[str, ...]] = '_write', # type: ignore
 	struct: Literal['<QB'] = '<QB'
 	header_log_accesses: bool = False
 

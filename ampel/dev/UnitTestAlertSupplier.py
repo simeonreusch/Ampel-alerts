@@ -26,7 +26,7 @@ class UnitTestAlertSupplier(AbsAlertSupplier):
 		)
 	)
 	"""
-	alerts: List[AmpelAlertProtocol]
+	alerts: list[AmpelAlertProtocol]
 
 	def __init__(self, **kwargs) -> None:
 		super().__init__(**kwargs)

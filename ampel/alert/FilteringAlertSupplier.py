@@ -7,7 +7,7 @@
 # Last Modified Date:  24.11.2021
 # Last Modified By:    valery brinnel <firstname.lastname@gmail.com>
 
-from typing import List, Iterator
+from typing import Iterator
 from ampel.abstract.AbsAlertSupplier import AbsAlertSupplier
 from ampel.model.UnitModel import UnitModel
 from ampel.log.AmpelLogger import AmpelLogger
@@ -31,7 +31,7 @@ class FilteringAlertSupplier(AbsAlertSupplier):
 	"""
 
 	supplier: UnitModel
-	match_ids: List[int]
+	match_ids: list[int]
 
 
 	def __init__(self, **kwargs) -> None:

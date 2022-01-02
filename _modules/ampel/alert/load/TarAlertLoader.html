@@ -35,15 +35,15 @@
   <h1>Source code for ampel.alert.load.TarAlertLoader</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python</span>
 <span class="c1"># -*- coding: utf-8 -*-</span>
-<span class="c1"># File              : Ampel-alerts/ampel/alert/load/TarAlertLoader.py</span>
-<span class="c1"># License           : BSD-3-Clause</span>
-<span class="c1"># Author            : vb &lt;vbrinnel@physik.hu-berlin.de&gt;</span>
-<span class="c1"># Date              : 13.05.2018</span>
-<span class="c1"># Last Modified Date: 15.03.2021</span>
-<span class="c1"># Last Modified By  : vb &lt;vbrinnel@physik.hu-berlin.de&gt;</span>
+<span class="c1"># File:                Ampel-alerts/ampel/alert/load/TarAlertLoader.py</span>
+<span class="c1"># License:             BSD-3-Clause</span>
+<span class="c1"># Author:              valery brinnel &lt;firstname.lastname@gmail.com&gt;</span>
+<span class="c1"># Date:                13.05.2018</span>
+<span class="c1"># Last Modified Date:  15.03.2021</span>
+<span class="c1"># Last Modified By:    valery brinnel &lt;firstname.lastname@gmail.com&gt;</span>
 
 <span class="kn">import</span> <span class="nn">tarfile</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">IO</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">IO</span>
 <span class="kn">from</span> <span class="nn">ampel.log.AmpelLogger</span> <span class="kn">import</span> <span class="n">AmpelLogger</span>
 <span class="kn">from</span> <span class="nn">ampel.abstract.AbsAlertLoader</span> <span class="kn">import</span> <span class="n">AbsAlertLoader</span>
 
@@ -57,8 +57,8 @@
 
 	<span class="n">tar_mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;r:gz&#39;</span>
 	<span class="n">start</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
-	<span class="n">file_obj</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">IO</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]]</span>
-	<span class="n">file_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+	<span class="n">file_obj</span><span class="p">:</span> <span class="kc">None</span> <span class="o">|</span> <span class="n">IO</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]</span>
+	<span class="n">file_path</span><span class="p">:</span> <span class="kc">None</span> <span class="o">|</span> <span class="nb">str</span>
 	<span class="n">logger</span><span class="p">:</span> <span class="n">AmpelLogger</span> <span class="c1"># actually optional</span>
 
 
@@ -69,7 +69,7 @@
 
 		<span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-		<span class="bp">self</span><span class="o">.</span><span class="n">chained_tal</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="s1">&#39;TarAlertLoader&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">chained_tal</span><span class="p">:</span> <span class="s1">&#39;None | TarAlertLoader&#39;</span> <span class="o">=</span> <span class="kc">None</span>
 
 		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_obj</span><span class="p">:</span>
 			<span class="bp">self</span><span class="o">.</span><span class="n">tar_file</span> <span class="o">=</span> <span class="n">tarfile</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">fileobj</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">file_obj</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tar_mode</span><span class="p">)</span>
@@ -143,7 +143,7 @@
 		<span class="k">return</span> <span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
 
-	<span class="k">def</span> <span class="nf">get_chained_next</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">IO</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]]:</span>
+	<span class="k">def</span> <span class="nf">get_chained_next</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span> <span class="o">|</span> <span class="n">IO</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]:</span>
 		<span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">chained_tal</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
 		<span class="n">file_obj</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">chained_tal</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 		<span class="k">if</span> <span class="n">file_obj</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -189,7 +189,7 @@
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2018-2021, Ampel Project.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.3.1.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.3.2.
     </div>
   </body>
 </html>

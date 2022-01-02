@@ -8,7 +8,7 @@
 # Last Modified By:    valery brinnel <firstname.lastname@gmail.com>
 
 import tarfile
-from typing import Optional, IO
+from typing import IO
 from ampel.log.AmpelLogger import AmpelLogger
 from ampel.abstract.AbsAlertLoader import AbsAlertLoader
 
@@ -22,8 +22,8 @@ class TarAlertLoader(AbsAlertLoader[IO[bytes]]):
 
 	tar_mode: str = 'r:gz'
 	start: int = 0
-	file_obj: Optional[IO[bytes]]
-	file_path: Optional[str]
+	file_obj: None | IO[bytes]
+	file_path: None | str
 	logger: AmpelLogger # actually optional
 
 
@@ -34,7 +34,7 @@ class TarAlertLoader(AbsAlertLoader[IO[bytes]]):
 
 		super().__init__(**kwargs)
 
-		self.chained_tal: Optional['TarAlertLoader'] = None
+		self.chained_tal: 'None | TarAlertLoader' = None
 
 		if self.file_obj:
 			self.tar_file = tarfile.open(fileobj=self.file_obj, mode=self.tar_mode)
@@ -108,7 +108,7 @@ class TarAlertLoader(AbsAlertLoader[IO[bytes]]):
 		return next(self)
 
 
-	def get_chained_next(self) -> Optional[IO[bytes]]:
+	def get_chained_next(self) -> None | IO[bytes]:
 		assert self.chained_tal is not None
 		file_obj = next(self.chained_tal, None)
 		if file_obj is None:

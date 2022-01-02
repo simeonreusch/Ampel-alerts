@@ -8,7 +8,7 @@
 # Last Modified By:    valery brinnel <firstname.lastname@gmail.com>
 
 from struct import pack
-from typing import Optional, ClassVar, Literal
+from typing import ClassVar, Literal
 from ampel.protocol.AmpelAlertProtocol import AmpelAlertProtocol
 from ampel.alert.reject.BaseAlertRegister import BaseAlertRegister
 
@@ -26,7 +26,7 @@ class MinimalAlertRegister(BaseAlertRegister):
 	header_log_accesses: bool = False
 
 
-	def file(self, alert: AmpelAlertProtocol, filter_res: Optional[int] = None) -> None:
+	def file(self, alert: AmpelAlertProtocol, filter_res: None | int = None) -> None:
 		self._write(pack('<QB', alert.id, filter_res or 0))
 
 

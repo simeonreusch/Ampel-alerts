@@ -12,7 +12,7 @@ from ampel.abstract.AbsAlertFilter import AbsAlertFilter
 from ampel.protocol.AmpelAlertProtocol import AmpelAlertProtocol
 
 from ampel.base.AmpelBaseModel import AmpelBaseModel
-from typing import Literal, Union
+from typing import Literal
 from collections.abc import Callable, Sequence
 
 
@@ -44,7 +44,7 @@ class PhotoAlertQuery(AmpelBaseModel):
 
 class BasicFilterCondition(AmpelBaseModel):
 
-	criteria: Union[PhotoAlertQuery, Sequence[PhotoAlertQuery]]
+	criteria: PhotoAlertQuery | Sequence[PhotoAlertQuery]
 	len: int
 	operator: Literal['>', '<', '>=', '<=', '==', '!=', 'AND', 'OR']
 	logicalConnection: Literal['AND', 'OR'] = 'AND'

@@ -8,7 +8,7 @@
 # Last Modified By:    valery brinnel <firstname.lastname@gmail.com>
 
 from logging import LogRecord
-from typing import Any, Union, Optional, cast
+from typing import Any, cast
 from collections.abc import Callable
 from ampel.types import ChannelId, StockId
 from ampel.core.AmpelContext import AmpelContext
@@ -47,7 +47,7 @@ class FilterBlock:
 		index: int,
 		context: AmpelContext,
 		channel: ChannelId,
-		filter_model: Optional[FilterModel],
+		filter_model: None | FilterModel,
 		process_name: str,
 		logger: AmpelLogger,
 		check_new: bool = False,
@@ -91,7 +91,7 @@ class FilterBlock:
 			# Instantiate/get filter class associated with this channel
 			logger.info(f"Loading filter: {filter_model.unit}", extra={'c': self.channel})
 
-			self.buf_hdlr: Union[EnclosedChanRecordBufHandler, ChanRecordBufHandler] = \
+			self.buf_hdlr: EnclosedChanRecordBufHandler | ChanRecordBufHandler = \
 				EnclosedChanRecordBufHandler(logger.level, self.channel) if embed \
 				else ChanRecordBufHandler(logger.level, self.channel)
 
@@ -125,17 +125,17 @@ class FilterBlock:
 				self.bypass = self.idx, False
 				self.update_rej = True
 
-			self.rej_log_handle: Optional[Callable[[Union[LightLogRecord, LogRecord]], None]] = None
-			self.rej_log_handler: Optional[LoggingHandlerProtocol] = None
-			self.file: Optional[Callable[[AmpelAlertProtocol, Optional[int]], None]] = None
-			self.register: Optional[AbsAlertRegister] = None
+			self.rej_log_handle: None | Callable[[LightLogRecord | LogRecord], None] = None
+			self.rej_log_handler: None | LoggingHandlerProtocol = None
+			self.file: None | Callable[[AmpelAlertProtocol, None | int], None] = None
+			self.register: None | AbsAlertRegister = None
 		else:
 			self.filter_func = no_filter
 			self.bypass = self.idx, False
 			self.overrule = self.idx, False
 
 
-	def filter(self, alert: AmpelAlertProtocol) -> tuple[int, Union[int, bool, None]]:
+	def filter(self, alert: AmpelAlertProtocol) -> tuple[int, int | bool | None]:
 
 		with self._stat_time.time():
 

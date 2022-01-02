@@ -73,7 +73,7 @@ class FilterBlocksHandler:
 
 	def __init__(self,
 		context: AmpelContext, logger: AmpelLogger,
-		directives: Sequence[Union[IngestDirective, DualIngestDirective]],
+		directives: Sequence[IngestDirective | DualIngestDirective],
 		process_name: str,
 		db_log_format: str = "standard"
 	) -> None:

@@ -7,7 +7,7 @@
 # Last Modified Date:  31.08.2020
 # Last Modified By:    valery brinnel <firstname.lastname@gmail.com>
 
-from typing import BinaryIO, Optional, Literal, Any, Union, ClassVar
+from typing import BinaryIO, Literal, Any, ClassVar
 from collections.abc import Sequence, Generator
 from ampel.types import ChannelId
 from ampel.abstract.AbsAlertRegister import AbsAlertRegister
@@ -63,7 +63,7 @@ class BaseAlertRegister(AbsAlertRegister, abstract=True):
 	#: save files in <path_channel_folder>/<channel>/<file>
 	path_channel_folder: bool = True
 	#: save file as <run_id|channel|string>.bin.gz
-	file_prefix: Union[str, Literal['$run_id', '$channel']] = '$channel'
+	file_prefix: str | Literal['$run_id', '$channel'] = '$channel'
 
 	#: additionaly to the parent's class (AmpelRegister) ability to rename the current register when
 	#: the number of blocks reaches a given threshold, this class can also rename the current file when
@@ -78,9 +78,9 @@ class BaseAlertRegister(AbsAlertRegister, abstract=True):
 	#:
 	#:   The current file suffix number is encoded in the header. If the current suffix number is 10 and
 	#:   you move files to another folder, the next rename will create ampel_register.bin.gz.11 nonetheless.
-	file_cap: Optional[dict[Literal['runs', 'blocks'], int]] # type: ignore[assignment]
+	file_cap: None | dict[Literal['runs', 'blocks'], int] # type: ignore[assignment]
 
-	header_bounds: ClassVar[Optional[Sequence[str]]] = None
+	header_bounds: ClassVar[None | Sequence[str]] = None
 
 
 	def __init__(self, **kwargs):
@@ -169,15 +169,15 @@ class BaseAlertRegister(AbsAlertRegister, abstract=True):
 
 	@classmethod
 	def iter(cls,
-		f: Union[BinaryIO, str], multiplier: int = 100000, verbose: bool = True
+		f: BinaryIO | str, multiplier: int = 100000, verbose: bool = True
 	) -> Generator[tuple[int, ...], None, None]:
 		return reg_iter(f, multiplier, verbose)
 
 
 	@classmethod
 	def find_alert(cls,
-		f: Union[BinaryIO, str], alert_id: Union[int, list[int]], alert_id_bytes_len: int = 8, **kwargs
-	) -> Optional[list[tuple[int, ...]]]:
+		f: BinaryIO | str, alert_id: int | list[int], alert_id_bytes_len: int = 8, **kwargs
+	) -> None | list[tuple[int, ...]]:
 		"""
 		:param f: file path (str) or file handle (which will not be closed)
 		:param kwargs: see method `ampel.util.register.find` docstring.
@@ -195,9 +195,9 @@ class BaseAlertRegister(AbsAlertRegister, abstract=True):
 
 	@classmethod
 	def find_stock(cls,
-		f: Union[BinaryIO, str], stock_id: Union[int, list[int]],
+		f: BinaryIO | str, stock_id: int | list[int],
 		stock_offset: int, stock_bytes_len: int = 8, **kwargs
-	) -> Optional[list[tuple[int, ...]]]:
+	) -> None | list[tuple[int, ...]]:
 		"""
 		:param f: file path (str) or file handle (which will not be closed)
 		:param stock_offset:

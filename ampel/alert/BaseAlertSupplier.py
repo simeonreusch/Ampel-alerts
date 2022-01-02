@@ -9,7 +9,7 @@
 
 import json
 from io import IOBase
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 from collections.abc import Callable, Iterator
 from ampel.protocol.AmpelAlertProtocol import AmpelAlertProtocol
 from ampel.abstract.AbsAlertSupplier import AbsAlertSupplier
@@ -43,7 +43,7 @@ class BaseAlertSupplier(AbsAlertSupplier, abstract=True):
 	loader: UnitModel
 
 	# Underlying serialization
-	deserialize: Optional[Literal["avro", "json", "csv"]]
+	deserialize: None | Literal["avro", "json", "csv"]
 
 
 	def __init__(self, **kwargs) -> None:

@@ -8,7 +8,6 @@
 # Last Modified By:    valery brinnel <firstname.lastname@gmail.com>
 
 import glob, os
-from typing import Optional
 from ampel.abstract.AbsAlertLoader import AbsAlertLoader
 
 
@@ -22,7 +21,7 @@ class DirFileNamesLoader(AbsAlertLoader[str]):
 
 	folder: str
 	extension: str
-	max_entries: Optional[int] = None
+	max_entries: None | int = None
 
 	def __init__(self, **kwargs) -> None:
 

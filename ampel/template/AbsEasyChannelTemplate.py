@@ -8,8 +8,7 @@
 # Last Modified By:    valery brinnel <firstname.lastname@gmail.com>
 
 import ujson
-from pydantic import validator
-from typing import Any, Union, Optional
+from typing import Any, Optional
 from ampel.types import ChannelId
 from ampel.log.AmpelLogger import AmpelLogger
 from ampel.model.ingest.T2Compute import T2Compute
@@ -41,11 +40,11 @@ class AbsEasyChannelTemplate(AbsChannelTemplate, abstract=True):
 	retro_complete: bool = False
 
 
-	@validator('t3_supervise', 't2_compute', pre=True, each_item=False)
-	def cast_to_list_if_required(cls, v):
-		if isinstance(v, dict):
-			return [v]
-		return v
+	def __init__(self, **kwargs) -> None:
+		for el in ('t3_supervise', 't2_compute'):
+			if isinstance(x := kwargs.get(el), dict):
+				kwargs[el] = [x]
+		super().__init__(**kwargs)
 
 
 	# Mandatory implementation
@@ -58,13 +57,13 @@ class AbsEasyChannelTemplate(AbsChannelTemplate, abstract=True):
 
 
 	def craft_t0_process(self,
-		config: Union[FirstPassConfig, dict[str, Any]],
-		controller: Union[str, dict[str, Any]],
-		supplier: Union[str, dict[str, Any]],
-		shaper: Union[str, dict[str, Any]],
-		combiner: Union[str, dict[str, Any]],
-		muxer: Optional[Union[str, dict[str, Any]]] = None,
-		compiler_opts: Optional[dict[str, Any]] = None
+		config: FirstPassConfig | dict[str, Any],
+		controller: str | dict[str, Any],
+		supplier: str | dict[str, Any],
+		shaper: str | dict[str, Any],
+		combiner: str | dict[str, Any],
+		muxer: None | str | dict[str, Any] = None,
+		compiler_opts: None | dict[str, Any] = None
 	) -> dict[str, Any]:
 		"""
 		This method needs a reference to a FirstPassConfig dict because
@@ -104,14 +103,14 @@ class AbsEasyChannelTemplate(AbsChannelTemplate, abstract=True):
 	@classmethod
 	def craft_t0_processor_config(cls,
 		channel: ChannelId,
-		config: Union[FirstPassConfig, dict[str, Any]],
+		config: FirstPassConfig | dict[str, Any],
 		t2_compute: list[T2Compute],
-		supplier: Union[str, dict[str, Any]],
-		shaper: Union[str, dict[str, Any]],
-		combiner: Union[str, dict[str, Any]],
-		filter_dict: Optional[dict[str, Any]] = None,
-		muxer: Optional[Union[str, dict[str, Any]]] = None,
-		compiler_opts: Optional[dict[str, Any]] = None
+		supplier: str | dict[str, Any],
+		shaper: str | dict[str, Any],
+		combiner: str | dict[str, Any],
+		filter_dict: None | dict[str, Any] = None,
+		muxer: None | str | dict[str, Any] = None,
+		compiler_opts: None | dict[str, Any] = None
 	) -> dict[str, Any]:
 		"""
 		This method needs a reference to a FirstPassConfig dict because

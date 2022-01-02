@@ -9,7 +9,7 @@
 
 from time import time
 from struct import pack
-from typing import Optional, ClassVar
+from typing import ClassVar
 from collections.abc import Sequence
 from ampel.protocol.AmpelAlertProtocol import AmpelAlertProtocol
 from ampel.alert.reject.FullAlertRegister import FullAlertRegister
@@ -28,7 +28,7 @@ class FullActiveAlertRegister(FullAlertRegister):
 	stock_max: int
 
 
-	def file(self, alert: AmpelAlertProtocol, filter_res: Optional[int] = None) -> None:
+	def file(self, alert: AmpelAlertProtocol, filter_res: None | int = None) -> None:
 
 		alid = alert.id
 		if alid > self.alert_max:

@@ -8,7 +8,7 @@
 # Last Modified By:    valery brinnel <firstname.lastname@gmail.com>
 
 from struct import pack
-from typing import Optional, Literal, Union, BinaryIO, ClassVar
+from typing import Literal, BinaryIO, ClassVar
 from ampel.protocol.AmpelAlertProtocol import AmpelAlertProtocol
 from ampel.alert.reject.BaseAlertRegister import BaseAlertRegister
 
@@ -20,12 +20,12 @@ class GeneralAlertRegister(BaseAlertRegister):
 	struct: Literal['<QQB'] = '<QQB'
 
 
-	def file(self, alert: AmpelAlertProtocol, filter_res: Optional[int] = None) -> None:
+	def file(self, alert: AmpelAlertProtocol, filter_res: None | int = None) -> None:
 		self._write(pack('<QQB', alert.id, alert.stock, filter_res or 0))
 
 
 	@classmethod
 	def find_stock(cls, # type: ignore[override]
-		f: Union[BinaryIO, str], stock_id: Union[int, list[int]], **kwargs
-	) -> Optional[list[tuple[int, ...]]]:
+		f: BinaryIO | str, stock_id: int | list[int], **kwargs
+	) -> None | list[tuple[int, ...]]:
 		return super().find_stock(f, stock_id=stock_id, stock_offset=8, **kwargs)

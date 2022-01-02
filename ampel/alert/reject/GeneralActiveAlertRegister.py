@@ -8,7 +8,7 @@
 # Last Modified By:    valery brinnel <firstname.lastname@gmail.com>
 
 from struct import pack
-from typing import Optional, ClassVar, Union
+from typing import ClassVar
 from collections.abc import Sequence
 from ampel.protocol.AmpelAlertProtocol import AmpelAlertProtocol
 from ampel.alert.reject.GeneralAlertRegister import GeneralAlertRegister
@@ -19,7 +19,7 @@ class GeneralActiveAlertRegister(GeneralAlertRegister):
 
 	__slots__: ClassVar[tuple[str, ...]] = '_write', 'alert_max', 'alert_min', 'stock_max', 'stock_min' # type: ignore
 	_slot_defaults = {'alert_max': 0, 'alert_min': 2**64, 'stock_max': 0, 'stock_min': 2**64}
-	new_header_size: Union[int, str] = "+1000"
+	new_header_size: int | str = "+1000"
 
 	header_bounds: ClassVar[Sequence[str]] = ('alert', 'stock') # type: ignore
 	alert_min: int
@@ -27,7 +27,7 @@ class GeneralActiveAlertRegister(GeneralAlertRegister):
 	stock_min: int
 	stock_max: int
 
-	def file(self, alert: AmpelAlertProtocol, filter_res: Optional[int] = None) -> None:
+	def file(self, alert: AmpelAlertProtocol, filter_res: None | int = None) -> None:
 
 		alid = alert.id
 		if alid > self.alert_max:

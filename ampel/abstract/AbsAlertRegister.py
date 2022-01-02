@@ -7,7 +7,6 @@
 # Last Modified Date:  24.11.2021
 # Last Modified By:    valery brinnel <firstname.lastname@gmail.com>
 
-from typing import Optional
 from ampel.base.AmpelABC import AmpelABC
 from ampel.base.decorator import abstractmethod
 from ampel.core.ContextUnit import ContextUnit
@@ -21,7 +20,7 @@ class AbsAlertRegister(AmpelABC, AmpelRegister, ContextUnit, abstract=True):
 	"""
 
 	@abstractmethod
-	def file(self, alert: AmpelAlertProtocol, filter_res: Optional[int] = None) -> None:
+	def file(self, alert: AmpelAlertProtocol, filter_res: None | int = None) -> None:
 		"""
 		Record the result of the filter.
 

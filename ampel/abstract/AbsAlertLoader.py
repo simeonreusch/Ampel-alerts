@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# File              : Ampel-alerts/ampel/abstract/AbsAlertLoader.py
-# License           : BSD-3-Clause
-# Author            : vb <vbrinnel@physik.hu-berlin.de>
-# Date              : 26.06.2021
-# Last Modified Date: 26.06.2021
-# Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
+# File:                Ampel-alerts/ampel/abstract/AbsAlertLoader.py
+# License:             BSD-3-Clause
+# Author:              valery brinnel <firstname.lastname@gmail.com>
+# Date:                26.06.2021
+# Last Modified Date:  26.06.2021
+# Last Modified By:    valery brinnel <firstname.lastname@gmail.com>
 
 from ampel.types import T
 from typing import Generic, Iterator

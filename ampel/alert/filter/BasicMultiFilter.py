@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# File              : Ampel-alerts/ampel/alert/filter/BasicMultiFilter.py
-# License           : BSD-3-Clause
-# Author            : vb <vbrinnel@physik.hu-berlin.de>
-# Date              : 14.01.2017
-# Last Modified Date: 24.11.2021
-# Last Modified By  : Jakob van Santen <jakob.van.santen@desy.de>
+# File:                Ampel-alerts/ampel/alert/filter/BasicMultiFilter.py
+# License:             BSD-3-Clause
+# Author:              valery brinnel <firstname.lastname@gmail.com>
+# Date:                14.01.2017
+# Last Modified Date:  24.11.2021
+# Last Modified By:    Jakob van Santen <jakob.van.santen@desy.de>
 
 import operator
 from ampel.abstract.AbsAlertFilter import AbsAlertFilter

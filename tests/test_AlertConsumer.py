@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# File              : Ampel-alerts/tests/test_AlertConsumer.py
-# License           : BSD-3-Clause
-# Author            : jvs
-# Date              : Unspecified
-# Last Modified Date: 24.11.2021
-# Last Modified By  : vb
+# File:                Ampel-alerts/tests/test_AlertConsumer.py
+# License:             BSD-3-Clause
+# Author:              jvs
+# Date:                Unspecified
+# Last Modified Date:  24.11.2021
+# Last Modified By:    vb
 
 import pytest
 import os, signal, time, threading

@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# File              : Ampel-alerts/ampel/alert/FilterBlock.py
-# License           : BSD-3-Clause
-# Author            : vb <vbrinnel@physik.hu-berlin.de>
-# Date              : 03.05.2018
-# Last Modified Date: 24.11.2021
-# Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
+# File:                Ampel-alerts/ampel/alert/FilterBlock.py
+# License:             BSD-3-Clause
+# Author:              valery brinnel <firstname.lastname@gmail.com>
+# Date:                03.05.2018
+# Last Modified Date:  24.11.2021
+# Last Modified By:    valery brinnel <firstname.lastname@gmail.com>
 
 from logging import LogRecord
 from typing import Any, Union, Optional, Callable, Tuple, cast

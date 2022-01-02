@@ -27,5 +27,5 @@ setup(
     url = 'https://ampelproject.github.io',
     packages = find_namespace_packages(),
     package_data = package_data,
-    python_requires = '>=3.9,<4.0'
+    python_requires = '>=3.10,<3.11'
 )

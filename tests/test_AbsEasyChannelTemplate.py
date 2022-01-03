@@ -1,11 +1,12 @@
 from typing import Any, TYPE_CHECKING
+from ampel.model.ChannelModel import ChannelModel
 import pytest, yaml
 import contextlib
 
+from ampel.log.AmpelLogger import AmpelLogger
 from ampel.template.AbsEasyChannelTemplate import AbsEasyChannelTemplate
 
-if TYPE_CHECKING:
-    from ampel.log.AmpelLogger import AmpelLogger
+if TYPE_CHECKING:   
     from ampel.config.builder.FirstPassConfig import FirstPassConfig
 
 class LegacyChannelTemplate(AbsEasyChannelTemplate):
@@ -147,3 +148,12 @@ def test_state_t2_instantiation(t2_compute, target, expected, exception, first_p
     assert (
         len([i for i in items if expected == i]) == 1
     ), "exactly one instance of each unit"
+
+def test_get_channel():
+    template = LegacyChannelTemplate(
+        channel = "FOO",
+        version = 0,
+        t0_filter = {"unit": "NoFilter"},
+    )
+    channel = template.get_channel(logger=AmpelLogger.get_logger())
+    assert ChannelModel(**channel).dict() == channel

@@ -8,9 +8,10 @@
 # Last Modified By:    valery brinnel <firstname.lastname@gmail.com>
 
 import ujson
-from typing import Any, Optional
+from typing import Any
 from ampel.types import ChannelId
 from ampel.log.AmpelLogger import AmpelLogger
+from ampel.model.ChannelModel import ChannelModel
 from ampel.model.ingest.T2Compute import T2Compute
 from ampel.model.ingest.FilterModel import FilterModel
 from ampel.config.builder.FirstPassConfig import FirstPassConfig
@@ -49,11 +50,7 @@ class AbsEasyChannelTemplate(AbsChannelTemplate, abstract=True):
 
 	# Mandatory implementation
 	def get_channel(self, logger: AmpelLogger) -> dict[str, Any]:
-		d = self.dict(by_alias=True)
-		for k in ("t0_filter", "t0_muxer", "t2_compute", "t3_supervise", "auto_complete"):
-			if k in d:
-				del d[k]
-		return d
+		return self.dict(include=ChannelModel._aks)
 
 
 	def craft_t0_process(self,
@@ -92,7 +89,7 @@ class AbsEasyChannelTemplate(AbsChannelTemplate, abstract=True):
 				"unit": "AlertConsumer",
 				"config": self.craft_t0_processor_config(
 					self.channel, config, self.t2_compute, supplier, shaper, combiner,
-					self.t0_filter.dict(exclude_unset=True, by_alias=True), muxer, compiler_opts
+					self.t0_filter.dict(exclude_unset=True), muxer, compiler_opts
 				)
 			}
 		}
@@ -151,17 +148,17 @@ class AbsEasyChannelTemplate(AbsChannelTemplate, abstract=True):
 		if muxer:
 			ingest['mux'] = ujson.loads(ujson.dumps(resolve_shortcut(muxer)))
 			if state_t2s:
-				ingest['mux']['combine'] = [{'unit': combiner, 'state_t2': state_t2s}]
+				ingest['mux']['combine'] = [resolve_shortcut(combiner) | {'state_t2': state_t2s}]
 			if point_t2s:
 				ingest['mux']['insert'] = {"point_t2": point_t2s}
 		else:
 			if state_t2s:
-				ingest['combine'] = [{'unit': combiner, 'state_t2': state_t2s}]
+				ingest['combine'] = [resolve_shortcut(combiner) | {'state_t2': state_t2s}]
 			if point_t2s:
 				if 'combine' in ingest:
 					ingest['combine'][0]['point_t2'] = point_t2s
 				else:
-					ingest['combine'] = [{'unit': combiner, 'point_t2': point_t2s}]
+					ingest['combine'] = [resolve_shortcut(combiner) | {'point_t2': point_t2s}]
 
 		return {
 			"supplier": resolve_shortcut(supplier),

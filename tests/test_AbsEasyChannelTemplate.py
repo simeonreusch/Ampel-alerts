@@ -147,3 +147,11 @@ def test_state_t2_instantiation(t2_compute, target, expected, exception, first_p
     assert (
         len([i for i in items if expected == i]) == 1
     ), "exactly one instance of each unit"
+
+
+@pytest.mark.parametrize("key", ["t2_compute", "t3_supervise"])
+def test_single_element_to_sequence(key):
+    kwargs = {"channel": "foo", "version": 0, "t0_filter": {"unit": "Nonesuch"}}
+    single = LegacyChannelTemplate(**(kwargs | {key: {"unit": "Nonesuch"}}))
+    sequence = LegacyChannelTemplate(**(kwargs | {key: [{"unit": "Nonesuch"}]}))
+    assert getattr(single, key) == getattr(sequence, key)

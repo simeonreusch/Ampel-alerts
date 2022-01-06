@@ -40,22 +40,12 @@ class AbsEasyChannelTemplate(AbsChannelTemplate, abstract=True):
 
 	retro_complete: bool = False
 
-
-	@validator('t3_supervise', 't2_compute', pre=True, each_item=False)
-	def cast_to_list_if_required(cls, v):
-		if isinstance(v, dict):
-			return [v]
-		return v
-
-
-	# Mandatory implementation
-	def get_channel(self, logger: AmpelLogger) -> Dict[str, Any]:
-		d = self.dict(by_alias=True)
-		for k in ("t0_filter", "t0_muxer", "t2_compute", "t3_supervise", "auto_complete"):
-			if k in d:
-				del d[k]
-		return d
-
+	def __init__(self, **kwargs):
+		# cast to sequence if needed
+		for k in ('t3_supervise', 't2_compute'):
+			if isinstance(v := kwargs.get(k), dict):
+				kwargs[k] = [v]
+		super().__init__(**kwargs)
 
 	def craft_t0_process(self,
 		config: Union[FirstPassConfig, Dict[str, Any]],

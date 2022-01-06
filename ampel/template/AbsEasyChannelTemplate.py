@@ -50,7 +50,7 @@ class AbsEasyChannelTemplate(AbsChannelTemplate, abstract=True):
 
 	# Mandatory implementation
 	def get_channel(self, logger: AmpelLogger) -> dict[str, Any]:
-		return self.dict(include=ChannelModel._aks)
+		return self.dict(include=ChannelModel.get_model_keys())
 
 
 	def craft_t0_process(self,

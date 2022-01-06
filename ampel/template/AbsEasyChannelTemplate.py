@@ -28,7 +28,7 @@ class AbsEasyChannelTemplate(AbsChannelTemplate, abstract=True):
 	Known subclass: :class:`~ampel.model.ZTFLegacyChannelTemplate.ZTFLegacyChannelTemplate`
 	"""
 	#: Filter to apply to incoming datapoints
-	t0_filter: FilterModel
+	t0_filter: None | FilterModel = None
 
 	#: T2 units to trigger when transient is updated. Dependencies of tied
 	#: units will be added automatically.
@@ -89,7 +89,7 @@ class AbsEasyChannelTemplate(AbsChannelTemplate, abstract=True):
 				"unit": "AlertConsumer",
 				"config": self.craft_t0_processor_config(
 					self.channel, config, self.t2_compute, supplier, shaper, combiner,
-					self.t0_filter.dict(exclude_unset=True), muxer, compiler_opts
+					self.t0_filter.dict(exclude_unset=True) if self.t0_filter else None, muxer, compiler_opts
 				)
 			}
 		}

@@ -11,11 +11,11 @@ from typing import Iterator
 from ampel.log.AmpelLogger import AmpelLogger
 from ampel.base.AmpelABC import AmpelABC
 from ampel.base.decorator import abstractmethod
-from ampel.base.AmpelBaseModel import AmpelBaseModel
+from ampel.base.AmpelUnit import AmpelUnit
 from ampel.protocol.AmpelAlertProtocol import AmpelAlertProtocol
 
 
-class AbsAlertSupplier(AmpelABC, AmpelBaseModel, abstract=True):
+class AbsAlertSupplier(AmpelUnit, AmpelABC, abstract=True):
 	"""
 	Iterable class that, for each alert payload provided by the underlying alert_loader,
 	returns an object that implements :class:`~ampel.protocol.AmpelAlertProtocol`.

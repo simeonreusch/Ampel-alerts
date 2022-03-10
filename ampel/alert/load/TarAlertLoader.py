@@ -9,6 +9,7 @@
 
 import tarfile
 from typing import Optional, IO
+from gzip import GzipFile
 from ampel.log.AmpelLogger import AmpelLogger
 from ampel.abstract.AbsAlertLoader import AbsAlertLoader
 
@@ -102,7 +103,8 @@ class TarAlertLoader(AbsAlertLoader[IO[bytes]]):
 					return subfile_obj
 				else:
 					return next(self)
-
+			elif tar_info.name.endswith('.gz'):
+				return GzipFile(mode="rb", fileobj=file_obj)
 			return file_obj
 
 		return next(self)

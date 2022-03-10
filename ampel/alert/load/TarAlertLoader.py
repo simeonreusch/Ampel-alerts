@@ -4,8 +4,8 @@
 # License:             BSD-3-Clause
 # Author:              valery brinnel <firstname.lastname@gmail.com>
 # Date:                13.05.2018
-# Last Modified Date:  15.03.2021
-# Last Modified By:    valery brinnel <firstname.lastname@gmail.com>
+# Last Modified Date:  10.03.2022
+# Last Modified By:    Marcus Fenner <mf@physik.hu-berlin.de>
 
 import tarfile
 from typing import IO
@@ -22,7 +22,7 @@ class TarAlertLoader(AbsAlertLoader[IO[bytes]]):
 
 	tar_mode: str = 'r:gz'
 	start: int = 0
-	file_obj: None | IO[bytes]
+	file_obj: None | IO[bytes] | tarfile.ExFileObject
 	file_path: None | str
 	logger: AmpelLogger # actually optional
 

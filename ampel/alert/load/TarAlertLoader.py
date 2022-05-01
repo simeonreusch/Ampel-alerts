@@ -4,10 +4,11 @@
 # License:             BSD-3-Clause
 # Author:              valery brinnel <firstname.lastname@gmail.com>
 # Date:                13.05.2018
-# Last Modified Date:  15.03.2021
-# Last Modified By:    valery brinnel <firstname.lastname@gmail.com>
+# Last Modified Date:  10.03.2022
+# Last Modified By:    Marcus Fenner <mf@physik.hu-berlin.de>
 
 import tarfile
+from gzip import GzipFile
 from typing import IO
 from ampel.log.AmpelLogger import AmpelLogger
 from ampel.abstract.AbsAlertLoader import AbsAlertLoader
@@ -22,7 +23,7 @@ class TarAlertLoader(AbsAlertLoader[IO[bytes]]):
 
 	tar_mode: str = 'r:gz'
 	start: int = 0
-	file_obj: None | IO[bytes]
+	file_obj: None | IO[bytes] | tarfile.ExFileObject
 	file_path: None | str
 	logger: AmpelLogger # actually optional
 
@@ -102,7 +103,8 @@ class TarAlertLoader(AbsAlertLoader[IO[bytes]]):
 					return subfile_obj
 				else:
 					return next(self)
-
+			elif tar_info.name.endswith('.gz'):
+				return GzipFile(mode="rb", fileobj=file_obj)
 			return file_obj
 
 		return next(self)

@@ -9,6 +9,7 @@ unit:
 - ampel.alert.load.FileAlertLoader
 - ampel.alert.load.DirAlertLoader
 - ampel.alert.load.DirFileNamesLoader
+- ampel.alert.load.DirTaggedAlertLoader
   
 # Logical unit
 - ampel.alert.filter.BasicMultiFilter

@@ -104,7 +104,7 @@ class TarAlertLoader(AbsAlertLoader[IO[bytes]]):
 				else:
 					return next(self)
 			elif tar_info.name.endswith('.gz'):
-				return GzipFile(mode="rb", fileobj=file_obj)
+				return GzipFile(mode="rb", fileobj=file_obj) # type: ignore[return-value]
 			return file_obj
 
 		return next(self)

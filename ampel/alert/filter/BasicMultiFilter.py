@@ -12,7 +12,7 @@ from ampel.abstract.AbsAlertFilter import AbsAlertFilter
 from ampel.protocol.AmpelAlertProtocol import AmpelAlertProtocol
 
 from ampel.base.AmpelBaseModel import AmpelBaseModel
-from typing import Literal
+from typing import Literal, ClassVar
 from collections.abc import Callable, Sequence
 
 
@@ -20,7 +20,7 @@ class PhotoAlertQuery(AmpelBaseModel):
 	"""
 	A filter condition suitable for use with AmpelAlert.get_values()
 	"""
-	_ops: dict[str, Callable] = {
+	_ops: ClassVar[dict[str, Callable]] = {
 		'>': operator.gt,
 		'<': operator.lt,
 		'>=': operator.ge,

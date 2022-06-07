@@ -126,7 +126,7 @@ class AutoCompleteBenchmark:
 		"""
 
 		#self._stock_col = context.db.get_collection('stock')
-		mc = MongoClient()
+		mc = MongoClient() # type: ignore
 		db = mc.Ampel_big
 		self._stock_col = db.big
 

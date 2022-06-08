@@ -72,7 +72,7 @@ class BaseAlertSupplier(AbsAlertSupplier, abstract=True):
 
 			from fastavro import reader
 			def avro_next(arg: IOBase): # noqa: E306
-				return reader(arg).next()
+				return next(reader(arg))
 
 			self._deserialize = avro_next
 		else:

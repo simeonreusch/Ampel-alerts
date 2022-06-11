@@ -4,9 +4,10 @@
 # License:             BSD-3-Clause
 # Author:              valery brinnel <firstname.lastname@gmail.com>
 # Date:                10.10.2017
-# Last Modified Date:  21.11.2021
+# Last Modified Date:  11.06.2022
 # Last Modified By:    valery brinnel <firstname.lastname@gmail.com>
 
+import sys
 from signal import signal, SIGINT, SIGTERM, default_int_handler
 from typing import Any
 from collections.abc import Sequence
@@ -74,6 +75,10 @@ class AlertConsumer(AbsEventUnit):
 	shout: int = LogFlag.SHOUT
 
 	updates_buffer_size: int = 500
+
+	#: Calls `sys.exit()` with `exit_if_no_change` as return code in case
+	#: no alert was processed (iter_count == 0)
+	exit_if_no_alert: None | int = None
 
 
 	@classmethod
@@ -452,6 +457,9 @@ class AlertConsumer(AbsEventUnit):
 				# Try to insert doc into trouble collection (raises no exception)
 				# Possible exception will be logged out to console in any case
 				report_exception(self._ampel_db, logger, exc=e)
+
+		if self.exit_if_no_alert and iter_count == 0:
+			sys.exit(self.exit_if_no_alert)
 
 		# Return number of processed alerts
 		return iter_count

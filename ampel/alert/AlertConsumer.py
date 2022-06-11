@@ -4,8 +4,10 @@
 # License           : BSD-3-Clause
 # Author            : vb <vbrinnel@physik.hu-berlin.de>
 # Date              : 10.10.2017
-# Last Modified Date: 21.11.2021
-# Last Modified By  : vb <vbrinnel@physik.hu-berlin.de>
+# Last Modified Date: 11.06.2022
+# Last Modified By  : sr <simeon.reusch@desy.de>
+
+import sys
 
 from signal import signal, SIGINT, SIGTERM, default_int_handler
 from typing import List, Any, Tuple, Sequence, Union, Optional
@@ -74,19 +76,24 @@ class AlertConsumer(AbsEventUnit):
 
 	updates_buffer_size: int = 500
 
+	#: Calls `sys.exit()` with `exit_if_no_alert` as return code in case
+	#: no alert was processed (iter_count == 0)
+	exit_if_no_alert: Union[None, int] = None
 
 	@classmethod
-	def from_process(cls, context: AmpelContext, process_name: str, override: Optional[dict] = None):
+	def from_process(
+		cls, context: AmpelContext, process_name: str, override: Optional[dict] = None
+	):
 		"""
 		Convenience method instantiating an AlertConsumer using the config entry from a given T0 process.
-		
+
 		Example::
-		    
+
 		  AlertConsumer.from_process(
-		      context, process_name="VAL_TEST2/T0/ztf_uw_public", override={'iter_max': 100}
+				  context, process_name="VAL_TEST2/T0/ztf_uw_public", override={'iter_max': 100}
 		  )
 		"""
-		args = context.get_config().get( # type: ignore
+		args = context.get_config().get(  # type: ignore
 			f"process.{process_name}.processor.config", dict
 		)
 
@@ -94,60 +101,59 @@ class AlertConsumer(AbsEventUnit):
 			raise ValueError(f"process.{process_name}.processor.config is None")
 
 		if override:
-			args = merge_dict(recursive_unfreeze(args), override) # type: ignore
+			args = merge_dict(recursive_unfreeze(args), override)  # type: ignore
 
 		return cls(context=context, **args)
-
 
 	def __init__(self, **kwargs) -> None:
 		"""
 		:raises:
-			:class:`ValueError` if no process can be loaded or if a process is
-			associated with an unknown channel
+						:class:`ValueError` if no process can be loaded or if a process is
+						associated with an unknown channel
 		"""
 
 		if kwargs.get("context") is None:
 			raise ValueError("An ampel context is required")
 
-		if isinstance(kwargs['directives'], dict):
-			kwargs['directives'] = [kwargs['directives']]
+		if isinstance(kwargs["directives"], dict):
+			kwargs["directives"] = [kwargs["directives"]]
 
 		#: Allow str (shortcut for a configless UnitModel(unit=str)) for convenience
-		for el in ('shaper', 'supplier'):
+		for el in ("shaper", "supplier"):
 			if el in kwargs and isinstance(kwargs[el], str):
 				kwargs[el] = {"unit": kwargs[el]}
 
 		# Allow loading compiler opts via aux unit for convenience
-		if isinstance(copts := kwargs.get('compiler_opts'), str):
-			kwargs['compiler_opts'] = AuxUnitRegister.new_unit(
+		if isinstance(copts := kwargs.get("compiler_opts"), str):
+			kwargs["compiler_opts"] = AuxUnitRegister.new_unit(
 				model=UnitModel(unit=copts)
 			)
 
 		logger = AmpelLogger.get_logger(
-			console=kwargs['context'].config.get(
+			console=kwargs["context"].config.get(
 				f"logging.{self.log_profile}.console", dict
 			)
 		)
 
-		if isinstance(kwargs['context'], DevAmpelContext):
+		if isinstance(kwargs["context"], DevAmpelContext):
 
-			kwargs['directives'] = [
-				kwargs['context'].hash_ingest_directive(el, logger=logger)
-				for el in kwargs['directives']
+			kwargs["directives"] = [
+				kwargs["context"].hash_ingest_directive(el, logger=logger)
+				for el in kwargs["directives"]
 			]
 
 			if "debug" in self.log_profile:
 				from ampel.util.pretty import prettyjson
+
 				logger.info("Auto-hashed ingestive directive(s):")
-				for el in kwargs['directives']:
+				for el in kwargs["directives"]:
 					print(prettyjson(el))
 
 		super().__init__(**kwargs)
 
 		self._ampel_db = self.context.get_database()
 		self.alert_supplier = AuxUnitRegister.new_unit(
-			model = self.supplier,
-			sub_type = AbsAlertSupplier
+			model=self.supplier, sub_type=AbsAlertSupplier
 		)
 
 		if AmpelLogger.has_verbose_console(self.context, self.log_profile):
@@ -158,26 +164,25 @@ class AlertConsumer(AbsEventUnit):
 			self.context, logger, self.directives, self.process_name, self.db_log_format
 		)
 
-		#signal(SIGTERM, self.register_sigterm)
+		# signal(SIGTERM, self.register_sigterm)
 		signal(SIGTERM, default_int_handler)
 		logger.info("AlertConsumer setup completed")
 
-
 	def register_signal(self, signum: int, frame) -> None:
-		""" Executed when SIGINT/SIGTERM is emitted during alert processing """
+		"""Executed when SIGINT/SIGTERM is emitted during alert processing"""
 		if self._cancel_run == 0:
 			self.print_feedback(signum, "(after processing of current alert)")
 			self._cancel_run: int = signum
 
-
 	def chatty_interrupt(self, signum: int, frame) -> None:
-		""" Executed when SIGINT/SIGTERM is emitted during alert supplier execution """
+		"""Executed when SIGINT/SIGTERM is emitted during alert supplier execution"""
 		self.print_feedback(signum, "(outside of alert processing)")
 		self._cancel_run = signum
 		default_int_handler(signum, frame)
 
-
-	def set_cancel_run(self, reason: AlertConsumerError = AlertConsumerError.CONNECTIVITY) -> None:
+	def set_cancel_run(
+		self, reason: AlertConsumerError = AlertConsumerError.CONNECTIVITY
+	) -> None:
 		"""
 		Cancels current processing of alerts (when DB becomes unresponsive for example).
 		Called in main loop or by DBUpdatesBuffer in case of un-recoverable errors.
@@ -186,7 +191,6 @@ class AlertConsumer(AbsEventUnit):
 			self.print_feedback(reason, "after processing of current alert")
 			self._cancel_run = reason
 
-
 	def process_alerts(self) -> None:
 		"""
 		Convenience method to process all alerts from a given loader until it dries out
@@ -194,7 +198,6 @@ class AlertConsumer(AbsEventUnit):
 		processed_alerts = self.iter_max
 		while processed_alerts == self.iter_max:
 			processed_alerts = self.run()
-
 
 	def run(self) -> int:
 		"""
@@ -207,10 +210,7 @@ class AlertConsumer(AbsEventUnit):
 		# Setup stats
 		#############
 
-		stats = {
-			"alerts": stat_alerts,
-			"accepted": stat_accepted.labels("any")
-		}
+		stats = {"alerts": stat_alerts, "accepted": stat_accepted.labels("any")}
 
 		run_id = self.context.new_run_id()
 
@@ -218,8 +218,10 @@ class AlertConsumer(AbsEventUnit):
 		###############
 
 		logger = AmpelLogger.from_profile(
-			self.context, self.log_profile, run_id,
-			base_flag = LogFlag.T0 | LogFlag.CORE | self.base_log_flag
+			self.context,
+			self.log_profile,
+			run_id,
+			base_flag=LogFlag.T0 | LogFlag.CORE | self.base_log_flag,
 		)
 
 		self.alert_supplier.set_logger(logger)
@@ -233,32 +235,42 @@ class AlertConsumer(AbsEventUnit):
 
 		# Add new doc in the 'events' collection
 		event_hdlr = EventHandler(
-			self.process_name, self.context.db, tier=0,
-			run_id=run_id, raise_exc=self.raise_exc
+			self.process_name,
+			self.context.db,
+			tier=0,
+			run_id=run_id,
+			raise_exc=self.raise_exc,
 		)
 
 		# Collects and executes pymongo.operations in collection Ampel_data
 		updates_buffer = DBUpdatesBuffer(
-			self._ampel_db, run_id, logger,
-			error_callback = self.set_cancel_run,
-			catch_signals = False, # we do it ourself
-			max_size = self.updates_buffer_size
+			self._ampel_db,
+			run_id,
+			logger,
+			error_callback=self.set_cancel_run,
+			catch_signals=False,  # we do it ourself
+			max_size=self.updates_buffer_size,
 		)
 
 		any_filter = any([fb.filter_model for fb in self._fbh.filter_blocks])
 		# if bypassing filters, track passing rates at top level
 		if not any_filter:
 			stats["filter_accepted"] = [
-				stat_accepted.labels(channel)
-				for channel in self._fbh.chan_names
+				stat_accepted.labels(channel) for channel in self._fbh.chan_names
 			]
 
 		# Setup ingesters
 		ing_hdlr = ChainedIngestionHandler(
-			self.context, self.shaper, self.directives, updates_buffer,
-			run_id, tier = 0, logger = logger, database = self.database,
-			trace_id = {'alertconsumer': self._trace_id},
-			compiler_opts = self.compiler_opts or CompilerOptions()
+			self.context,
+			self.shaper,
+			self.directives,
+			updates_buffer,
+			run_id,
+			tier=0,
+			logger=logger,
+			database=self.database,
+			trace_id={"alertconsumer": self._trace_id},
+			compiler_opts=self.compiler_opts or CompilerOptions(),
 		)
 
 		# Loop variables
@@ -271,8 +283,11 @@ class AlertConsumer(AbsEventUnit):
 		err = 0
 
 		assert self._fbh.chan_names is not None
-		reduced_chan_names: Union[str, List[str]] = self._fbh.chan_names[0] \
-			if len(self._fbh.chan_names) == 1 else self._fbh.chan_names
+		reduced_chan_names: Union[str, List[str]] = (
+			self._fbh.chan_names[0]
+			if len(self._fbh.chan_names) == 1
+			else self._fbh.chan_names
+		)
 		fblocks = self._fbh.filter_blocks
 
 		if any_filter:
@@ -287,7 +302,7 @@ class AlertConsumer(AbsEventUnit):
 		################
 
 		# The extra is just a feedback for the console stream handler
-		logger.log(self.shout, "Processing alerts", extra={'r': run_id})
+		logger.log(self.shout, "Processing alerts", extra={"r": run_id})
 
 		try:
 
@@ -315,22 +330,35 @@ class AlertConsumer(AbsEventUnit):
 							# Apply filter (returns None/False in case of rejection or True/int in case of match)
 							res = fblock.filter(alert)
 							if res[1]:
-								filter_results.append(res) # type: ignore[arg-type]
+								filter_results.append(res)  # type: ignore[arg-type]
 
 						# Unrecoverable (logging related) errors
 						except (PyMongoError, AmpelLoggingError) as e:
 							print("%s: abording run() procedure" % e.__class__.__name__)
-							self._report_ap_error(e, event_hdlr, logger, run_id, extra={'a': alert.id})
+							self._report_ap_error(
+								e, event_hdlr, logger, run_id, extra={"a": alert.id}
+							)
 							raise e
 
 						# Possibly tolerable errors (could be an error from a contributed filter)
 						except Exception as e:
 
 							if db_logging_handler:
-								fblock.forward(db_logging_handler, stock=stock_id, extra={'a': alert.id})
+								fblock.forward(
+									db_logging_handler,
+									stock=stock_id,
+									extra={"a": alert.id},
+								)
 							self._report_ap_error(
-								e, event_hdlr, logger, run_id,
-								extra={'a': alert.id, 'section': 'filter', 'c': fblock.channel}
+								e,
+								event_hdlr,
+								logger,
+								run_id,
+								extra={
+									"a": alert.id,
+									"section": "filter",
+									"c": fblock.channel,
+								},
 							)
 
 							if self.raise_exc:
@@ -339,8 +367,12 @@ class AlertConsumer(AbsEventUnit):
 								if self.error_max:
 									err += 1
 								if err == self.error_max:
-									logger.error("Max number of error reached, breaking alert processing")
-									self.set_cancel_run(AlertConsumerError.TOO_MANY_ERRORS)
+									logger.error(
+										"Max number of error reached, breaking alert processing"
+									)
+									self.set_cancel_run(
+										AlertConsumerError.TOO_MANY_ERRORS
+									)
 				else:
 					# if bypassing filters, track passing rates at top level
 					for counter in stats["filter_accepted"]:
@@ -353,19 +385,29 @@ class AlertConsumer(AbsEventUnit):
 					try:
 						with stat_time.labels("ingest").time():
 							ing_hdlr.ingest(
-								alert.datapoints, filter_results, stock_id, alert.tag,
-								{'alert': alert.id}, alert.extra.get('stock') if alert.extra else None
+								alert.datapoints,
+								filter_results,
+								stock_id,
+								alert.tag,
+								{"alert": alert.id},
+								alert.extra.get("stock") if alert.extra else None,
 							)
 					except (PyMongoError, AmpelLoggingError) as e:
 						print("%s: abording run() procedure" % e.__class__.__name__)
-						self._report_ap_error(e, event_hdlr, logger, run_id, extra={'a': alert.id})
+						self._report_ap_error(
+							e, event_hdlr, logger, run_id, extra={"a": alert.id}
+						)
 						raise e
 
 					except Exception as e:
 
 						self._report_ap_error(
-							e, event_hdlr, logger, run_id, filter_results,
-							extra={'a': alert.id, 'section': 'ingest'}
+							e,
+							event_hdlr,
+							logger,
+							run_id,
+							filter_results,
+							extra={"a": alert.id, "section": "ingest"},
 						)
 
 						if self.raise_exc:
@@ -375,7 +417,9 @@ class AlertConsumer(AbsEventUnit):
 							err += 1
 
 						if err == self.error_max:
-							logger.error("Max number of error reached, breaking alert processing")
+							logger.error(
+								"Max number of error reached, breaking alert processing"
+							)
 							self.set_cancel_run(AlertConsumerError.TOO_MANY_ERRORS)
 
 				else:
@@ -390,8 +434,8 @@ class AlertConsumer(AbsEventUnit):
 					# a LogDocument manually.
 					lr = LightLogRecord(logger.name, LogFlag.INFO | logger.base_flag)
 					lr.stock = stock_id
-					lr.channel = reduced_chan_names # type: ignore[assignment]
-					lr.extra = {'a': alert.id, 'allout': True}
+					lr.channel = reduced_chan_names  # type: ignore[assignment]
+					lr.extra = {"a": alert.id, "allout": True}
 					if db_logging_handler:
 						db_logging_handler.handle(lr)
 
@@ -452,37 +496,42 @@ class AlertConsumer(AbsEventUnit):
 				# Possible exception will be logged out to console in any case
 				report_exception(self._ampel_db, logger, exc=e)
 
+		if self.exit_if_no_alert and iter_count == 0:
+			sys.exit(self.exit_if_no_alert)
+
 		# Return number of processed alerts
 		return iter_count
 
-
-	def _report_ap_error(self,
-		arg_e: Exception, event_hdlr, logger: AmpelLogger, run_id: Union[int, List[int]],
+	def _report_ap_error(
+		self,
+		arg_e: Exception,
+		event_hdlr,
+		logger: AmpelLogger,
+		run_id: Union[int, List[int]],
 		filter_results: Optional[List[Tuple[int, Union[bool, int]]]] = None,
-		extra: Optional[dict[str, Any]] = None
+		extra: Optional[dict[str, Any]] = None,
 	) -> None:
 		"""
 		:param extra: optional extra key/value fields to add to 'trouble' doc
 		"""
 
 		event_hdlr.add_extra(overwrite=True, success=False)
-		info: Any = {'process': self.process_name, 'run': run_id}
+		info: Any = {"process": self.process_name, "run": run_id}
 
 		if extra:
 			for k in extra.keys():
 				info[k] = extra[k]
 
 		if filter_results:
-			info['channel'] = [self.directives[el[0]].channel for el in filter_results]
+			info["channel"] = [self.directives[el[0]].channel for el in filter_results]
 
 		# Try to insert doc into trouble collection (raises no exception)
 		# Possible exception will be logged out to console in any case
 		report_exception(self._ampel_db, logger, exc=arg_e, info=info)
 
-
 	@staticmethod
 	def print_feedback(arg: Any, suffix: str = "") -> None:
-		print("") # ^C in console
+		print("")  # ^C in console
 		try:
 			arg = AlertConsumerError(arg)
 		except Exception:

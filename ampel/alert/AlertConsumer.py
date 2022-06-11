@@ -76,7 +76,7 @@ class AlertConsumer(AbsEventUnit):
 
 	updates_buffer_size: int = 500
 
-	#: Calls `sys.exit()` with `exit_if_no_change` as return code in case
+	#: Calls `sys.exit()` with `exit_if_no_alert` as return code in case
 	#: no alert was processed (iter_count == 0)
 	exit_if_no_alert: None | int = None
 

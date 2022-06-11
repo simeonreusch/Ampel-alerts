@@ -131,6 +131,13 @@ and <code class="xref py py-class docutils literal notranslate"><span class="pre
 <dd><p>Flag to use for log records with a level between INFO and WARN</p>
 </dd></dl>
 
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ampel.alert.AlertConsumer.AlertConsumer.exit_if_no_alert">
+<span class="sig-name descname"><span class="pre">exit_if_no_alert</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><span class="pre">None</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#ampel.alert.AlertConsumer.AlertConsumer.exit_if_no_alert" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calls <cite>sys.exit()</cite> with <cite>exit_if_no_change</cite> as return code in case
+no alert was processed (iter_count == 0)</p>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="ampel.alert.AlertConsumer.AlertConsumer.from_process">
 <em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_process</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">process_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ampel/alert/AlertConsumer.html#AlertConsumer.from_process"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ampel.alert.AlertConsumer.AlertConsumer.from_process" title="Permalink to this definition">¶</a></dt>
